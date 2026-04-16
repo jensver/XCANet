@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:XcaNet.App.ViewModels"
+        x:Class="XcaNet.App.Views.MainWindow"
+        x:DataType="vm:ShellViewModel"
+        Width="960"
+        Height="540"
+        MinWidth="720"
+        MinHeight="420"
+        Title="{Binding Title}">
+  <Grid RowDefinitions="Auto,*" Margin="32">
+    <StackPanel Spacing="8">
+      <TextBlock FontSize="32"
+                 FontWeight="SemiBold"
+                 Text="{Binding Title}" />
+      <TextBlock Classes="dim"
+                 FontSize="18"
+                 Text="{Binding Subtitle}" />
+    </StackPanel>
+
+    <Border Grid.Row="1"
+            Margin="0,24,0,0"
+            Padding="24"
+            Background="#112233"
+            CornerRadius="16">
+      <StackPanel Spacing="12">
+        <TextBlock FontSize="20" FontWeight="SemiBold" Text="Solution Skeleton Ready" />
+        <TextBlock TextWrapping="Wrap"
+                   Text="The application shell, layered projects, dependency injection, configuration, and logging are wired. Domain, storage, security, and crypto features remain intentionally unimplemented in this milestone." />
+      </StackPanel>
+    </Border>
+  </Grid>
+</Window>
