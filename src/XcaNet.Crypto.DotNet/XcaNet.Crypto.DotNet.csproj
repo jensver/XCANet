@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\XcaNet.Contracts\XcaNet.Contracts.csproj" />
+    <ProjectReference Include="..\XcaNet.Core\XcaNet.Core.csproj" />
+    <ProjectReference Include="..\XcaNet.Crypto.Abstractions\XcaNet.Crypto.Abstractions.csproj" />
+  </ItemGroup>
+</Project>
