@@ -95,10 +95,22 @@ namespace XcaNet.Storage.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DataFormat")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("DerData")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsCertificateAuthority")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Issuer")
                         .IsRequired()
@@ -108,13 +120,15 @@ namespace XcaNet.Storage.Persistence.Migrations
                     b.Property<Guid?>("IssuerCertificateId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("KeyAlgorithm")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("NotAfterUtc")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("NotBeforeUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PemData")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("PrivateKeyId")
@@ -175,17 +189,35 @@ namespace XcaNet.Storage.Persistence.Migrations
                     b.Property<DateTime>("CreatedUtc")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DataFormat")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte[]>("DerData")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PemData")
+                    b.Property<string>("KeyAlgorithm")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PrivateKeyId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Subject")
                         .IsRequired()
                         .HasMaxLength(400)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SubjectAlternativeNames")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

@@ -6,6 +6,7 @@ using XcaNet.App;
 using XcaNet.App.Composition;
 using XcaNet.App.DependencyInjection;
 using XcaNet.Application.DependencyInjection;
+using XcaNet.Crypto.DotNet.DependencyInjection;
 
 namespace XcaNet.App.Desktop;
 
@@ -42,6 +43,7 @@ internal static class Program
             logging.AddDebug();
         });
 
+        services.AddManagedCryptoServices();
         services.AddApplication(configuration);
         services.AddPresentation();
 

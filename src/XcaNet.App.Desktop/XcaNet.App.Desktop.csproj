@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\XcaNet.App\XcaNet.App.csproj" />
+    <ProjectReference Include="..\XcaNet.Crypto.DotNet\XcaNet.Crypto.DotNet.csproj" />
   </ItemGroup>
 
   <ItemGroup>

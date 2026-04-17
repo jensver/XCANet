@@ -3,12 +3,12 @@
         xmlns:vm="using:XcaNet.App.ViewModels"
         x:Class="XcaNet.App.Views.MainWindow"
         x:DataType="vm:ShellViewModel"
-        Width="960"
-        Height="540"
-        MinWidth="720"
-        MinHeight="420"
+        Width="1240"
+        Height="920"
+        MinWidth="900"
+        MinHeight="700"
         Title="{Binding Title}">
-  <Grid RowDefinitions="Auto,*" Margin="32">
+  <Grid RowDefinitions="Auto,*" Margin="24">
     <StackPanel Spacing="8">
       <TextBlock FontSize="32"
                  FontWeight="SemiBold"
@@ -18,45 +18,126 @@
                  Text="{Binding Subtitle}" />
     </StackPanel>
 
-    <Grid Grid.Row="1"
-          Margin="0,24,0,0"
-          ColumnDefinitions="2*,3*"
-          ColumnSpacing="20">
-      <Border Padding="24"
-              Background="#112233"
-              CornerRadius="16">
-        <StackPanel Spacing="12">
-          <TextBlock FontSize="20" FontWeight="SemiBold" Text="Database Lifecycle" />
-          <TextBlock Text="Database Path" />
-          <TextBox Text="{Binding DatabasePath}" />
-          <TextBlock Text="Display Name" />
-          <TextBox Text="{Binding DisplayName}" />
-          <TextBlock Text="Master Password" />
-          <TextBox PasswordChar="*" Text="{Binding Password}" />
+    <ScrollViewer Grid.Row="1" Margin="0,24,0,0">
+      <StackPanel Spacing="16">
+        <Grid ColumnDefinitions="2*,3*" ColumnSpacing="20">
+          <Border Padding="20"
+                  Background="#112233"
+                  CornerRadius="16">
+            <StackPanel Spacing="12">
+              <TextBlock FontSize="20" FontWeight="SemiBold" Text="Database Lifecycle" />
+              <TextBlock Text="Database Path" />
+              <TextBox Text="{Binding DatabasePath}" />
+              <TextBlock Text="Display Name" />
+              <TextBox Text="{Binding DisplayName}" />
+              <TextBlock Text="Master Password" />
+              <TextBox PasswordChar="*" Text="{Binding Password}" />
 
-          <WrapPanel Margin="0,12,0,0" HorizontalAlignment="Left">
-            <Button Margin="0,0,8,8" Command="{Binding CreateDatabaseCommand}" Content="Create" />
-            <Button Margin="0,0,8,8" Command="{Binding OpenDatabaseCommand}" Content="Open" />
-            <Button Margin="0,0,8,8" Command="{Binding UnlockDatabaseCommand}" Content="Unlock" />
-            <Button Margin="0,0,8,8" Command="{Binding LockDatabaseCommand}" Content="Lock" />
-          </WrapPanel>
-        </StackPanel>
-      </Border>
+              <WrapPanel Margin="0,12,0,0" HorizontalAlignment="Left">
+                <Button Margin="0,0,8,8" Command="{Binding CreateDatabaseCommand}" Content="Create" />
+                <Button Margin="0,0,8,8" Command="{Binding OpenDatabaseCommand}" Content="Open" />
+                <Button Margin="0,0,8,8" Command="{Binding UnlockDatabaseCommand}" Content="Unlock" />
+                <Button Margin="0,0,8,8" Command="{Binding LockDatabaseCommand}" Content="Lock" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
 
-      <Border Grid.Column="1"
-              Padding="24"
-              Background="#18363C"
-              CornerRadius="16">
-        <StackPanel Spacing="12">
-          <TextBlock FontSize="20" FontWeight="SemiBold" Text="Status" />
-          <TextBlock TextWrapping="Wrap" Text="{Binding StatusMessage}" />
-          <TextBlock FontWeight="SemiBold" Text="Current Session" />
-          <TextBlock Text="{Binding Snapshot.DatabasePath}" />
-          <TextBlock Text="{Binding Snapshot.DisplayName}" />
-          <TextBlock Text="{Binding Snapshot.State}" />
-          <TextBlock Text="{Binding Snapshot.SchemaVersion}" />
-        </StackPanel>
-      </Border>
-    </Grid>
+          <Border Grid.Column="1"
+                  Padding="20"
+                  Background="#18363C"
+                  CornerRadius="16">
+            <StackPanel Spacing="12">
+              <TextBlock FontSize="20" FontWeight="SemiBold" Text="Status" />
+              <TextBlock TextWrapping="Wrap" Text="{Binding StatusMessage}" />
+              <TextBlock FontWeight="SemiBold" Text="Current Session" />
+              <TextBlock Text="{Binding Snapshot.DatabasePath}" />
+              <TextBlock Text="{Binding Snapshot.DisplayName}" />
+              <TextBlock Text="{Binding Snapshot.State}" />
+              <TextBlock Text="{Binding Snapshot.SchemaVersion}" />
+              <TextBlock Text="Private Key Id" />
+              <TextBox Text="{Binding CurrentPrivateKeyId}" />
+              <TextBlock Text="Issuer Certificate Id" />
+              <TextBox Text="{Binding IssuerCertificateId}" />
+              <TextBlock Text="Certificate Id" />
+              <TextBox Text="{Binding CurrentCertificateId}" />
+              <TextBlock Text="CSR Id" />
+              <TextBox Text="{Binding CurrentCertificateSigningRequestId}" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Grid ColumnDefinitions="1,1" ColumnSpacing="20">
+          <Border Padding="20" Background="#173528" CornerRadius="16">
+            <StackPanel Spacing="10">
+              <TextBlock FontSize="20" FontWeight="SemiBold" Text="Managed Crypto" />
+              <TextBlock Text="Key Display Name" />
+              <TextBox Text="{Binding KeyDisplayName}" />
+              <TextBlock Text="Key Algorithm (`Rsa` or `Ecdsa`)" />
+              <TextBox Text="{Binding KeyAlgorithm}" />
+              <TextBlock Text="ECDSA Curve (`P256` or `P384`)" />
+              <TextBox Text="{Binding EllipticCurve}" />
+              <TextBlock Text="Subject Name" />
+              <TextBox Text="{Binding SubjectName}" />
+              <WrapPanel Margin="0,12,0,0">
+                <Button Margin="0,0,8,8" Command="{Binding GenerateKeyCommand}" Content="Generate Key" />
+                <Button Margin="0,0,8,8" Command="{Binding CreateSelfSignedCaCommand}" Content="Create Self-Signed CA" />
+                <Button Margin="0,0,8,8" Command="{Binding CreateCertificateSigningRequestCommand}" Content="Create CSR" />
+                <Button Margin="0,0,8,8" Command="{Binding SignCertificateSigningRequestCommand}" Content="Sign CSR" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="1" Padding="20" Background="#2A213C" CornerRadius="16">
+            <StackPanel Spacing="10">
+              <TextBlock FontSize="20" FontWeight="SemiBold" Text="Import / Export" />
+              <TextBlock Text="Import Kind (`Certificate`, `PrivateKey`, `CertificateSigningRequest`, `Bundle`)" />
+              <TextBox Text="{Binding ImportKind}" />
+              <TextBlock Text="Import Format (`Pem`, `Der`, `Pkcs8`, `Pkcs12`, `Pkcs10`)" />
+              <TextBox Text="{Binding ImportFormat}" />
+              <TextBlock Text="Import Payload" />
+              <TextBox AcceptsReturn="True" Height="140" TextWrapping="Wrap" Text="{Binding ImportPayload}" />
+              <Button Margin="0,8,0,0" HorizontalAlignment="Left" Command="{Binding ImportMaterialCommand}" Content="Import Material" />
+
+              <Separator Margin="0,8,0,8" />
+
+              <TextBlock Text="Export Kind" />
+              <TextBox Text="{Binding ExportKind}" />
+              <TextBlock Text="Export Format" />
+              <TextBox Text="{Binding ExportFormat}" />
+              <TextBlock Text="Export Password (for encrypted key or PFX)" />
+              <TextBox PasswordChar="*" Text="{Binding ExportPassword}" />
+              <WrapPanel Margin="0,8,0,0">
+                <Button Margin="0,0,8,8" Command="{Binding ExportMaterialCommand}" Content="Export Selected Material" />
+                <Button Margin="0,0,8,8" Command="{Binding LoadCertificateDetailsCommand}" Content="Load Certificate Details" />
+              </WrapPanel>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Grid ColumnDefinitions="1,1" ColumnSpacing="20">
+          <Border Padding="20" Background="#1F1F2B" CornerRadius="16">
+            <StackPanel Spacing="10">
+              <TextBlock FontSize="20" FontWeight="SemiBold" Text="Certificate Details" />
+              <TextBox AcceptsReturn="True"
+                       Height="220"
+                       IsReadOnly="True"
+                       TextWrapping="Wrap"
+                       Text="{Binding CertificateDetails}" />
+            </StackPanel>
+          </Border>
+
+          <Border Grid.Column="1" Padding="20" Background="#2B1F1F" CornerRadius="16">
+            <StackPanel Spacing="10">
+              <TextBlock FontSize="20" FontWeight="SemiBold" Text="Exported Artifact" />
+              <TextBox AcceptsReturn="True"
+                       Height="220"
+                       IsReadOnly="True"
+                       TextWrapping="Wrap"
+                       Text="{Binding ExportedArtifact}" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
   </Grid>
 </Window>

@@ -44,6 +44,8 @@ public sealed class XcaNetDbContext : DbContext
             entity.Property(x => x.SerialNumber).HasMaxLength(128).IsRequired();
             entity.Property(x => x.Sha1Thumbprint).HasMaxLength(64).IsRequired();
             entity.Property(x => x.Sha256Thumbprint).HasMaxLength(128).IsRequired();
+            entity.Property(x => x.DataFormat).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.KeyAlgorithm).HasMaxLength(64).IsRequired();
             entity.HasIndex(x => x.SerialNumber);
             entity.HasIndex(x => x.Sha1Thumbprint);
             entity.HasIndex(x => x.Sha256Thumbprint);
@@ -60,6 +62,8 @@ public sealed class XcaNetDbContext : DbContext
             entity.HasKey(x => x.Id);
             entity.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
             entity.Property(x => x.Subject).HasMaxLength(400).IsRequired();
+            entity.Property(x => x.DataFormat).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.KeyAlgorithm).HasMaxLength(64).IsRequired();
         });
 
         modelBuilder.Entity<CertificateRevocationListEntity>(entity =>

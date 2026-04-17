@@ -12,6 +12,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDatabaseMigrator, DatabaseMigrator>();
         services.AddSingleton<IDatabaseProfileRepository, DatabaseProfileRepository>();
         services.AddSingleton<IAuditEventRepository, AuditEventRepository>();
+        services.AddSingleton<ICertificateRepository, CertificateRepository>();
+        services.AddSingleton<ICertificateRequestRepository, CertificateRequestRepository>();
         services.AddSingleton<IPrivateKeyRepository, PrivateKeyRepository>();
         return services;
     }

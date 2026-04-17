@@ -14,6 +14,9 @@ public sealed class CertificateEntity
     public int RevocationState { get; set; }
     public Guid? IssuerCertificateId { get; set; }
     public Guid? PrivateKeyId { get; set; }
-    public string? PemData { get; set; }
+    public byte[] DerData { get; set; } = [];
+    public string DataFormat { get; set; } = string.Empty;
+    public string KeyAlgorithm { get; set; } = string.Empty;
+    public bool IsCertificateAuthority { get; set; }
     public ICollection<CertificateTagEntity> CertificateTags { get; set; } = [];
 }
