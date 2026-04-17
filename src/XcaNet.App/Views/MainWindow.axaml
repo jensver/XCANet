@@ -18,16 +18,45 @@
                  Text="{Binding Subtitle}" />
     </StackPanel>
 
-    <Border Grid.Row="1"
-            Margin="0,24,0,0"
-            Padding="24"
-            Background="#112233"
-            CornerRadius="16">
-      <StackPanel Spacing="12">
-        <TextBlock FontSize="20" FontWeight="SemiBold" Text="Solution Skeleton Ready" />
-        <TextBlock TextWrapping="Wrap"
-                   Text="The application shell, layered projects, dependency injection, configuration, and logging are wired. Domain, storage, security, and crypto features remain intentionally unimplemented in this milestone." />
-      </StackPanel>
-    </Border>
+    <Grid Grid.Row="1"
+          Margin="0,24,0,0"
+          ColumnDefinitions="2*,3*"
+          ColumnSpacing="20">
+      <Border Padding="24"
+              Background="#112233"
+              CornerRadius="16">
+        <StackPanel Spacing="12">
+          <TextBlock FontSize="20" FontWeight="SemiBold" Text="Database Lifecycle" />
+          <TextBlock Text="Database Path" />
+          <TextBox Text="{Binding DatabasePath}" />
+          <TextBlock Text="Display Name" />
+          <TextBox Text="{Binding DisplayName}" />
+          <TextBlock Text="Master Password" />
+          <TextBox PasswordChar="*" Text="{Binding Password}" />
+
+          <WrapPanel Margin="0,12,0,0" HorizontalAlignment="Left">
+            <Button Margin="0,0,8,8" Command="{Binding CreateDatabaseCommand}" Content="Create" />
+            <Button Margin="0,0,8,8" Command="{Binding OpenDatabaseCommand}" Content="Open" />
+            <Button Margin="0,0,8,8" Command="{Binding UnlockDatabaseCommand}" Content="Unlock" />
+            <Button Margin="0,0,8,8" Command="{Binding LockDatabaseCommand}" Content="Lock" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Grid.Column="1"
+              Padding="24"
+              Background="#18363C"
+              CornerRadius="16">
+        <StackPanel Spacing="12">
+          <TextBlock FontSize="20" FontWeight="SemiBold" Text="Status" />
+          <TextBlock TextWrapping="Wrap" Text="{Binding StatusMessage}" />
+          <TextBlock FontWeight="SemiBold" Text="Current Session" />
+          <TextBlock Text="{Binding Snapshot.DatabasePath}" />
+          <TextBlock Text="{Binding Snapshot.DisplayName}" />
+          <TextBlock Text="{Binding Snapshot.State}" />
+          <TextBlock Text="{Binding Snapshot.SchemaVersion}" />
+        </StackPanel>
+      </Border>
+    </Grid>
   </Grid>
 </Window>

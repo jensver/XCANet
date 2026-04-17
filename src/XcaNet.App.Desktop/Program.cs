@@ -42,7 +42,7 @@ internal static class Program
             logging.AddDebug();
         });
 
-        services.AddApplication();
+        services.AddApplication(configuration);
         services.AddPresentation();
 
         return services.BuildServiceProvider(validateScopes: true);
