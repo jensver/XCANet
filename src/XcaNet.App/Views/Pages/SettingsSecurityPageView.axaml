@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="XcaNet.App.Views.Pages.SettingsSecurityPageView">
+  <Grid ColumnDefinitions="1.1*,1*" ColumnSpacing="16">
+    <Border Background="White" CornerRadius="12" Padding="16">
+      <StackPanel Spacing="12">
+        <TextBlock Text="Database Lifecycle" FontSize="18" FontWeight="SemiBold" />
+        <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+          <TextBlock Text="Database Path" />
+          <TextBox Grid.Column="1" Text="{Binding DatabasePath}" />
+          <TextBlock Grid.Row="1" Text="Display Name" />
+          <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DisplayName}" />
+          <TextBlock Grid.Row="2" Text="Password" />
+          <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Password}" PasswordChar="*" />
+          <TextBlock Grid.Row="3" Text="State" />
+          <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SessionState}" />
+          <TextBlock Grid.Row="4" Text="Last Opened" />
+          <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding LastOpened}" />
+        </Grid>
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Button Content="Create" Command="{Binding CreateDatabaseCommand}" />
+          <Button Content="Open" Command="{Binding OpenDatabaseCommand}" />
+          <Button Content="Unlock" Command="{Binding UnlockDatabaseCommand}" />
+          <Button Content="Lock" Command="{Binding LockDatabaseCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Column="1" Background="White" CornerRadius="12" Padding="16">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Security Notes" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+        <TextBlock Text="Private keys remain encrypted at rest. Unlock is required before any key creation, CSR signing, or export operation." TextWrapping="Wrap" />
+        <TextBlock Text="The managed crypto backend is active. OpenSSL interop, CRL generation, and advanced templates remain deferred." TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

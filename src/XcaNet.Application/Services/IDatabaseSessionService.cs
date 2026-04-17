@@ -1,4 +1,5 @@
 using XcaNet.Contracts.Database;
+using XcaNet.Contracts.Browser;
 using XcaNet.Contracts.Crypto;
 using XcaNet.Contracts.Crypto.Workflow;
 using XcaNet.Contracts.Results;
@@ -30,6 +31,20 @@ public interface IDatabaseSessionService
     Task<OperationResult<ExportedArtifact>> ExportStoredMaterialAsync(ExportStoredMaterialRequest request, CancellationToken cancellationToken);
 
     Task<OperationResult<CertificateDetails>> GetCertificateDetailsAsync(Guid certificateId, CancellationToken cancellationToken);
+
+    Task<OperationResult<DashboardSummary>> GetDashboardSummaryAsync(CancellationToken cancellationToken);
+
+    Task<OperationResult<IReadOnlyList<CertificateListItem>>> ListCertificatesAsync(CertificateBrowserQuery query, CancellationToken cancellationToken);
+
+    Task<OperationResult<CertificateInspector>> GetCertificateInspectorAsync(Guid certificateId, CancellationToken cancellationToken);
+
+    Task<OperationResult<IReadOnlyList<PrivateKeyListItem>>> ListPrivateKeysAsync(CancellationToken cancellationToken);
+
+    Task<OperationResult<IReadOnlyList<CertificateRequestListItem>>> ListCertificateSigningRequestsAsync(CancellationToken cancellationToken);
+
+    Task<OperationResult<IReadOnlyList<CertificateRevocationListItem>>> ListCertificateRevocationListsAsync(CancellationToken cancellationToken);
+
+    Task<OperationResult<IReadOnlyList<TemplateListItem>>> ListTemplatesAsync(CancellationToken cancellationToken);
 
     DatabaseSessionSnapshot GetSnapshot();
 }

@@ -14,7 +14,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAuditEventRepository, AuditEventRepository>();
         services.AddSingleton<ICertificateRepository, CertificateRepository>();
         services.AddSingleton<ICertificateRequestRepository, CertificateRequestRepository>();
+        services.AddSingleton<ICertificateRevocationListRepository, CertificateRevocationListRepository>();
         services.AddSingleton<IPrivateKeyRepository, PrivateKeyRepository>();
+        services.AddSingleton<ITemplateRepository, TemplateRepository>();
         return services;
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using XcaNet.Contracts.Browser;
 using XcaNet.Contracts.Crypto;
 using XcaNet.Contracts.Crypto.Workflow;
 using XcaNet.Contracts.Database;
@@ -19,7 +20,9 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
     private readonly IAuditEventRepository _auditEventRepository;
     private readonly ICertificateRepository _certificateRepository;
     private readonly ICertificateRequestRepository _certificateRequestRepository;
+    private readonly ICertificateRevocationListRepository _certificateRevocationListRepository;
     private readonly IPrivateKeyRepository _privateKeyRepository;
+    private readonly ITemplateRepository _templateRepository;
     private readonly IDatabaseSecretProtector _databaseSecretProtector;
     private readonly IKeyService _keyService;
     private readonly ICertificateService _certificateService;
@@ -40,7 +43,9 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         IAuditEventRepository auditEventRepository,
         ICertificateRepository certificateRepository,
         ICertificateRequestRepository certificateRequestRepository,
+        ICertificateRevocationListRepository certificateRevocationListRepository,
         IPrivateKeyRepository privateKeyRepository,
+        ITemplateRepository templateRepository,
         IDatabaseSecretProtector databaseSecretProtector,
         IKeyService keyService,
         ICertificateService certificateService,
@@ -53,7 +58,9 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         _auditEventRepository = auditEventRepository;
         _certificateRepository = certificateRepository;
         _certificateRequestRepository = certificateRequestRepository;
+        _certificateRevocationListRepository = certificateRevocationListRepository;
         _privateKeyRepository = privateKeyRepository;
+        _templateRepository = templateRepository;
         _databaseSecretProtector = databaseSecretProtector;
         _keyService = keyService;
         _certificateService = certificateService;
@@ -417,15 +424,16 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             }
 
             var certificateId = Guid.NewGuid();
+            Guid? subjectPrivateKeyId = csrEntity.PrivateKeyId == Guid.Empty ? null : csrEntity.PrivateKeyId;
             await _certificateRepository.AddAsync(
                 _currentDatabasePath!,
-                CreateCertificateEntity(certificateId, request.DisplayName, signResult.Value.DerData, signResult.Value.Details, null, request.IssuerCertificateId),
+                CreateCertificateEntity(certificateId, request.DisplayName, signResult.Value.DerData, signResult.Value.Details, subjectPrivateKeyId, request.IssuerCertificateId),
                 cancellationToken);
 
             await _auditEventRepository.AddAsync(_currentDatabasePath!, CreateAuditEvent(AuditEventKind.CertificateSigningRequestSigned, "Certificate signing request signed."), cancellationToken);
 
             return OperationResult<StoredCertificateResult>.Success(
-                new StoredCertificateResult(certificateId, null, signResult.Value.Details),
+                new StoredCertificateResult(certificateId, subjectPrivateKeyId, signResult.Value.Details),
                 "Certificate signing request signed.");
         }
         finally
@@ -553,6 +561,257 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         }
     }
 
+    public async Task<OperationResult<DashboardSummary>> GetDashboardSummaryAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<DashboardSummary>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var certificates = await _certificateRepository.ListAsync(databasePath, cancellationToken);
+            var privateKeys = await _privateKeyRepository.ListAsync(databasePath, cancellationToken);
+            var certificateRequests = await _certificateRequestRepository.ListAsync(databasePath, cancellationToken);
+            var certificateRevocationLists = await _certificateRevocationListRepository.ListAsync(databasePath, cancellationToken);
+            var templates = await _templateRepository.ListAsync(databasePath, cancellationToken);
+
+            return OperationResult<DashboardSummary>.Success(
+                new DashboardSummary(
+                    certificates.Count,
+                    privateKeys.Count,
+                    certificateRequests.Count,
+                    certificateRevocationLists.Count,
+                    templates.Count),
+                "Dashboard summary loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<IReadOnlyList<CertificateListItem>>> ListCertificatesAsync(CertificateBrowserQuery query, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<IReadOnlyList<CertificateListItem>>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var now = DateTimeOffset.UtcNow;
+            var expiringSoonBoundary = now.AddDays(Math.Max(1, query.ExpiringSoonWithinDays));
+            var certificates = await _certificateRepository.ListAsync(databasePath, cancellationToken);
+            var childCounts = certificates
+                .Where(x => x.IssuerCertificateId.HasValue)
+                .GroupBy(x => x.IssuerCertificateId!.Value)
+                .ToDictionary(x => x.Key, x => x.Count());
+
+            var filtered = certificates
+                .Where(x => MatchesSearch(x, query.SearchText))
+                .Where(x => MatchesAuthorityFilter(x, query.AuthorityFilter))
+                .Where(x => MatchesValidityFilter(x, query.ValidityFilter, now, expiringSoonBoundary))
+                .Select(x => new CertificateListItem(
+                    x.Id,
+                    x.DisplayName,
+                    x.Subject,
+                    x.Issuer,
+                    x.SerialNumber,
+                    x.Sha1Thumbprint,
+                    x.Sha256Thumbprint,
+                    ToDateTimeOffset(x.NotBeforeUtc),
+                    ToDateTimeOffset(x.NotAfterUtc),
+                    x.KeyAlgorithm,
+                    x.IsCertificateAuthority,
+                    FormatRevocationStatus(x.RevocationState),
+                    x.IssuerCertificateId,
+                    x.PrivateKeyId,
+                    childCounts.GetValueOrDefault(x.Id)))
+                .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            return OperationResult<IReadOnlyList<CertificateListItem>>.Success(filtered, "Certificates loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<CertificateInspector>> GetCertificateInspectorAsync(Guid certificateId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<CertificateInspector>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var certificates = await _certificateRepository.ListAsync(databasePath, cancellationToken);
+            var certificateEntity = certificates.SingleOrDefault(x => x.Id == certificateId);
+            if (certificateEntity is null)
+            {
+                return OperationResult<CertificateInspector>.Failure(OperationErrorCode.DatabaseNotFound, "Certificate not found.");
+            }
+
+            var detailsResult = await _certificateService.ParseCertificateAsync(
+                new CertificateParseRequest(certificateEntity.DerData, CryptoDataFormat.Der),
+                cancellationToken);
+
+            if (!detailsResult.IsSuccess || detailsResult.Value is null)
+            {
+                return OperationResult<CertificateInspector>.Failure(detailsResult.ErrorCode, detailsResult.Message);
+            }
+
+            var privateKeys = await _privateKeyRepository.ListAsync(databasePath, cancellationToken);
+            var issuer = certificateEntity.IssuerCertificateId.HasValue
+                ? certificates.SingleOrDefault(x => x.Id == certificateEntity.IssuerCertificateId.Value)
+                : null;
+            var relatedPrivateKey = certificateEntity.PrivateKeyId.HasValue
+                ? privateKeys.SingleOrDefault(x => x.Id == certificateEntity.PrivateKeyId.Value)
+                : null;
+            var children = certificates
+                .Where(x => x.IssuerCertificateId == certificateEntity.Id)
+                .OrderBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .Select(x => new RelatedCertificateSummary(x.Id, x.DisplayName, x.Subject))
+                .ToList();
+
+            return OperationResult<CertificateInspector>.Success(
+                new CertificateInspector(
+                    certificateEntity.Id,
+                    certificateEntity.DisplayName,
+                    detailsResult.Value,
+                    FormatRevocationStatus(certificateEntity.RevocationState),
+                    issuer?.Id,
+                    issuer?.DisplayName,
+                    relatedPrivateKey?.Id,
+                    relatedPrivateKey?.DisplayName,
+                    children),
+                "Certificate details loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<IReadOnlyList<PrivateKeyListItem>>> ListPrivateKeysAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<IReadOnlyList<PrivateKeyListItem>>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var certificates = await _certificateRepository.ListAsync(databasePath, cancellationToken);
+            var linkedCertificateCounts = certificates
+                .Where(x => x.PrivateKeyId.HasValue)
+                .GroupBy(x => x.PrivateKeyId!.Value)
+                .ToDictionary(x => x.Key, x => x.Count());
+            var privateKeys = await _privateKeyRepository.ListAsync(databasePath, cancellationToken);
+
+            var items = privateKeys
+                .Select(x => new PrivateKeyListItem(
+                    x.Id,
+                    x.DisplayName,
+                    x.Algorithm,
+                    x.PublicKeyFingerprint,
+                    DateTime.SpecifyKind(x.CreatedUtc, DateTimeKind.Utc),
+                    linkedCertificateCounts.GetValueOrDefault(x.Id)))
+                .ToList();
+
+            return OperationResult<IReadOnlyList<PrivateKeyListItem>>.Success(items, "Private keys loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<IReadOnlyList<CertificateRequestListItem>>> ListCertificateSigningRequestsAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<IReadOnlyList<CertificateRequestListItem>>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var items = (await _certificateRequestRepository.ListAsync(databasePath, cancellationToken))
+                .Select(x => new CertificateRequestListItem(
+                    x.Id,
+                    x.DisplayName,
+                    x.Subject,
+                    x.PrivateKeyId == Guid.Empty ? null : x.PrivateKeyId,
+                    x.KeyAlgorithm,
+                    x.SubjectAlternativeNames,
+                    DateTime.SpecifyKind(x.CreatedUtc, DateTimeKind.Utc)))
+                .ToList();
+
+            return OperationResult<IReadOnlyList<CertificateRequestListItem>>.Success(items, "Certificate signing requests loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<IReadOnlyList<CertificateRevocationListItem>>> ListCertificateRevocationListsAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<IReadOnlyList<CertificateRevocationListItem>>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var items = (await _certificateRevocationListRepository.ListAsync(databasePath, cancellationToken))
+                .Select(x => new CertificateRevocationListItem(
+                    x.Id,
+                    x.DisplayName,
+                    x.AuthorityId,
+                    DateTime.SpecifyKind(x.CreatedUtc, DateTimeKind.Utc),
+                    x.NextUpdateUtc is null ? null : DateTime.SpecifyKind(x.NextUpdateUtc.Value, DateTimeKind.Utc)))
+                .ToList();
+
+            return OperationResult<IReadOnlyList<CertificateRevocationListItem>>.Success(items, "Certificate revocation lists loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<IReadOnlyList<TemplateListItem>>> ListTemplatesAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<IReadOnlyList<TemplateListItem>>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var items = (await _templateRepository.ListAsync(databasePath, cancellationToken))
+                .Select(x => new TemplateListItem(x.Id, x.Name, x.Description, x.IsFavorite, x.IsDisabled))
+                .ToList();
+
+            return OperationResult<IReadOnlyList<TemplateListItem>>.Success(items, "Templates loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public DatabaseSessionSnapshot GetSnapshot()
     {
         var message = _state switch
@@ -617,6 +876,20 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         return AuditEventKind.PrivateKeyStored;
     }
 
+    private bool TryGetOpenDatabasePath<T>(out string databasePath, out OperationResult<T>? failure)
+    {
+        if (string.IsNullOrWhiteSpace(_currentDatabasePath))
+        {
+            databasePath = string.Empty;
+            failure = OperationResult<T>.Failure(OperationErrorCode.DatabaseNotOpen, "Open a database before browsing its contents.");
+            return false;
+        }
+
+        databasePath = _currentDatabasePath;
+        failure = null;
+        return true;
+    }
+
     private bool IsUnlockedDatabase()
     {
         return !string.IsNullOrWhiteSpace(_currentDatabasePath) && _state == DatabaseSessionState.Unlocked && _unlockedKey is not null;
@@ -678,6 +951,77 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             KeyAlgorithm = details.KeyAlgorithm,
             IsCertificateAuthority = details.IsCertificateAuthority
         };
+    }
+
+    private static bool MatchesSearch(CertificateEntity entity, string? searchText)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            return true;
+        }
+
+        return ContainsIgnoreCase(entity.DisplayName, searchText)
+            || ContainsIgnoreCase(entity.Subject, searchText)
+            || ContainsIgnoreCase(entity.Issuer, searchText)
+            || ContainsIgnoreCase(entity.SerialNumber, searchText)
+            || ContainsIgnoreCase(entity.Sha1Thumbprint, searchText)
+            || ContainsIgnoreCase(entity.Sha256Thumbprint, searchText);
+    }
+
+    private static bool MatchesAuthorityFilter(CertificateEntity entity, CertificateAuthorityFilter filter)
+    {
+        return filter switch
+        {
+            CertificateAuthorityFilter.Authorities => entity.IsCertificateAuthority,
+            CertificateAuthorityFilter.LeafCertificates => !entity.IsCertificateAuthority,
+            _ => true
+        };
+    }
+
+    private static bool MatchesValidityFilter(CertificateEntity entity, CertificateValidityFilter filter, DateTimeOffset now, DateTimeOffset expiringSoonBoundary)
+    {
+        if (filter == CertificateValidityFilter.All)
+        {
+            return true;
+        }
+
+        var notBefore = ToDateTimeOffset(entity.NotBeforeUtc);
+        var notAfter = ToDateTimeOffset(entity.NotAfterUtc);
+        var isRevoked = entity.RevocationState == (int)RevocationState.Revoked;
+        var isExpired = notAfter.HasValue && notAfter.Value < now;
+        var isValid = !isRevoked
+            && !isExpired
+            && (!notBefore.HasValue || notBefore.Value <= now)
+            && (!notAfter.HasValue || notAfter.Value >= now);
+        var isExpiringSoon = isValid && notAfter.HasValue && notAfter.Value <= expiringSoonBoundary;
+
+        return filter switch
+        {
+            CertificateValidityFilter.Valid => isValid,
+            CertificateValidityFilter.ExpiringSoon => isExpiringSoon,
+            CertificateValidityFilter.Expired => isExpired,
+            CertificateValidityFilter.Revoked => isRevoked,
+            _ => true
+        };
+    }
+
+    private static string FormatRevocationStatus(int revocationState)
+    {
+        return Enum.IsDefined(typeof(RevocationState), revocationState)
+            ? ((RevocationState)revocationState).ToString()
+            : RevocationState.Unknown.ToString();
+    }
+
+    private static DateTimeOffset? ToDateTimeOffset(DateTime? value)
+    {
+        return value is null
+            ? null
+            : DateTime.SpecifyKind(value.Value, DateTimeKind.Utc);
+    }
+
+    private static bool ContainsIgnoreCase(string candidate, string searchText)
+    {
+        return candidate.Contains(searchText, StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task<OperationResult<ExportedArtifact>> ExportPrivateKeyMaterialAsync(ExportStoredMaterialRequest request, CancellationToken cancellationToken)

@@ -25,4 +25,13 @@ public sealed class CertificateRepository : ICertificateRepository
         await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
         return await dbContext.Certificates.SingleOrDefaultAsync(x => x.Id == certificateId, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<CertificateEntity>> ListAsync(string databasePath, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        return await dbContext.Certificates
+            .AsNoTracking()
+            .OrderBy(x => x.DisplayName)
+            .ToListAsync(cancellationToken);
+    }
 }

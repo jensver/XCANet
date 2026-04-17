@@ -25,4 +25,13 @@ public sealed class PrivateKeyRepository : IPrivateKeyRepository
         await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
         return await dbContext.PrivateKeys.SingleOrDefaultAsync(x => x.Id == privateKeyId, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<PrivateKeyEntity>> ListAsync(string databasePath, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        return await dbContext.PrivateKeys
+            .AsNoTracking()
+            .OrderByDescending(x => x.CreatedUtc)
+            .ToListAsync(cancellationToken);
+    }
 }
