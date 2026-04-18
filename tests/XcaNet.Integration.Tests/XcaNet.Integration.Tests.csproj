@@ -25,7 +25,12 @@
     <ProjectReference Include="..\..\src\XcaNet.App\XcaNet.App.csproj" />
     <ProjectReference Include="..\..\src\XcaNet.Application\XcaNet.Application.csproj" />
     <ProjectReference Include="..\..\src\XcaNet.Crypto.DotNet\XcaNet.Crypto.DotNet.csproj" />
+    <ProjectReference Include="..\..\src\XcaNet.Crypto.OpenSsl\XcaNet.Crypto.OpenSsl.csproj" />
     <ProjectReference Include="..\..\src\XcaNet.Storage\XcaNet.Storage.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\OpenSslBridgeTestHarness.cs" Link="Support\OpenSslBridgeTestHarness.cs" />
   </ItemGroup>
 
 </Project>

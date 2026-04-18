@@ -327,7 +327,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             await _auditEventRepository.AddAsync(_currentDatabasePath!, CreateAuditEvent(AuditEventKind.CertificateCreated, "Certificate created."), cancellationToken);
 
             return OperationResult<StoredCertificateResult>.Success(
-                new StoredCertificateResult(certificateId, request.PrivateKeyId, createResult.Value.Details),
+                new StoredCertificateResult(certificateId, request.PrivateKeyId, createResult.Value.Details, createResult.Value.BackendUsed),
                 "Self-signed CA certificate created.");
         }
         finally
@@ -434,7 +434,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             await _auditEventRepository.AddAsync(_currentDatabasePath!, CreateAuditEvent(AuditEventKind.CertificateSigningRequestSigned, "Certificate signing request signed."), cancellationToken);
 
             return OperationResult<StoredCertificateResult>.Success(
-                new StoredCertificateResult(certificateId, subjectPrivateKeyId, signResult.Value.Details),
+                new StoredCertificateResult(certificateId, subjectPrivateKeyId, signResult.Value.Details, signResult.Value.BackendUsed),
                 "Certificate signing request signed.");
         }
         finally
@@ -487,7 +487,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             return !details.IsSuccess || details.Value is null
                 ? OperationResult<StoredCertificateResult>.Failure(details.ErrorCode, details.Message)
                 : OperationResult<StoredCertificateResult>.Success(
-                    new StoredCertificateResult(reloadedCertificate.Id, reloadedCertificate.PrivateKeyId, details.Value),
+                    new StoredCertificateResult(reloadedCertificate.Id, reloadedCertificate.PrivateKeyId, details.Value, CryptoBackendKind.Managed),
                     "Certificate revoked.");
         }
         finally

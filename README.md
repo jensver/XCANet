@@ -12,8 +12,10 @@ XcaNet is a clean-architecture rewrite of a cross-platform PKI manager in `.NET 
 - `src/XcaNet.Storage` contains the EF Core SQLite context, repositories, and migrations.
 - `src/XcaNet.Security` contains master-password protection and encrypted private-key blob handling.
 - `src/XcaNet.Crypto.Abstractions` defines backend-neutral crypto contracts.
-- `src/XcaNet.Crypto.DotNet` implements the managed RSA/ECDSA, certificate, CSR, and import/export path.
-- `src/XcaNet.Crypto.OpenSsl`, `src/XcaNet.ImportExport`, `src/XcaNet.Localization`, and `src/XcaNet.Diagnostics` remain partial or scaffolded for later milestones.
+- `src/XcaNet.Crypto.DotNet` implements the managed RSA/ECDSA, certificate, CSR, import/export, and CRL path.
+- `src/XcaNet.Crypto.OpenSsl` adds the routed OpenSSL-backed certificate-signing path through a thin native bridge.
+- `src/XcaNet.Interop.OpenSsl` owns bridge loading, probing, capability reporting, and safe marshalling.
+- `src/XcaNet.ImportExport`, `src/XcaNet.Localization`, and `src/XcaNet.Diagnostics` remain partial or scaffolded for later milestones.
 - `tests/` contains unit and integration coverage for the storage, security, and managed-crypto milestones.
 
 ## Storage And Security
@@ -68,3 +70,21 @@ Milestone 5 adds the first revocation workflow and a cleanup pass on the UI/appl
 - audit events now cover certificate revocation and CRL generation
 
 Import and export remain transport-oriented in the application layer, so the current paste-based UI can be replaced later without changing the workflow contracts.
+
+## Optional OpenSSL Backend
+
+Milestone 6 adds an optional OpenSSL integration without making native code part of the application architecture:
+
+- the app still starts and works with the managed backend when no OpenSSL bridge is present
+- OpenSSL is loaded only through `XcaNet.Interop.OpenSsl`
+- backend routing is centralized and explicit
+- the first OpenSSL-backed operation is CSR signing
+- parity tests cover managed vs OpenSSL output for that operation
+
+Build the native bridge locally with:
+
+```bash
+native/xcanet_ossl_bridge/build-bridge.sh <output-dir>
+```
+
+To use a specific bridge artifact, set `XCANET_OPENSSL_BRIDGE_PATH` or configure `Crypto:OpenSslBridgePath`. If no bridge is configured, the managed backend remains active.

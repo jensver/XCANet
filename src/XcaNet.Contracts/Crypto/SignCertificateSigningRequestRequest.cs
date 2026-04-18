@@ -5,4 +5,5 @@ public sealed record SignCertificateSigningRequestRequest(
     byte[] IssuerCertificateDer,
     byte[] IssuerPrivateKeyPkcs8,
     string IssuerPrivateKeyAlgorithm,
-    int ValidityDays);
+    int ValidityDays,
+    CryptoBackendPreference? PreferredBackend = null);

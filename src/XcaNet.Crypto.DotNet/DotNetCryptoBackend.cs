@@ -99,7 +99,7 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
             using var certificate = certificateRequest.CreateSelfSigned(notBefore, notAfter);
             var der = certificate.Export(X509ContentType.Cert);
             return Task.FromResult(OperationResult<SignedCertificateResult>.Success(
-                new SignedCertificateResult(der, ParseCertificate(certificate)),
+                new SignedCertificateResult(der, ParseCertificate(certificate), CryptoBackendKind.Managed),
                 "Self-signed CA certificate created."));
         }
         catch (CryptographicException)
@@ -131,7 +131,7 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
 
             var der = issuedCertificate.Export(X509ContentType.Cert);
             return Task.FromResult(OperationResult<SignedCertificateResult>.Success(
-                new SignedCertificateResult(der, ParseCertificate(issuedCertificate)),
+                new SignedCertificateResult(der, ParseCertificate(issuedCertificate), CryptoBackendKind.Managed),
                 "Certificate signing request issued."));
         }
         catch (CryptographicException)

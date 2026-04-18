@@ -31,7 +31,7 @@
         <TextBlock Text="Security Notes" FontSize="18" FontWeight="SemiBold" />
         <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
         <TextBlock Text="Private keys remain encrypted at rest. Unlock is required before any key creation, CSR signing, or export operation." TextWrapping="Wrap" />
-        <TextBlock Text="The managed crypto backend is active. OpenSSL interop, CRL generation, and advanced templates remain deferred." TextWrapping="Wrap" />
+        <TextBlock Text="The managed backend remains the default. Optional OpenSSL CSR-signing support is available through the routed crypto backend when a bridge is configured." TextWrapping="Wrap" />
       </StackPanel>
     </Border>
   </Grid>

@@ -17,6 +17,7 @@
   <ItemGroup>
     <ProjectReference Include="..\XcaNet.App\XcaNet.App.csproj" />
     <ProjectReference Include="..\XcaNet.Crypto.DotNet\XcaNet.Crypto.DotNet.csproj" />
+    <ProjectReference Include="..\XcaNet.Crypto.OpenSsl\XcaNet.Crypto.OpenSsl.csproj" />
   </ItemGroup>
 
   <ItemGroup>

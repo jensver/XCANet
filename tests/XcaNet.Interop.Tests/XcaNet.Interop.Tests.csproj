@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\src\XcaNet.Interop.OpenSsl\XcaNet.Interop.OpenSsl.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Shared\OpenSslBridgeTestHarness.cs" Link="Support\OpenSslBridgeTestHarness.cs" />
+  </ItemGroup>
+
 </Project>
