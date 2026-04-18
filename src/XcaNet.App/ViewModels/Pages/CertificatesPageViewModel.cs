@@ -1,16 +1,14 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using XcaNet.App.ViewModels.Items;
 using XcaNet.Contracts.Browser;
+using XcaNet.Contracts.Revocation;
 
 namespace XcaNet.App.ViewModels.Pages;
 
-public sealed class CertificatesPageViewModel : PageViewModelBase
+public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase<CertificateListItem, Guid>
 {
-    private CertificateListItem? _selectedItem;
-    private string _searchText = string.Empty;
-    private CertificateValidityFilter _selectedValidityFilter = CertificateValidityFilter.All;
-    private CertificateAuthorityFilter _selectedAuthorityFilter = CertificateAuthorityFilter.All;
+    private CertificateFilterState _filter = new(null, null, null, null, null, CertificateValidityFilter.All, CertificateAuthorityFilter.All, 30);
+    private CertificateInspectorData? _inspector;
     private string _importDisplayName = "Imported Material";
     private string _importPayload = string.Empty;
     private string _importPassword = string.Empty;
@@ -19,13 +17,15 @@ public sealed class CertificatesPageViewModel : PageViewModelBase
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
     private string _selectedExportPassword = string.Empty;
     private string _exportPreview = string.Empty;
+    private CertificateRevocationReason _selectedRevocationReason = CertificateRevocationReason.Unspecified;
+    private DateTimeOffset _selectedRevocationDate = DateTimeOffset.UtcNow;
+    private string _revocationConfirmationText = string.Empty;
+    private RelatedNavigationItem? _selectedChildNavigationItem;
 
     public CertificatesPageViewModel()
         : base("Certificates")
     {
     }
-
-    public ObservableCollection<CertificateListItem> Items { get; } = [];
 
     public IReadOnlyList<CertificateValidityFilter> ValidityFilters { get; } =
         [CertificateValidityFilter.All, CertificateValidityFilter.Valid, CertificateValidityFilter.ExpiringSoon, CertificateValidityFilter.Expired, CertificateValidityFilter.Revoked];
@@ -42,36 +42,19 @@ public sealed class CertificatesPageViewModel : PageViewModelBase
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } =
         [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs12];
 
-    public CertificateInspectorViewModel Inspector { get; } = new();
+    public IReadOnlyList<CertificateRevocationReason> RevocationReasons { get; } =
+        Enum.GetValues<CertificateRevocationReason>();
 
-    public CertificateListItem? SelectedItem
+    public CertificateFilterState Filter
     {
-        get => _selectedItem;
-        set
-        {
-            if (SetProperty(ref _selectedItem, value))
-            {
-                OnPropertyChanged(nameof(HasSelection));
-            }
-        }
+        get => _filter;
+        set => SetProperty(ref _filter, value);
     }
 
-    public string SearchText
+    public CertificateInspectorData? Inspector
     {
-        get => _searchText;
-        set => SetProperty(ref _searchText, value);
-    }
-
-    public CertificateValidityFilter SelectedValidityFilter
-    {
-        get => _selectedValidityFilter;
-        set => SetProperty(ref _selectedValidityFilter, value);
-    }
-
-    public CertificateAuthorityFilter SelectedAuthorityFilter
-    {
-        get => _selectedAuthorityFilter;
-        set => SetProperty(ref _selectedAuthorityFilter, value);
+        get => _inspector;
+        set => SetProperty(ref _inspector, value);
     }
 
     public string ImportDisplayName
@@ -122,13 +105,45 @@ public sealed class CertificatesPageViewModel : PageViewModelBase
         set => SetProperty(ref _exportPreview, value);
     }
 
-    public bool HasSelection => SelectedItem is not null;
+    public CertificateRevocationReason SelectedRevocationReason
+    {
+        get => _selectedRevocationReason;
+        set => SetProperty(ref _selectedRevocationReason, value);
+    }
 
-    public ICommand? RefreshCommand { get; set; }
+    public DateTimeOffset SelectedRevocationDate
+    {
+        get => _selectedRevocationDate;
+        set => SetProperty(ref _selectedRevocationDate, value);
+    }
+
+    public string RevocationConfirmationText
+    {
+        get => _revocationConfirmationText;
+        set
+        {
+            if (SetProperty(ref _revocationConfirmationText, value))
+            {
+                OnPropertyChanged(nameof(IsRevocationConfirmed));
+            }
+        }
+    }
+
+    public bool IsRevocationConfirmed => string.Equals(RevocationConfirmationText, "REVOKE", StringComparison.Ordinal);
+
+    public RelatedNavigationItem? SelectedChildNavigationItem
+    {
+        get => _selectedChildNavigationItem;
+        set => SetProperty(ref _selectedChildNavigationItem, value);
+    }
 
     public ICommand? ImportMaterialCommand { get; set; }
 
     public ICommand? ExportSelectedCommand { get; set; }
+
+    public ICommand? RevokeSelectedCommand { get; set; }
+
+    public ICommand? GenerateCertificateRevocationListCommand { get; set; }
 
     public ICommand? OpenIssuerCommand { get; set; }
 
@@ -136,17 +151,5 @@ public sealed class CertificatesPageViewModel : PageViewModelBase
 
     public ICommand? OpenChildCertificateCommand { get; set; }
 
-    public void SetItems(IEnumerable<CertificateListItem> items)
-    {
-        var previousSelectionId = SelectedItem?.CertificateId;
-        Items.Clear();
-        foreach (var item in items)
-        {
-            Items.Add(item);
-        }
-
-        SelectedItem = previousSelectionId.HasValue
-            ? Items.FirstOrDefault(x => x.CertificateId == previousSelectionId.Value) ?? Items.FirstOrDefault()
-            : Items.FirstOrDefault();
-    }
+    protected override Guid GetItemId(CertificateListItem item) => item.CertificateId;
 }

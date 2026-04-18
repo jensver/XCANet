@@ -5,6 +5,7 @@ public sealed record CertificateRequestListItem(
     string DisplayName,
     string Subject,
     Guid? PrivateKeyId,
+    NavigationTarget? PrivateKeyTarget,
     string KeyAlgorithm,
     string SubjectAlternativeNames,
     DateTimeOffset CreatedUtc);

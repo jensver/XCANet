@@ -32,9 +32,9 @@ public sealed class BrowseWorkflowsTests
             new SignStoredCertificateSigningRequestRequest(csr.Value!.CertificateSigningRequestId, issuerCertificate.Value!.CertificateId, issuerKey.Value.PrivateKeyId, "Leaf Certificate", 180),
             CancellationToken.None);
 
-        var allCertificates = await service.ListCertificatesAsync(new CertificateBrowserQuery(null, CertificateValidityFilter.All, CertificateAuthorityFilter.All, 30), CancellationToken.None);
-        var authorityCertificates = await service.ListCertificatesAsync(new CertificateBrowserQuery(null, CertificateValidityFilter.All, CertificateAuthorityFilter.Authorities, 30), CancellationToken.None);
-        var searchedCertificates = await service.ListCertificatesAsync(new CertificateBrowserQuery("leaf.example.test", CertificateValidityFilter.All, CertificateAuthorityFilter.All, 30), CancellationToken.None);
+        var allCertificates = await service.ListCertificatesAsync(new CertificateFilterState(null, null, null, null, null, CertificateValidityFilter.All, CertificateAuthorityFilter.All, 30), CancellationToken.None);
+        var authorityCertificates = await service.ListCertificatesAsync(new CertificateFilterState(null, null, null, null, null, CertificateValidityFilter.All, CertificateAuthorityFilter.Authorities, 30), CancellationToken.None);
+        var searchedCertificates = await service.ListCertificatesAsync(new CertificateFilterState(null, "leaf.example.test", null, null, null, CertificateValidityFilter.All, CertificateAuthorityFilter.All, 30), CancellationToken.None);
         var inspector = await service.GetCertificateInspectorAsync(leafCertificate.Value!.CertificateId, CancellationToken.None);
 
         Assert.True(allCertificates.IsSuccess);
@@ -48,8 +48,8 @@ public sealed class BrowseWorkflowsTests
         Assert.Single(searchedItems);
         Assert.Equal(leafCertificate.Value!.CertificateId, searchedItems[0].CertificateId);
         Assert.True(inspector.IsSuccess);
-        Assert.Equal("Issuer CA", inspector.Value!.IssuerDisplayName);
-        Assert.Equal("Leaf Key", inspector.Value.PrivateKeyDisplayName);
+        Assert.Equal("Issuer CA", inspector.Value!.Display.IssuerDisplayName);
+        Assert.Equal("Leaf Key", inspector.Value.Display.PrivateKeyDisplayName);
     }
 
     [Fact]

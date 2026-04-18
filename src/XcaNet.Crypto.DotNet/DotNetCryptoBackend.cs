@@ -1,6 +1,8 @@
 using System.Formats.Asn1;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using XcaNet.Contracts.Revocation;
 using XcaNet.Contracts.Crypto;
 using XcaNet.Contracts.Results;
 using XcaNet.Crypto.Abstractions;
@@ -150,6 +152,61 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
         catch (CryptographicException)
         {
             return Task.FromResult(OperationResult<CertificateDetails>.Failure(OperationErrorCode.ValidationFailed, "Invalid certificate data."));
+        }
+    }
+
+    public Task<OperationResult<CertificateRevocationListResult>> GenerateCertificateRevocationListAsync(GenerateCertificateRevocationListRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            using var issuerCertificate = X509CertificateLoader.LoadCertificate(request.IssuerCertificateDer);
+            using var issuerKey = LoadPrivateKey(request.IssuerPrivateKeyPkcs8, CryptoDataFormat.Pkcs8);
+            using var issuerCertificateWithKey = AttachPrivateKey(issuerCertificate, issuerKey);
+            var builder = new CertificateRevocationListBuilder();
+
+            foreach (var revokedCertificate in request.RevokedCertificates)
+            {
+                builder.AddEntry(
+                    ParseSerialNumber(revokedCertificate.SerialNumber),
+                    revokedCertificate.RevokedAt,
+                    MapRevocationReason(revokedCertificate.Reason));
+            }
+
+            var crlBytes = BuildCertificateRevocationList(
+                builder,
+                issuerCertificateWithKey,
+                request.CrlNumber,
+                request.ThisUpdate,
+                request.NextUpdate,
+                issuerKey.Algorithm);
+
+            var pem = PemEncoding.WriteString("X509 CRL", crlBytes);
+            var details = ParseCertificateRevocationList(crlBytes, CryptoDataFormat.Der);
+            return Task.FromResult(OperationResult<CertificateRevocationListResult>.Success(
+                new CertificateRevocationListResult(crlBytes, pem, details),
+                "Certificate revocation list generated."));
+        }
+        catch (CryptographicException)
+        {
+            return Task.FromResult(OperationResult<CertificateRevocationListResult>.Failure(OperationErrorCode.ValidationFailed, "Failed to generate the certificate revocation list."));
+        }
+    }
+
+    public Task<OperationResult<CertificateRevocationListDetails>> ParseCertificateRevocationListAsync(CertificateRevocationListParseRequest request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        try
+        {
+            return Task.FromResult(OperationResult<CertificateRevocationListDetails>.Success(
+                ParseCertificateRevocationList(request.Data, request.Format),
+                "Certificate revocation list parsed."));
+        }
+        catch (CryptographicException)
+        {
+            return Task.FromResult(OperationResult<CertificateRevocationListDetails>.Failure(OperationErrorCode.ValidationFailed, "Invalid certificate revocation list data."));
         }
     }
 
@@ -492,6 +549,180 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
     private static string ComputeFingerprint(byte[] subjectPublicKeyInfo)
     {
         return Convert.ToHexString(SHA256.HashData(subjectPublicKeyInfo));
+    }
+
+    private static byte[] BuildCertificateRevocationList(
+        CertificateRevocationListBuilder builder,
+        X509Certificate2 issuerCertificateWithKey,
+        long crlNumber,
+        DateTimeOffset thisUpdate,
+        DateTimeOffset nextUpdate,
+        string algorithm)
+    {
+        return algorithm switch
+        {
+            "RSA" => builder.Build(
+                issuerCertificateWithKey,
+                new BigInteger(crlNumber),
+                nextUpdate,
+                HashAlgorithmName.SHA256,
+                RSASignaturePadding.Pkcs1,
+                thisUpdate),
+            "ECDSA" => builder.Build(
+                issuerCertificateWithKey,
+                new BigInteger(crlNumber),
+                nextUpdate,
+                HashAlgorithmName.SHA256,
+                null,
+                thisUpdate),
+            _ => throw new CryptographicException("Unsupported issuer key algorithm.")
+        };
+    }
+
+    private static CertificateRevocationListDetails ParseCertificateRevocationList(byte[] data, CryptoDataFormat format)
+    {
+        var derData = format == CryptoDataFormat.Pem ? DecodePem("X509 CRL", data) : data;
+        var reader = new AsnReader(derData, AsnEncodingRules.DER);
+        var certificateList = reader.ReadSequence();
+        var tbsCertList = certificateList.ReadSequence();
+
+        if (tbsCertList.PeekTag().HasSameClassAndValue(Asn1Tag.Integer))
+        {
+            tbsCertList.ReadInteger();
+        }
+
+        ReadAlgorithmIdentifier(tbsCertList);
+        var issuerNameBytes = tbsCertList.ReadEncodedValue().ToArray();
+        var issuer = new X500DistinguishedName(issuerNameBytes).Name ?? string.Empty;
+        var thisUpdate = ReadTime(tbsCertList);
+        DateTimeOffset? nextUpdate = null;
+        if (tbsCertList.HasData && IsTimeTag(tbsCertList.PeekTag()))
+        {
+            nextUpdate = ReadTime(tbsCertList);
+        }
+
+        var revokedEntries = new List<RevokedCertificateEntry>();
+        if (tbsCertList.HasData && tbsCertList.PeekTag().HasSameClassAndValue(Asn1Tag.Sequence))
+        {
+            var revokedCertificates = tbsCertList.ReadSequence();
+            while (revokedCertificates.HasData)
+            {
+                var revokedEntry = revokedCertificates.ReadSequence();
+                var serialNumber = Convert.ToHexString(revokedEntry.ReadIntegerBytes().ToArray());
+                var revokedAt = ReadTime(revokedEntry);
+                var reason = CertificateRevocationReason.Unspecified;
+
+                if (revokedEntry.HasData)
+                {
+                    var extensions = revokedEntry.ReadSequence();
+                    while (extensions.HasData)
+                    {
+                        var extension = extensions.ReadSequence();
+                        var oid = extension.ReadObjectIdentifier();
+                        if (extension.HasData && extension.PeekTag().HasSameClassAndValue(Asn1Tag.Boolean))
+                        {
+                            extension.ReadBoolean();
+                        }
+
+                        var value = extension.ReadOctetString();
+                        if (oid == "2.5.29.21")
+                        {
+                            var reasonReader = new AsnReader(value, AsnEncodingRules.DER);
+                            reason = reasonReader.ReadEnumeratedValue<CertificateRevocationReason>();
+                        }
+                    }
+                }
+
+                revokedEntries.Add(new RevokedCertificateEntry(Guid.Empty, serialNumber, serialNumber, serialNumber, reason, revokedAt));
+            }
+        }
+
+        string crlNumber = "0";
+        if (tbsCertList.HasData && tbsCertList.PeekTag().HasSameClassAndValue(new Asn1Tag(TagClass.ContextSpecific, 0)))
+        {
+            var extensionsContainer = tbsCertList.ReadSequence(new Asn1Tag(TagClass.ContextSpecific, 0));
+            var extensions = extensionsContainer.ReadSequence();
+            while (extensions.HasData)
+            {
+                var extension = extensions.ReadSequence();
+                var oid = extension.ReadObjectIdentifier();
+                if (extension.HasData && extension.PeekTag().HasSameClassAndValue(Asn1Tag.Boolean))
+                {
+                    extension.ReadBoolean();
+                }
+
+                var value = extension.ReadOctetString();
+                if (oid == "2.5.29.20")
+                {
+                    var numberReader = new AsnReader(value, AsnEncodingRules.DER);
+                    crlNumber = numberReader.ReadInteger().ToString();
+                }
+            }
+        }
+
+        return new CertificateRevocationListDetails(issuer, crlNumber, thisUpdate, nextUpdate, revokedEntries);
+    }
+
+    private static ReadOnlyMemory<byte> ReadAlgorithmIdentifier(AsnReader reader)
+    {
+        return reader.ReadEncodedValue();
+    }
+
+    private static DateTimeOffset ReadTime(AsnReader reader)
+    {
+        var tag = reader.PeekTag();
+        return tag.TagValue switch
+        {
+            (int)UniversalTagNumber.UtcTime => reader.ReadUtcTime(),
+            (int)UniversalTagNumber.GeneralizedTime => reader.ReadGeneralizedTime(),
+            _ => throw new CryptographicException("Unsupported time value in CRL.")
+        };
+    }
+
+    private static bool IsTimeTag(Asn1Tag tag)
+    {
+        return tag.TagClass == TagClass.Universal
+            && (tag.TagValue == (int)UniversalTagNumber.UtcTime || tag.TagValue == (int)UniversalTagNumber.GeneralizedTime);
+    }
+
+    private static byte[] DecodePem(string label, byte[] data)
+    {
+        var text = System.Text.Encoding.UTF8.GetString(data);
+        var field = PemEncoding.Find(text);
+        if (!text[field.Label].SequenceEqual(label))
+        {
+            throw new CryptographicException("PEM payload not found.");
+        }
+
+        return Convert.FromBase64String(text[field.Base64Data].ToString());
+    }
+
+    private static byte[] ParseSerialNumber(string serialNumber)
+    {
+        return Convert.FromHexString(serialNumber.Length % 2 == 0 ? serialNumber : $"0{serialNumber}");
+    }
+
+    private static X509RevocationReason? MapRevocationReason(CertificateRevocationReason reason)
+    {
+        return reason switch
+        {
+            CertificateRevocationReason.KeyCompromise => X509RevocationReason.KeyCompromise,
+            CertificateRevocationReason.CaCompromise => X509RevocationReason.CACompromise,
+            CertificateRevocationReason.AffiliationChanged => X509RevocationReason.AffiliationChanged,
+            CertificateRevocationReason.Superseded => X509RevocationReason.Superseded,
+            CertificateRevocationReason.CessationOfOperation => X509RevocationReason.CessationOfOperation,
+            CertificateRevocationReason.CertificateHold => X509RevocationReason.CertificateHold,
+            CertificateRevocationReason.PrivilegeWithdrawn => X509RevocationReason.PrivilegeWithdrawn,
+            CertificateRevocationReason.AaCompromise => X509RevocationReason.AACompromise,
+            _ => X509RevocationReason.Unspecified
+        };
+    }
+
+    private static CertificateRevocationReason MapRevocationReason(int reason)
+    {
+        return Enum.IsDefined(typeof(CertificateRevocationReason), reason)
+            ? (CertificateRevocationReason)reason
+            : CertificateRevocationReason.Unspecified;
     }
 
     private static X509SignatureGenerator CreateSignatureGenerator(LoadedPrivateKey loadedKey)

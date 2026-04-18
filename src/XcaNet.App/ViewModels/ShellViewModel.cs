@@ -1,5 +1,7 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using XcaNet.App.Commands;
 using XcaNet.App.ViewModels.Navigation;
 using XcaNet.App.ViewModels.Notifications;
@@ -10,7 +12,7 @@ using XcaNet.Contracts.Crypto;
 using XcaNet.Contracts.Crypto.Workflow;
 using XcaNet.Contracts.Database;
 using XcaNet.Contracts.Results;
-using Microsoft.Extensions.Logging;
+using XcaNet.Contracts.Revocation;
 
 namespace XcaNet.App.ViewModels;
 
@@ -23,13 +25,15 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _openDatabaseCommand;
     private readonly AsyncCommand _unlockDatabaseCommand;
     private readonly AsyncCommand _lockDatabaseCommand;
-    private readonly AsyncCommand _refreshDashboardCommand;
+    private readonly AsyncCommand _refreshWorkspaceCommand;
     private readonly AsyncCommand _refreshCertificatesCommand;
     private readonly AsyncCommand _importMaterialCommand;
     private readonly AsyncCommand _exportCertificateCommand;
-    private readonly DelegateCommand _openIssuerCommand;
-    private readonly DelegateCommand _openPrivateKeyFromCertificateCommand;
-    private readonly DelegateCommand _openChildCertificateCommand;
+    private readonly AsyncCommand _revokeCertificateCommand;
+    private readonly AsyncCommand _generateCertificateRevocationListCommand;
+    private readonly DelegateCommand _navigateIssuerCommand;
+    private readonly DelegateCommand _navigatePrivateKeyCommand;
+    private readonly DelegateCommand _navigateChildCertificateCommand;
     private readonly AsyncCommand _refreshPrivateKeysCommand;
     private readonly AsyncCommand _generateKeyCommand;
     private readonly AsyncCommand _createSelfSignedCaCommand;
@@ -38,8 +42,9 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _refreshCertificateRequestsCommand;
     private readonly AsyncCommand _signCertificateSigningRequestCommand;
     private readonly AsyncCommand _exportCertificateSigningRequestCommand;
-    private readonly DelegateCommand _openPrivateKeyFromRequestCommand;
+    private readonly DelegateCommand _navigateRequestPrivateKeyCommand;
     private readonly AsyncCommand _refreshCertificateRevocationListsCommand;
+    private readonly DelegateCommand _navigateCrlIssuerCommand;
     private readonly AsyncCommand _refreshTemplatesCommand;
 
     private PageViewModelBase _currentPage;
@@ -66,23 +71,26 @@ public sealed class ShellViewModel : ViewModelBase
         _openDatabaseCommand = new AsyncCommand(OpenDatabaseAsync, () => !IsBusy);
         _unlockDatabaseCommand = new AsyncCommand(UnlockDatabaseAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Locked);
         _lockDatabaseCommand = new AsyncCommand(LockDatabaseAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
-        _refreshDashboardCommand = new AsyncCommand(RefreshAllAsync, () => !IsBusy);
+        _refreshWorkspaceCommand = new AsyncCommand(RefreshAllAsync, () => !IsBusy);
         _refreshCertificatesCommand = new AsyncCommand(LoadCertificatesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _importMaterialCommand = new AsyncCommand(ImportMaterialAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
-        _exportCertificateCommand = new AsyncCommand(ExportSelectedCertificateAsync, () => !IsBusy && CertificatesPage.SelectedItem is not null && Snapshot.State == DatabaseSessionState.Unlocked);
-        _openIssuerCommand = new DelegateCommand(OpenIssuerCertificate, () => CertificatesPage.Inspector.CanOpenIssuer);
-        _openPrivateKeyFromCertificateCommand = new DelegateCommand(OpenPrivateKeyFromCertificate, () => CertificatesPage.Inspector.CanOpenPrivateKey);
-        _openChildCertificateCommand = new DelegateCommand(OpenChildCertificate, () => CertificatesPage.Inspector.CanOpenSelectedChild);
+        _exportCertificateCommand = new AsyncCommand(ExportSelectedCertificateAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.HasSelection);
+        _revokeCertificateCommand = new AsyncCommand(RevokeSelectedCertificateAsync, CanRevokeSelectedCertificate);
+        _generateCertificateRevocationListCommand = new AsyncCommand(GenerateCertificateRevocationListAsync, CanGenerateCertificateRevocationList);
+        _navigateIssuerCommand = new DelegateCommand(() => NavigateTo(CertificatesPage.Inspector?.Navigation.Issuer), () => CertificatesPage.Inspector?.Navigation.Issuer is not null);
+        _navigatePrivateKeyCommand = new DelegateCommand(() => NavigateTo(CertificatesPage.Inspector?.Navigation.PrivateKey), () => CertificatesPage.Inspector?.Navigation.PrivateKey is not null);
+        _navigateChildCertificateCommand = new DelegateCommand(() => NavigateTo(CertificatesPage.SelectedChildNavigationItem?.Target), () => CertificatesPage.SelectedChildNavigationItem is not null);
         _refreshPrivateKeysCommand = new AsyncCommand(LoadPrivateKeysAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _generateKeyCommand = new AsyncCommand(GenerateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
-        _createSelfSignedCaCommand = new AsyncCommand(CreateSelfSignedCaAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.SelectedItem is not null);
-        _createCertificateSigningRequestCommand = new AsyncCommand(CreateCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.SelectedItem is not null);
-        _exportPrivateKeyCommand = new AsyncCommand(ExportSelectedPrivateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.SelectedItem is not null);
+        _createSelfSignedCaCommand = new AsyncCommand(CreateSelfSignedCaAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
+        _createCertificateSigningRequestCommand = new AsyncCommand(CreateCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
+        _exportPrivateKeyCommand = new AsyncCommand(ExportSelectedPrivateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _refreshCertificateRequestsCommand = new AsyncCommand(LoadCertificateRequestsAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
-        _signCertificateSigningRequestCommand = new AsyncCommand(SignCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.SelectedItem is not null && CertificateRequestsPage.SelectedIssuerCertificate is not null && CertificateRequestsPage.SelectedIssuerPrivateKey is not null);
-        _exportCertificateSigningRequestCommand = new AsyncCommand(ExportSelectedCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.SelectedItem is not null);
-        _openPrivateKeyFromRequestCommand = new DelegateCommand(OpenPrivateKeyFromRequest, () => CertificateRequestsPage.SelectedItem?.PrivateKeyId is not null);
+        _signCertificateSigningRequestCommand = new AsyncCommand(SignCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection && CertificateRequestsPage.SelectedIssuerCertificate is not null && CertificateRequestsPage.SelectedIssuerPrivateKey is not null);
+        _exportCertificateSigningRequestCommand = new AsyncCommand(ExportSelectedCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection);
+        _navigateRequestPrivateKeyCommand = new DelegateCommand(() => NavigateTo(CertificateRequestsPage.SelectedItem?.PrivateKeyTarget), () => CertificateRequestsPage.SelectedItem?.PrivateKeyTarget is not null);
         _refreshCertificateRevocationListsCommand = new AsyncCommand(LoadCertificateRevocationListsAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
+        _navigateCrlIssuerCommand = new DelegateCommand(() => NavigateTo(CertificateRevocationListsPage.Inspector?.IssuerTarget), () => CertificateRevocationListsPage.Inspector is not null);
         _refreshTemplatesCommand = new AsyncCommand(LoadTemplatesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
@@ -93,9 +101,11 @@ public sealed class ShellViewModel : ViewModelBase
         CertificatesPage.RefreshCommand = _refreshCertificatesCommand;
         CertificatesPage.ImportMaterialCommand = _importMaterialCommand;
         CertificatesPage.ExportSelectedCommand = _exportCertificateCommand;
-        CertificatesPage.OpenIssuerCommand = _openIssuerCommand;
-        CertificatesPage.OpenPrivateKeyCommand = _openPrivateKeyFromCertificateCommand;
-        CertificatesPage.OpenChildCertificateCommand = _openChildCertificateCommand;
+        CertificatesPage.RevokeSelectedCommand = _revokeCertificateCommand;
+        CertificatesPage.GenerateCertificateRevocationListCommand = _generateCertificateRevocationListCommand;
+        CertificatesPage.OpenIssuerCommand = _navigateIssuerCommand;
+        CertificatesPage.OpenPrivateKeyCommand = _navigatePrivateKeyCommand;
+        CertificatesPage.OpenChildCertificateCommand = _navigateChildCertificateCommand;
 
         PrivateKeysPage.RefreshCommand = _refreshPrivateKeysCommand;
         PrivateKeysPage.GenerateKeyCommand = _generateKeyCommand;
@@ -106,9 +116,10 @@ public sealed class ShellViewModel : ViewModelBase
         CertificateRequestsPage.RefreshCommand = _refreshCertificateRequestsCommand;
         CertificateRequestsPage.SignSelectedCommand = _signCertificateSigningRequestCommand;
         CertificateRequestsPage.ExportSelectedCommand = _exportCertificateSigningRequestCommand;
-        CertificateRequestsPage.OpenSelectedPrivateKeyCommand = _openPrivateKeyFromRequestCommand;
+        CertificateRequestsPage.OpenSelectedPrivateKeyCommand = _navigateRequestPrivateKeyCommand;
 
         CertificateRevocationListsPage.RefreshCommand = _refreshCertificateRevocationListsCommand;
+        CertificateRevocationListsPage.OpenIssuerCommand = _navigateCrlIssuerCommand;
         TemplatesPage.RefreshCommand = _refreshTemplatesCommand;
 
         NavigationItems =
@@ -125,17 +136,9 @@ public sealed class ShellViewModel : ViewModelBase
         _currentPage = DashboardPage;
 
         CertificatesPage.PropertyChanged += OnCertificatesPagePropertyChanged;
-        CertificatesPage.Inspector.PropertyChanged += (_, _) => RefreshCommandStates();
-        PrivateKeysPage.PropertyChanged += (_, _) => RefreshCommandStates();
-        CertificateRequestsPage.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName is nameof(CertificateRequestsPageViewModel.SelectedItem)
-                or nameof(CertificateRequestsPageViewModel.SelectedIssuerCertificate)
-                or nameof(CertificateRequestsPageViewModel.SelectedIssuerPrivateKey))
-            {
-                RefreshCommandStates();
-            }
-        };
+        PrivateKeysPage.PropertyChanged += OnPageSelectionChanged;
+        CertificateRequestsPage.PropertyChanged += OnPageSelectionChanged;
+        CertificateRevocationListsPage.PropertyChanged += OnPageSelectionChanged;
 
         SelectPage(DashboardPage);
         ApplySnapshot(Snapshot);
@@ -207,18 +210,14 @@ public sealed class ShellViewModel : ViewModelBase
     {
         await RunDatabaseActionAsync(
             "Opening database",
-            () => _databaseSessionService.OpenDatabaseAsync(
-                new OpenDatabaseRequest(SettingsSecurityPage.DatabasePath),
-                CancellationToken.None));
+            () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(SettingsSecurityPage.DatabasePath), CancellationToken.None));
     }
 
     private async Task UnlockDatabaseAsync()
     {
         await RunDatabaseActionAsync(
             "Unlocking database",
-            () => _databaseSessionService.UnlockDatabaseAsync(
-                new UnlockDatabaseRequest(SettingsSecurityPage.Password),
-                CancellationToken.None));
+            () => _databaseSessionService.UnlockDatabaseAsync(new UnlockDatabaseRequest(SettingsSecurityPage.Password), CancellationToken.None));
     }
 
     private async Task LockDatabaseAsync()
@@ -235,11 +234,7 @@ public sealed class ShellViewModel : ViewModelBase
 
         using var scope = BeginBusy("Generating managed private key");
         var result = await _databaseSessionService.GenerateStoredKeyAsync(
-            new GenerateStoredKeyRequest(
-                PrivateKeysPage.NewKeyDisplayName,
-                algorithm,
-                algorithm == KeyAlgorithmKind.Rsa ? 3072 : null,
-                curve),
+            new GenerateStoredKeyRequest(PrivateKeysPage.NewKeyDisplayName, algorithm, algorithm == KeyAlgorithmKind.Rsa ? 3072 : null, curve),
             CancellationToken.None);
 
         if (!result.IsSuccess || result.Value is null)
@@ -249,8 +244,7 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         await RefreshAllAsync();
-        SelectPage(PrivateKeysPage);
-        SelectPrivateKey(result.Value.PrivateKeyId);
+        NavigateTo(new NavigationTarget(BrowserEntityType.PrivateKey, result.Value.PrivateKeyId, NavigationFocusSection.Overview));
         NotifySuccess($"Generated {result.Value.Algorithm} key.");
     }
 
@@ -278,8 +272,7 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         await RefreshAllAsync();
-        SelectCertificate(result.Value.CertificateId);
-        SelectPage(CertificatesPage);
+        NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, result.Value.CertificateId, NavigationFocusSection.Inspector));
         NotifySuccess("Self-signed CA certificate created.");
     }
 
@@ -307,8 +300,7 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         await RefreshAllAsync();
-        SelectCertificateRequest(result.Value.CertificateSigningRequestId);
-        SelectPage(CertificateRequestsPage);
+        NavigateTo(new NavigationTarget(BrowserEntityType.CertificateSigningRequest, result.Value.CertificateSigningRequestId, NavigationFocusSection.Overview));
         NotifySuccess("Certificate signing request created.");
     }
 
@@ -339,9 +331,64 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         await RefreshAllAsync();
-        SelectCertificate(result.Value.CertificateId);
-        SelectPage(CertificatesPage);
+        NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, result.Value.CertificateId, NavigationFocusSection.Inspector));
         NotifySuccess("CSR signed into a certificate.");
+    }
+
+    private async Task RevokeSelectedCertificateAsync()
+    {
+        if (CertificatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a certificate first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Revoking certificate");
+        var result = await _databaseSessionService.RevokeCertificateAsync(
+            new RevokeStoredCertificateRequest(
+                CertificatesPage.SelectedItem.CertificateId,
+                CertificatesPage.SelectedRevocationReason,
+                CertificatesPage.SelectedRevocationDate),
+            CancellationToken.None);
+
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        CertificatesPage.RevocationConfirmationText = string.Empty;
+        await RefreshAllAsync();
+        NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, result.Value.CertificateId, NavigationFocusSection.Revocation));
+        NotifySuccess("Certificate revoked.");
+    }
+
+    private async Task GenerateCertificateRevocationListAsync()
+    {
+        if (CertificatesPage.SelectedItem?.PrivateKeyId is null)
+        {
+            NotifyFailure("The selected CA certificate must have an associated private key.");
+            return;
+        }
+
+        using var scope = BeginBusy("Generating certificate revocation list");
+        var result = await _databaseSessionService.GenerateCertificateRevocationListAsync(
+            new GenerateCertificateRevocationListWorkflowRequest(
+                CertificatesPage.SelectedItem.CertificateId,
+                CertificatesPage.SelectedItem.PrivateKeyId.Value,
+                $"{CertificatesPage.SelectedItem.DisplayName} CRL",
+                7),
+            CancellationToken.None);
+
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await RefreshAllAsync();
+        NavigateTo(new NavigationTarget(BrowserEntityType.CertificateRevocationList, result.Value.CertificateRevocationListId, NavigationFocusSection.RevokedEntries));
+        NotifySuccess("Certificate revocation list generated.");
     }
 
     private async Task ImportMaterialAsync()
@@ -365,15 +412,15 @@ public sealed class ShellViewModel : ViewModelBase
         await RefreshAllAsync();
         if (result.Value.CertificateIds.Count > 0)
         {
-            SelectCertificate(result.Value.CertificateIds[0]);
+            NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, result.Value.CertificateIds[0], NavigationFocusSection.Inspector));
         }
         else if (result.Value.PrivateKeyIds.Count > 0)
         {
-            SelectPrivateKey(result.Value.PrivateKeyIds[0]);
+            NavigateTo(new NavigationTarget(BrowserEntityType.PrivateKey, result.Value.PrivateKeyIds[0], NavigationFocusSection.Overview));
         }
         else if (result.Value.CertificateSigningRequestIds.Count > 0)
         {
-            SelectCertificateRequest(result.Value.CertificateSigningRequestIds[0]);
+            NavigateTo(new NavigationTarget(BrowserEntityType.CertificateSigningRequest, result.Value.CertificateSigningRequestIds[0], NavigationFocusSection.Overview));
         }
 
         NotifySuccess("Material imported.");
@@ -381,7 +428,7 @@ public sealed class ShellViewModel : ViewModelBase
 
     private async Task ExportSelectedCertificateAsync()
     {
-        if (CertificatesPage.SelectedItem is null)
+        if (!CertificatesPage.HasSelection || CertificatesPage.SelectedItem is null)
         {
             NotifyFailure("Select a certificate first.");
             return;
@@ -402,7 +449,7 @@ public sealed class ShellViewModel : ViewModelBase
 
     private async Task ExportSelectedPrivateKeyAsync()
     {
-        if (PrivateKeysPage.SelectedItem is null)
+        if (!PrivateKeysPage.HasSelection || PrivateKeysPage.SelectedItem is null)
         {
             NotifyFailure("Select a private key first.");
             return;
@@ -423,7 +470,7 @@ public sealed class ShellViewModel : ViewModelBase
 
     private async Task ExportSelectedCertificateSigningRequestAsync()
     {
-        if (CertificateRequestsPage.SelectedItem is null)
+        if (!CertificateRequestsPage.HasSelection || CertificateRequestsPage.SelectedItem is null)
         {
             NotifyFailure("Select a CSR first.");
             return;
@@ -454,8 +501,8 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         await LoadDashboardAsync();
-        await LoadCertificatesAsync();
         await LoadPrivateKeysAsync();
+        await LoadCertificatesAsync();
         await LoadCertificateRequestsAsync();
         await LoadCertificateRevocationListsAsync();
         await LoadTemplatesAsync();
@@ -486,26 +533,13 @@ public sealed class ShellViewModel : ViewModelBase
         if (Snapshot.State == DatabaseSessionState.Closed)
         {
             CertificatesPage.SetItems([]);
-            CertificatesPage.Inspector.Clear();
+            CertificatesPage.Inspector = null;
+            CertificatesPage.SelectedChildNavigationItem = null;
             return;
         }
 
-        var result = await _databaseSessionService.ListCertificatesAsync(
-            new CertificateBrowserQuery(
-                CertificatesPage.SearchText,
-                CertificatesPage.SelectedValidityFilter,
-                CertificatesPage.SelectedAuthorityFilter,
-                30),
-            CancellationToken.None);
-
-        if (!result.IsSuccess || result.Value is null)
-        {
-            CertificatesPage.SetItems([]);
-            CertificatesPage.Inspector.Clear();
-            return;
-        }
-
-        CertificatesPage.SetItems(result.Value);
+        var result = await _databaseSessionService.ListCertificatesAsync(CertificatesPage.Filter, CancellationToken.None);
+        CertificatesPage.SetItems(result.IsSuccess && result.Value is not null ? result.Value : []);
         await LoadSelectedCertificateInspectorAsync();
         CertificateRequestsPage.SetIssuers(CertificatesPage.Items, PrivateKeysPage.Items);
     }
@@ -540,11 +574,13 @@ public sealed class ShellViewModel : ViewModelBase
         if (Snapshot.State == DatabaseSessionState.Closed)
         {
             CertificateRevocationListsPage.SetItems([]);
+            CertificateRevocationListsPage.Inspector = null;
             return;
         }
 
         var result = await _databaseSessionService.ListCertificateRevocationListsAsync(CancellationToken.None);
         CertificateRevocationListsPage.SetItems(result.IsSuccess && result.Value is not null ? result.Value : []);
+        await LoadSelectedCertificateRevocationListInspectorAsync();
     }
 
     private async Task LoadTemplatesAsync()
@@ -561,64 +597,63 @@ public sealed class ShellViewModel : ViewModelBase
 
     private async Task LoadSelectedCertificateInspectorAsync()
     {
-        if (CertificatesPage.SelectedItem is null || Snapshot.State == DatabaseSessionState.Closed)
+        if (!CertificatesPage.HasSelection || CertificatesPage.SelectedItem is null || Snapshot.State == DatabaseSessionState.Closed)
         {
-            CertificatesPage.Inspector.Clear();
+            CertificatesPage.Inspector = null;
+            CertificatesPage.SelectedChildNavigationItem = null;
+            RefreshCommandStates();
             return;
         }
 
         var result = await _databaseSessionService.GetCertificateInspectorAsync(CertificatesPage.SelectedItem.CertificateId, CancellationToken.None);
-        if (!result.IsSuccess || result.Value is null)
-        {
-            CertificatesPage.Inspector.Clear();
-            return;
-        }
-
-        CertificatesPage.Inspector.Apply(result.Value);
+        CertificatesPage.Inspector = result.IsSuccess ? result.Value : null;
+        CertificatesPage.SelectedChildNavigationItem = CertificatesPage.Inspector?.Navigation.Children.FirstOrDefault();
+        RefreshCommandStates();
     }
 
-    private void OpenIssuerCertificate()
+    private async Task LoadSelectedCertificateRevocationListInspectorAsync()
     {
-        if (CertificatesPage.Inspector.IssuerCertificateId is null)
+        if (!CertificateRevocationListsPage.HasSelection || CertificateRevocationListsPage.SelectedItem is null || Snapshot.State == DatabaseSessionState.Closed)
         {
+            CertificateRevocationListsPage.Inspector = null;
+            RefreshCommandStates();
             return;
         }
 
-        SelectCertificate(CertificatesPage.Inspector.IssuerCertificateId.Value);
-        SelectPage(CertificatesPage);
+        var result = await _databaseSessionService.GetCertificateRevocationListInspectorAsync(CertificateRevocationListsPage.SelectedItem.CertificateRevocationListId, CancellationToken.None);
+        CertificateRevocationListsPage.Inspector = result.IsSuccess ? result.Value : null;
+        RefreshCommandStates();
     }
 
-    private void OpenPrivateKeyFromCertificate()
+    private void NavigateTo(NavigationTarget? target)
     {
-        if (CertificatesPage.Inspector.PrivateKeyId is null)
+        if (target is null)
         {
             return;
         }
 
-        SelectPrivateKey(CertificatesPage.Inspector.PrivateKeyId.Value);
-        SelectPage(PrivateKeysPage);
-    }
-
-    private void OpenChildCertificate()
-    {
-        if (CertificatesPage.Inspector.SelectedChildCertificate is null)
+        switch (target.EntityType)
         {
-            return;
+            case BrowserEntityType.Certificate:
+                SelectPage(CertificatesPage);
+                CertificatesPage.SelectedItem = CertificatesPage.Items.FirstOrDefault(x => x.CertificateId == target.EntityId);
+                break;
+            case BrowserEntityType.PrivateKey:
+                SelectPage(PrivateKeysPage);
+                PrivateKeysPage.SelectedItem = PrivateKeysPage.Items.FirstOrDefault(x => x.PrivateKeyId == target.EntityId);
+                break;
+            case BrowserEntityType.CertificateSigningRequest:
+                SelectPage(CertificateRequestsPage);
+                CertificateRequestsPage.SelectedItem = CertificateRequestsPage.Items.FirstOrDefault(x => x.CertificateSigningRequestId == target.EntityId);
+                break;
+            case BrowserEntityType.CertificateRevocationList:
+                SelectPage(CertificateRevocationListsPage);
+                CertificateRevocationListsPage.SelectedItem = CertificateRevocationListsPage.Items.FirstOrDefault(x => x.CertificateRevocationListId == target.EntityId);
+                break;
+            case BrowserEntityType.Template:
+                SelectPage(TemplatesPage);
+                break;
         }
-
-        SelectCertificate(CertificatesPage.Inspector.SelectedChildCertificate.CertificateId);
-        SelectPage(CertificatesPage);
-    }
-
-    private void OpenPrivateKeyFromRequest()
-    {
-        if (CertificateRequestsPage.SelectedItem?.PrivateKeyId is null)
-        {
-            return;
-        }
-
-        SelectPrivateKey(CertificateRequestsPage.SelectedItem.PrivateKeyId.Value);
-        SelectPage(PrivateKeysPage);
     }
 
     private void SelectPage(PageViewModelBase page)
@@ -630,26 +665,35 @@ public sealed class ShellViewModel : ViewModelBase
         }
     }
 
-    private void SelectCertificate(Guid certificateId)
+    private void OnCertificatesPagePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        CertificatesPage.SelectedItem = CertificatesPage.Items.FirstOrDefault(x => x.CertificateId == certificateId);
-    }
-
-    private void SelectPrivateKey(Guid privateKeyId)
-    {
-        PrivateKeysPage.SelectedItem = PrivateKeysPage.Items.FirstOrDefault(x => x.PrivateKeyId == privateKeyId);
-    }
-
-    private void SelectCertificateRequest(Guid certificateSigningRequestId)
-    {
-        CertificateRequestsPage.SelectedItem = CertificateRequestsPage.Items.FirstOrDefault(x => x.CertificateSigningRequestId == certificateSigningRequestId);
-    }
-
-    private void OnCertificatesPagePropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-    {
-        if (e.PropertyName == nameof(CertificatesPageViewModel.SelectedItem))
+        if (e.PropertyName is nameof(CertificatesPageViewModel.SelectedItem)
+            or nameof(CertificatesPageViewModel.Filter)
+            or nameof(CertificatesPageViewModel.RevocationConfirmationText)
+            or nameof(CertificatesPageViewModel.SelectedChildNavigationItem))
         {
-            _ = LoadSelectedCertificateInspectorAsync();
+            if (e.PropertyName == nameof(CertificatesPageViewModel.SelectedItem))
+            {
+                _ = LoadSelectedCertificateInspectorAsync();
+            }
+
+            RefreshCommandStates();
+        }
+    }
+
+    private void OnPageSelectionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(PrivateKeysPageViewModel.SelectedItem)
+            or nameof(CertificateRequestsPageViewModel.SelectedItem)
+            or nameof(CertificateRequestsPageViewModel.SelectedIssuerCertificate)
+            or nameof(CertificateRequestsPageViewModel.SelectedIssuerPrivateKey)
+            or nameof(CertificateRevocationListsPageViewModel.SelectedItem))
+        {
+            if (sender == CertificateRevocationListsPage && e.PropertyName == nameof(CertificateRevocationListsPageViewModel.SelectedItem))
+            {
+                _ = LoadSelectedCertificateRevocationListInspectorAsync();
+            }
+
             RefreshCommandStates();
         }
     }
@@ -697,11 +741,13 @@ public sealed class ShellViewModel : ViewModelBase
         DashboardPage.CertificateRevocationListCount = 0;
         DashboardPage.TemplateCount = 0;
         CertificatesPage.SetItems([]);
-        CertificatesPage.Inspector.Clear();
+        CertificatesPage.Inspector = null;
+        CertificatesPage.SelectedChildNavigationItem = null;
         PrivateKeysPage.SetItems([]);
         CertificateRequestsPage.SetItems([]);
         CertificateRequestsPage.SetIssuers([], []);
         CertificateRevocationListsPage.SetItems([]);
+        CertificateRevocationListsPage.Inspector = null;
         TemplatesPage.SetItems([]);
         RefreshCommandStates();
     }
@@ -729,15 +775,26 @@ public sealed class ShellViewModel : ViewModelBase
         NotifySuccess(successMessage);
     }
 
-    private void NotifySuccess(string message)
+    private bool CanRevokeSelectedCertificate()
     {
-        AddNotification("Success", message);
+        return !IsBusy
+            && Snapshot.State == DatabaseSessionState.Unlocked
+            && CertificatesPage.SelectedItem is { } certificate
+            && !string.Equals(certificate.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase)
+            && CertificatesPage.IsRevocationConfirmed;
     }
 
-    private void NotifyFailure(string message)
+    private bool CanGenerateCertificateRevocationList()
     {
-        AddNotification("Error", message);
+        return !IsBusy
+            && Snapshot.State == DatabaseSessionState.Unlocked
+            && CertificatesPage.SelectedItem is { IsCertificateAuthority: true, PrivateKeyId: not null } certificate
+            && !string.Equals(certificate.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase);
     }
+
+    private void NotifySuccess(string message) => AddNotification("Success", message);
+
+    private void NotifyFailure(string message) => AddNotification("Error", message);
 
     private void AddNotification(string level, string message)
     {
@@ -755,13 +812,15 @@ public sealed class ShellViewModel : ViewModelBase
         _openDatabaseCommand.RaiseCanExecuteChanged();
         _unlockDatabaseCommand.RaiseCanExecuteChanged();
         _lockDatabaseCommand.RaiseCanExecuteChanged();
-        _refreshDashboardCommand.RaiseCanExecuteChanged();
+        _refreshWorkspaceCommand.RaiseCanExecuteChanged();
         _refreshCertificatesCommand.RaiseCanExecuteChanged();
         _importMaterialCommand.RaiseCanExecuteChanged();
         _exportCertificateCommand.RaiseCanExecuteChanged();
-        _openIssuerCommand.RaiseCanExecuteChanged();
-        _openPrivateKeyFromCertificateCommand.RaiseCanExecuteChanged();
-        _openChildCertificateCommand.RaiseCanExecuteChanged();
+        _revokeCertificateCommand.RaiseCanExecuteChanged();
+        _generateCertificateRevocationListCommand.RaiseCanExecuteChanged();
+        _navigateIssuerCommand.RaiseCanExecuteChanged();
+        _navigatePrivateKeyCommand.RaiseCanExecuteChanged();
+        _navigateChildCertificateCommand.RaiseCanExecuteChanged();
         _refreshPrivateKeysCommand.RaiseCanExecuteChanged();
         _generateKeyCommand.RaiseCanExecuteChanged();
         _createSelfSignedCaCommand.RaiseCanExecuteChanged();
@@ -770,8 +829,9 @@ public sealed class ShellViewModel : ViewModelBase
         _refreshCertificateRequestsCommand.RaiseCanExecuteChanged();
         _signCertificateSigningRequestCommand.RaiseCanExecuteChanged();
         _exportCertificateSigningRequestCommand.RaiseCanExecuteChanged();
-        _openPrivateKeyFromRequestCommand.RaiseCanExecuteChanged();
+        _navigateRequestPrivateKeyCommand.RaiseCanExecuteChanged();
         _refreshCertificateRevocationListsCommand.RaiseCanExecuteChanged();
+        _navigateCrlIssuerCommand.RaiseCanExecuteChanged();
         _refreshTemplatesCommand.RaiseCanExecuteChanged();
     }
 

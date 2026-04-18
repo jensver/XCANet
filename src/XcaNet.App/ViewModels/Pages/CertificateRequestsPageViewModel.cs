@@ -4,9 +4,8 @@ using XcaNet.Contracts.Browser;
 
 namespace XcaNet.App.ViewModels.Pages;
 
-public sealed class CertificateRequestsPageViewModel : PageViewModelBase
+public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewModelBase<CertificateRequestListItem, Guid>
 {
-    private CertificateRequestListItem? _selectedItem;
     private CertificateListItem? _selectedIssuerCertificate;
     private PrivateKeyListItem? _selectedIssuerPrivateKey;
     private string _issuedCertificateDisplayName = "Issued Certificate";
@@ -19,25 +18,11 @@ public sealed class CertificateRequestsPageViewModel : PageViewModelBase
     {
     }
 
-    public ObservableCollection<CertificateRequestListItem> Items { get; } = [];
-
     public ObservableCollection<CertificateListItem> IssuerCertificates { get; } = [];
 
     public ObservableCollection<PrivateKeyListItem> IssuerPrivateKeys { get; } = [];
 
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs10];
-
-    public CertificateRequestListItem? SelectedItem
-    {
-        get => _selectedItem;
-        set
-        {
-            if (SetProperty(ref _selectedItem, value))
-            {
-                OnPropertyChanged(nameof(HasSelection));
-            }
-        }
-    }
 
     public CertificateListItem? SelectedIssuerCertificate
     {
@@ -75,29 +60,11 @@ public sealed class CertificateRequestsPageViewModel : PageViewModelBase
         set => SetProperty(ref _exportPreview, value);
     }
 
-    public bool HasSelection => SelectedItem is not null;
-
-    public ICommand? RefreshCommand { get; set; }
-
     public ICommand? SignSelectedCommand { get; set; }
 
     public ICommand? ExportSelectedCommand { get; set; }
 
     public ICommand? OpenSelectedPrivateKeyCommand { get; set; }
-
-    public void SetItems(IEnumerable<CertificateRequestListItem> items)
-    {
-        var previousSelectionId = SelectedItem?.CertificateSigningRequestId;
-        Items.Clear();
-        foreach (var item in items)
-        {
-            Items.Add(item);
-        }
-
-        SelectedItem = previousSelectionId.HasValue
-            ? Items.FirstOrDefault(x => x.CertificateSigningRequestId == previousSelectionId.Value) ?? Items.FirstOrDefault()
-            : Items.FirstOrDefault();
-    }
 
     public void SetIssuers(IEnumerable<CertificateListItem> certificates, IEnumerable<PrivateKeyListItem> privateKeys)
     {
@@ -116,4 +83,6 @@ public sealed class CertificateRequestsPageViewModel : PageViewModelBase
         SelectedIssuerCertificate ??= IssuerCertificates.FirstOrDefault();
         SelectedIssuerPrivateKey ??= IssuerPrivateKeys.FirstOrDefault();
     }
+
+    protected override Guid GetItemId(CertificateRequestListItem item) => item.CertificateSigningRequestId;
 }

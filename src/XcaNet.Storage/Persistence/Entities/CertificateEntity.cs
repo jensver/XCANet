@@ -12,6 +12,8 @@ public sealed class CertificateEntity
     public DateTime? NotBeforeUtc { get; set; }
     public DateTime? NotAfterUtc { get; set; }
     public int RevocationState { get; set; }
+    public int? RevocationReason { get; set; }
+    public DateTime? RevokedAtUtc { get; set; }
     public Guid? IssuerCertificateId { get; set; }
     public Guid? PrivateKeyId { get; set; }
     public byte[] DerData { get; set; } = [];

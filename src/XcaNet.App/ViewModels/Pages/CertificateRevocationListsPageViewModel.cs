@@ -4,25 +4,24 @@ using XcaNet.Contracts.Browser;
 
 namespace XcaNet.App.ViewModels.Pages;
 
-public sealed class CertificateRevocationListsPageViewModel : PageViewModelBase
+public sealed class CertificateRevocationListsPageViewModel : SelectableItemsPageViewModelBase<CertificateRevocationListItem, Guid>
 {
+    private CertificateRevocationListInspectorData? _inspector;
+
     public CertificateRevocationListsPageViewModel()
         : base("CRLs")
     {
     }
 
-    public ObservableCollection<CertificateRevocationListItem> Items { get; } = [];
+    public string PlaceholderMessage => "Generate CRLs from the certificates page for CA certificates with an available issuer key.";
 
-    public string PlaceholderMessage => "CRL generation is deferred. Existing CRL records appear here when present.";
-
-    public ICommand? RefreshCommand { get; set; }
-
-    public void SetItems(IEnumerable<CertificateRevocationListItem> items)
+    public CertificateRevocationListInspectorData? Inspector
     {
-        Items.Clear();
-        foreach (var item in items)
-        {
-            Items.Add(item);
-        }
+        get => _inspector;
+        set => SetProperty(ref _inspector, value);
     }
+
+    public ICommand? OpenIssuerCommand { get; set; }
+
+    protected override Guid GetItemId(CertificateRevocationListItem item) => item.CertificateRevocationListId;
 }

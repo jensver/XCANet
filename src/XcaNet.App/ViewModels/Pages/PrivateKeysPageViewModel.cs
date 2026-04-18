@@ -4,9 +4,8 @@ using XcaNet.Contracts.Browser;
 
 namespace XcaNet.App.ViewModels.Pages;
 
-public sealed class PrivateKeysPageViewModel : PageViewModelBase
+public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<PrivateKeyListItem, Guid>
 {
-    private PrivateKeyListItem? _selectedItem;
     private string _newKeyDisplayName = "Managed Key";
     private KeyAlgorithmView _selectedAlgorithm = KeyAlgorithmView.Rsa;
     private EllipticCurveView _selectedCurve = EllipticCurveView.P256;
@@ -25,25 +24,11 @@ public sealed class PrivateKeysPageViewModel : PageViewModelBase
     {
     }
 
-    public ObservableCollection<PrivateKeyListItem> Items { get; } = [];
-
     public IReadOnlyList<KeyAlgorithmView> Algorithms { get; } = [KeyAlgorithmView.Rsa, KeyAlgorithmView.Ecdsa];
 
     public IReadOnlyList<EllipticCurveView> Curves { get; } = [EllipticCurveView.P256, EllipticCurveView.P384];
 
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs8];
-
-    public PrivateKeyListItem? SelectedItem
-    {
-        get => _selectedItem;
-        set
-        {
-            if (SetProperty(ref _selectedItem, value))
-            {
-                OnPropertyChanged(nameof(HasSelection));
-            }
-        }
-    }
 
     public string NewKeyDisplayName
     {
@@ -117,10 +102,6 @@ public sealed class PrivateKeysPageViewModel : PageViewModelBase
         set => SetProperty(ref _exportPreview, value);
     }
 
-    public bool HasSelection => SelectedItem is not null;
-
-    public ICommand? RefreshCommand { get; set; }
-
     public ICommand? GenerateKeyCommand { get; set; }
 
     public ICommand? CreateSelfSignedCaCommand { get; set; }
@@ -129,17 +110,5 @@ public sealed class PrivateKeysPageViewModel : PageViewModelBase
 
     public ICommand? ExportSelectedCommand { get; set; }
 
-    public void SetItems(IEnumerable<PrivateKeyListItem> items)
-    {
-        var previousSelectionId = SelectedItem?.PrivateKeyId;
-        Items.Clear();
-        foreach (var item in items)
-        {
-            Items.Add(item);
-        }
-
-        SelectedItem = previousSelectionId.HasValue
-            ? Items.FirstOrDefault(x => x.PrivateKeyId == previousSelectionId.Value) ?? Items.FirstOrDefault()
-            : Items.FirstOrDefault();
-    }
+    protected override Guid GetItemId(PrivateKeyListItem item) => item.PrivateKeyId;
 }

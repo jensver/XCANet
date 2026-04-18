@@ -26,6 +26,10 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<StoredCertificateResult>> SignCertificateSigningRequestAsync(SignStoredCertificateSigningRequestRequest request, CancellationToken cancellationToken);
 
+    Task<OperationResult<StoredCertificateResult>> RevokeCertificateAsync(RevokeStoredCertificateRequest request, CancellationToken cancellationToken);
+
+    Task<OperationResult<StoredCertificateRevocationListResult>> GenerateCertificateRevocationListAsync(GenerateCertificateRevocationListWorkflowRequest request, CancellationToken cancellationToken);
+
     Task<OperationResult<ImportStoredMaterialResult>> ImportStoredMaterialAsync(ImportStoredMaterialRequest request, CancellationToken cancellationToken);
 
     Task<OperationResult<ExportedArtifact>> ExportStoredMaterialAsync(ExportStoredMaterialRequest request, CancellationToken cancellationToken);
@@ -34,15 +38,17 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<DashboardSummary>> GetDashboardSummaryAsync(CancellationToken cancellationToken);
 
-    Task<OperationResult<IReadOnlyList<CertificateListItem>>> ListCertificatesAsync(CertificateBrowserQuery query, CancellationToken cancellationToken);
+    Task<OperationResult<IReadOnlyList<CertificateListItem>>> ListCertificatesAsync(CertificateFilterState filter, CancellationToken cancellationToken);
 
-    Task<OperationResult<CertificateInspector>> GetCertificateInspectorAsync(Guid certificateId, CancellationToken cancellationToken);
+    Task<OperationResult<CertificateInspectorData>> GetCertificateInspectorAsync(Guid certificateId, CancellationToken cancellationToken);
 
     Task<OperationResult<IReadOnlyList<PrivateKeyListItem>>> ListPrivateKeysAsync(CancellationToken cancellationToken);
 
     Task<OperationResult<IReadOnlyList<CertificateRequestListItem>>> ListCertificateSigningRequestsAsync(CancellationToken cancellationToken);
 
     Task<OperationResult<IReadOnlyList<CertificateRevocationListItem>>> ListCertificateRevocationListsAsync(CancellationToken cancellationToken);
+
+    Task<OperationResult<CertificateRevocationListInspectorData>> GetCertificateRevocationListInspectorAsync(Guid certificateRevocationListId, CancellationToken cancellationToken);
 
     Task<OperationResult<IReadOnlyList<TemplateListItem>>> ListTemplatesAsync(CancellationToken cancellationToken);
 

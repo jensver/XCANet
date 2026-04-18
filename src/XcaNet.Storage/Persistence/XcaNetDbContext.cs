@@ -54,6 +54,7 @@ public sealed class XcaNetDbContext : DbContext
             entity.HasIndex(x => x.NotBeforeUtc);
             entity.HasIndex(x => x.NotAfterUtc);
             entity.HasIndex(x => x.RevocationState);
+            entity.HasIndex(x => x.RevokedAtUtc);
             entity.HasIndex(x => x.IssuerCertificateId);
         });
 
@@ -70,6 +71,17 @@ public sealed class XcaNetDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.IssuerDisplayName).HasMaxLength(200).IsRequired();
+            entity.OwnsMany(x => x.RevokedEntries, owned =>
+            {
+                owned.ToTable("CertificateRevocationListEntries");
+                owned.WithOwner().HasForeignKey("CertificateRevocationListId");
+                owned.Property<int>("Id");
+                owned.HasKey("Id");
+                owned.Property(x => x.SerialNumber).HasMaxLength(128).IsRequired();
+                owned.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+                owned.Property(x => x.Subject).HasMaxLength(400).IsRequired();
+            });
         });
 
         modelBuilder.Entity<TemplateEntity>(entity =>
@@ -110,7 +122,9 @@ public sealed class XcaNetDbContext : DbContext
             entity.HasKey(x => x.Id);
             entity.Property(x => x.EventType).HasMaxLength(128).IsRequired();
             entity.Property(x => x.Message).HasMaxLength(512).IsRequired();
+            entity.Property(x => x.EntityType).HasMaxLength(128);
             entity.HasIndex(x => x.OccurredUtc);
+            entity.HasIndex(x => x.EntityId);
         });
 
         modelBuilder.Entity<AppSettingEntity>(entity =>

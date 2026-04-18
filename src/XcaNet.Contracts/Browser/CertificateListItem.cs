@@ -13,6 +13,8 @@ public sealed record CertificateListItem(
     string KeyAlgorithm,
     bool IsCertificateAuthority,
     string RevocationStatus,
+    string? RevocationReason,
+    DateTimeOffset? RevokedAt,
     Guid? IssuerCertificateId,
     Guid? PrivateKeyId,
     int ChildCertificateCount);

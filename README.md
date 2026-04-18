@@ -54,3 +54,17 @@ Milestone 4 turns the shell into a usable desktop structure:
 - busy-state feedback, notifications, and command enablement tied to database session state
 
 The UI still talks only to `XcaNet.Application` contracts. EF Core and crypto implementations remain behind the application and storage layers.
+
+## Revocation And CRLs
+
+Milestone 5 adds the first revocation workflow and a cleanup pass on the UI/application boundary:
+
+- page view models now stay focused on selection, filter state, busy state, and user intent while application services own workflow execution
+- navigation between certificates, keys, CSRs, and CRLs uses a single `NavigationTarget` model
+- certificate browsing uses a dedicated `CertificateFilterState` and the inspector binds to a stable `CertificateInspectorData` DTO instead of storage models
+- certificates can now be revoked with a stored reason and revocation timestamp
+- managed CRL generation persists issuer metadata, CRL number, update timestamps, and revoked entries
+- certificate and CRL list/detail views now reflect revocation status and generated CRLs
+- audit events now cover certificate revocation and CRL generation
+
+Import and export remain transport-oriented in the application layer, so the current paste-based UI can be replaced later without changing the workflow contracts.

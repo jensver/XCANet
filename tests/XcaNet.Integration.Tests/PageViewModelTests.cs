@@ -1,7 +1,7 @@
-using XcaNet.App.ViewModels.Items;
 using XcaNet.App.ViewModels.Pages;
 using XcaNet.Contracts.Browser;
 using XcaNet.Contracts.Crypto;
+using XcaNet.Contracts.Revocation;
 
 namespace XcaNet.Integration.Tests;
 
@@ -25,14 +25,13 @@ public sealed class PageViewModelTests
     }
 
     [Fact]
-    public void CertificateInspectorViewModel_Apply_ShouldExposeRelationshipsAndDetails()
+    public void CertificateInspectorData_ShouldExposeRelationshipsAndDetails()
     {
-        var inspector = new CertificateInspectorViewModel();
-        var child = new RelatedCertificateSummary(Guid.NewGuid(), "Issued Leaf", "CN=leaf.example.test");
-        var certificate = new CertificateInspector(
+        var childTarget = new NavigationTarget(BrowserEntityType.Certificate, Guid.NewGuid(), NavigationFocusSection.Inspector);
+        var certificate = new CertificateInspectorData(
             Guid.NewGuid(),
-            "Root CA",
-            new CertificateDetails(
+            new CertificateDisplayFields("Root CA", "range", "Certificate Authority", "Issuer CA", "Root Key"),
+            new CertificateRawFields(
                 "CN=Root CA",
                 "CN=Root CA",
                 "01",
@@ -40,28 +39,25 @@ public sealed class PageViewModelTests
                 DateTimeOffset.UtcNow.AddDays(30),
                 "SHA1",
                 "SHA256",
-                "RSA",
+                "RSA"),
+            new CertificateExtensionFields(
                 true,
+                ["root.example.test"],
                 ["KeyCertSign", "CrlSign"],
-                ["Server Authentication"],
-                ["root.example.test"]),
-            "Active",
-            Guid.NewGuid(),
-            "Issuer CA",
-            Guid.NewGuid(),
-            "Root Key",
-            [child]);
+                ["Server Authentication"]),
+            new CertificateRevocationInfo(false, "Active", null, null, null),
+            new CertificateNavigationInfo(
+                new NavigationTarget(BrowserEntityType.Certificate, Guid.NewGuid(), NavigationFocusSection.Inspector),
+                new NavigationTarget(BrowserEntityType.PrivateKey, Guid.NewGuid(), NavigationFocusSection.Overview),
+                [new RelatedNavigationItem("Issued Leaf", "CN=leaf.example.test", childTarget)]));
 
-        inspector.Apply(certificate);
-
-        Assert.True(inspector.HasCertificate);
-        Assert.True(inspector.CanOpenIssuer);
-        Assert.True(inspector.CanOpenPrivateKey);
-        Assert.True(inspector.CanOpenSelectedChild);
-        Assert.Equal("Root CA", inspector.DisplayName);
-        Assert.Equal("Certificate Authority", inspector.CertificateAuthorityStatus);
-        Assert.Equal("Root Key", inspector.PrivateKeyDisplayName);
-        Assert.Single(inspector.ChildCertificates);
+        Assert.Equal("Root CA", certificate.Display.DisplayName);
+        Assert.Equal("Certificate Authority", certificate.Display.CertificateKind);
+        Assert.Equal("Root Key", certificate.Display.PrivateKeyDisplayName);
+        Assert.True(certificate.Extensions.IsCertificateAuthority);
+        Assert.NotNull(certificate.Navigation.Issuer);
+        Assert.NotNull(certificate.Navigation.PrivateKey);
+        Assert.Single(certificate.Navigation.Children);
     }
 
     [Fact]
@@ -95,6 +91,8 @@ public sealed class PageViewModelTests
             "RSA",
             isCertificateAuthority,
             "Active",
+            null,
+            null,
             null,
             null,
             0);

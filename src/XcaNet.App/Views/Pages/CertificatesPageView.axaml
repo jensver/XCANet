@@ -6,11 +6,17 @@
       <Border Background="White" CornerRadius="12" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Search and Filter" FontSize="18" FontWeight="SemiBold" />
-          <Grid ColumnDefinitions="*,180,180,Auto" ColumnSpacing="10">
-            <TextBox Watermark="Search name, subject, issuer, serial, thumbprint" Text="{Binding SearchText}" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding ValidityFilters}" SelectedItem="{Binding SelectedValidityFilter}" />
-            <ComboBox Grid.Column="2" ItemsSource="{Binding AuthorityFilters}" SelectedItem="{Binding SelectedAuthorityFilter}" />
-            <Button Grid.Column="3" Content="Refresh" Command="{Binding RefreshCommand}" />
+          <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="10" RowSpacing="10">
+            <TextBox Watermark="Display name" Text="{Binding Filter.DisplayName}" />
+            <TextBox Grid.Column="1" Watermark="Subject" Text="{Binding Filter.Subject}" />
+            <TextBox Grid.Column="2" Watermark="Issuer" Text="{Binding Filter.Issuer}" />
+            <TextBox Grid.Row="1" Watermark="Serial" Text="{Binding Filter.SerialNumber}" />
+            <TextBox Grid.Row="1" Grid.Column="1" Watermark="Thumbprint" Text="{Binding Filter.Thumbprint}" />
+            <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Spacing="10">
+              <ComboBox Width="150" ItemsSource="{Binding ValidityFilters}" SelectedItem="{Binding Filter.ValidityFilter}" />
+              <ComboBox Width="150" ItemsSource="{Binding AuthorityFilters}" SelectedItem="{Binding Filter.AuthorityFilter}" />
+              <Button Content="Refresh" Command="{Binding RefreshCommand}" />
+            </StackPanel>
           </Grid>
         </StackPanel>
       </Border>
@@ -31,7 +37,10 @@
                       <TextBlock Text="{Binding Subject}" Foreground="#475569" TextWrapping="Wrap" />
                     </StackPanel>
                     <TextBlock Grid.Column="1" Text="{Binding Issuer}" TextWrapping="Wrap" />
-                    <TextBlock Grid.Column="2" Text="{Binding RevocationStatus}" />
+                    <StackPanel Grid.Column="2">
+                      <TextBlock Text="{Binding RevocationStatus}" />
+                      <TextBlock Text="{Binding RevocationReason}" Foreground="#B45309" IsVisible="{Binding RevocationReason}" />
+                    </StackPanel>
                     <TextBlock Grid.Column="3" Text="{Binding KeyAlgorithm}" />
                   </Grid>
                 </Border>
@@ -67,39 +76,42 @@
           </Grid>
           <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
             <TextBlock Text="Display Name" />
-            <TextBlock Grid.Column="1" Text="{Binding Inspector.DisplayName}" TextWrapping="Wrap" />
+            <TextBlock Grid.Column="1" Text="{Binding Inspector.Display.DisplayName}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="1" Text="Subject" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inspector.Subject}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inspector.Raw.Subject}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="2" Text="Issuer" />
-            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Inspector.IssuerDisplayName}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Inspector.Display.IssuerDisplayName}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="3" Text="Serial" />
-            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Inspector.SerialNumber}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Inspector.Raw.SerialNumber}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="4" Text="Not Before" />
-            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Inspector.NotBefore}" />
+            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Inspector.Raw.NotBefore}" />
             <TextBlock Grid.Row="5" Text="Not After" />
-            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Inspector.NotAfter}" />
+            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Inspector.Raw.NotAfter}" />
             <TextBlock Grid.Row="6" Text="SHA-1" />
-            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Inspector.Sha1Thumbprint}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Inspector.Raw.Sha1Thumbprint}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="7" Text="SHA-256" />
-            <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Inspector.Sha256Thumbprint}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Inspector.Raw.Sha256Thumbprint}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="8" Text="Key Algorithm" />
-            <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding Inspector.KeyAlgorithm}" />
+            <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding Inspector.Raw.KeyAlgorithm}" />
             <TextBlock Grid.Row="9" Text="CA Status" />
-            <TextBlock Grid.Row="9" Grid.Column="1" Text="{Binding Inspector.CertificateAuthorityStatus}" />
+            <TextBlock Grid.Row="9" Grid.Column="1" Text="{Binding Inspector.Display.CertificateKind}" />
             <TextBlock Grid.Row="10" Text="Revocation" />
-            <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding Inspector.RevocationStatus}" />
+            <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding Inspector.Revocation.Status}" />
             <TextBlock Grid.Row="11" Text="Private Key" />
-            <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding Inspector.PrivateKeyDisplayName}" />
+            <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding Inspector.Display.PrivateKeyDisplayName}" />
           </Grid>
 
           <TextBlock Text="Subject Alternative Names" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding Inspector.SubjectAlternativeNames}" TextWrapping="Wrap" />
+          <ItemsControl ItemsSource="{Binding Inspector.Extensions.SubjectAlternativeNames}" />
           <TextBlock Text="Key Usage" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding Inspector.KeyUsage}" TextWrapping="Wrap" />
+          <ItemsControl ItemsSource="{Binding Inspector.Extensions.KeyUsages}" />
           <TextBlock Text="Enhanced Key Usage" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding Inspector.EnhancedKeyUsage}" TextWrapping="Wrap" />
+          <ItemsControl ItemsSource="{Binding Inspector.Extensions.EnhancedKeyUsages}" />
+          <TextBlock Text="Revocation Details" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding Inspector.Revocation.ReasonDisplayName}" />
+          <TextBlock Text="{Binding Inspector.Revocation.RevokedAt}" />
           <TextBlock Text="Child Certificates" FontWeight="SemiBold" />
-          <ComboBox ItemsSource="{Binding Inspector.ChildCertificates}" SelectedItem="{Binding Inspector.SelectedChildCertificate}" />
+          <ComboBox ItemsSource="{Binding Inspector.Navigation.Children}" SelectedItem="{Binding SelectedChildNavigationItem}" />
         </StackPanel>
       </Border>
 
@@ -111,6 +123,21 @@
             <TextBox Grid.Column="1" Text="{Binding SelectedExportPassword}" PasswordChar="*" Watermark="Optional export password for PKCS#12" />
           </Grid>
           <TextBox Text="{Binding ExportPreview}" AcceptsReturn="True" Height="180" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Background="White" CornerRadius="12" Padding="16">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Revoke Certificate" FontSize="18" FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="220,*" ColumnSpacing="10">
+            <ComboBox ItemsSource="{Binding RevocationReasons}" SelectedItem="{Binding SelectedRevocationReason}" />
+            <DatePicker Grid.Column="1" SelectedDate="{Binding SelectedRevocationDate}" />
+          </Grid>
+          <TextBox Text="{Binding RevocationConfirmationText}" Watermark="Type REVOKE to confirm" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="Revoke Selected" Command="{Binding RevokeSelectedCommand}" />
+            <Button Content="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />
+          </StackPanel>
         </StackPanel>
       </Border>
     </StackPanel>
