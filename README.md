@@ -95,3 +95,15 @@ native/xcanet_ossl_bridge/build-bridge.sh <output-dir>
 ```
 
 To use a specific bridge artifact, set `XCANET_OPENSSL_BRIDGE_PATH` or configure `Crypto:OpenSslBridgePath`. If no bridge is configured, the managed backend remains active.
+
+## UX Completion And Operator Workflows
+
+Milestone 8 focuses on desktop usability rather than backend expansion:
+
+- native file-based import and export now sit on top of the existing application-layer import/export contracts
+- supported file workflows cover PEM, DER, PKCS#8, PKCS#12/PFX, PKCS#10 CSR, and CRL material
+- drag-and-drop import routes through the same application import path as the native picker flow
+- certificates, keys, CSRs, CRLs, templates, and settings now expose clearer empty states and more consistent workflow actions
+- Settings / Security now shows read-only backend diagnostics for managed availability, OpenSSL availability/version/capabilities, routing summary, and schema/app version data
+
+The file picker layer only gathers paths. Parsing, classification, preview, persistence, and export generation remain below the UI layer. Diagnostics are informational only: there is still no backend picker UI, and the managed backend remains the default path.

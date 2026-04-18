@@ -756,6 +756,7 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
                         new ImportCertificateMaterialResult(
                             [new ImportedPrivateKeyMaterial(result.Value.DisplayName, result.Value.Algorithm, result.Value.PublicKeyFingerprint, result.Value.Pkcs8PrivateKey)],
                             [],
+                            [],
                             []),
                         "Private key material imported.")
                     : OperationResult<ImportCertificateMaterialResult>.Failure(result.ErrorCode, result.Message);
@@ -772,6 +773,7 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
             new ImportCertificateMaterialResult(
                 [],
                 [new ImportedCertificateMaterial(request.DisplayName, certificate.Export(X509ContentType.Cert), ParseCertificate(certificate))],
+                [],
                 []),
             "Certificate material imported."));
     }
@@ -787,7 +789,8 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
                         new ImportCertificateMaterialResult(
                             [],
                             [],
-                            [new ImportedCertificateSigningRequestMaterial(request.DisplayName, request.Data, result.Value)]),
+                            [new ImportedCertificateSigningRequestMaterial(request.DisplayName, request.Data, result.Value)],
+                            []),
                         "CSR material imported.")
                     : OperationResult<ImportCertificateMaterialResult>.Failure(result.ErrorCode, result.Message);
             });
@@ -821,7 +824,7 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
         }
 
         return Task.FromResult(OperationResult<ImportCertificateMaterialResult>.Success(
-            new ImportCertificateMaterialResult(privateKeys, certificates, []),
+            new ImportCertificateMaterialResult(privateKeys, certificates, [], []),
             "Bundle material imported."));
     }
 

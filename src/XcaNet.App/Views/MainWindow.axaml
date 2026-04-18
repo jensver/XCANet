@@ -5,6 +5,7 @@
         Height="920"
         MinWidth="1100"
         MinHeight="760"
+        DragDrop.AllowDrop="True"
         Title="XcaNet">
   <Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,*">
     <Border Grid.RowSpan="3" Background="#14202A" Padding="18">

@@ -12,6 +12,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICertificateService>(provider => provider.GetRequiredService<DotNetCryptoBackend>());
         services.AddSingleton<ICertificateSigningRequestService>(provider => provider.GetRequiredService<DotNetCryptoBackend>());
         services.AddSingleton<IImportExportService>(provider => provider.GetRequiredService<DotNetCryptoBackend>());
+        services.AddSingleton<ICryptoBackendDiagnosticsProvider, ManagedCryptoBackendDiagnosticsProvider>();
         return services;
     }
 }

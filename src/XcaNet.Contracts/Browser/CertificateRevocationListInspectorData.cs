@@ -6,7 +6,7 @@ public sealed record CertificateRevocationListInspectorData(
     Guid CertificateRevocationListId,
     string DisplayName,
     string IssuerDisplayName,
-    NavigationTarget IssuerTarget,
+    NavigationTarget? IssuerTarget,
     string CrlNumber,
     DateTimeOffset ThisUpdate,
     DateTimeOffset? NextUpdate,

@@ -9,6 +9,12 @@
             <TextBlock Text="Stored Private Keys" FontSize="18" FontWeight="SemiBold" />
             <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}" />
           </Grid>
+          <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="320">
             <ListBox.ItemTemplate>
               <DataTemplate>
@@ -71,7 +77,10 @@
             <ComboBox ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding SelectedExportFormat}" />
             <TextBox Grid.Column="1" Text="{Binding SelectedExportPassword}" PasswordChar="*" Watermark="Optional export password" />
           </Grid>
-          <Button Content="Export Selected Key" HorizontalAlignment="Left" Command="{Binding ExportSelectedCommand}" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="Preview Export" Command="{Binding ExportSelectedCommand}" />
+            <Button Content="Export to File" Command="{Binding ExportSelectedToFileCommand}" />
+          </StackPanel>
           <TextBox Text="{Binding ExportPreview}" AcceptsReturn="True" Height="160" TextWrapping="Wrap" />
         </StackPanel>
       </Border>

@@ -11,6 +11,13 @@ public sealed class SettingsSecurityPageViewModel : PageViewModelBase
     private string _statusMessage = "No database is open.";
     private string _sessionState = DatabaseSessionState.Closed.ToString();
     private string _lastOpened = "Never";
+    private string _managedBackendStatus = "Available";
+    private string _openSslBackendStatus = "Unavailable";
+    private string _openSslVersion = "Not loaded";
+    private string _openSslCapabilities = "None";
+    private string _routingSummary = "Managed remains the default backend.";
+    private string _appVersion = "Unknown";
+    private string _schemaVersion = "1";
 
     public SettingsSecurityPageViewModel()
         : base("Settings / Security")
@@ -51,6 +58,48 @@ public sealed class SettingsSecurityPageViewModel : PageViewModelBase
     {
         get => _lastOpened;
         set => SetProperty(ref _lastOpened, value);
+    }
+
+    public string ManagedBackendStatus
+    {
+        get => _managedBackendStatus;
+        set => SetProperty(ref _managedBackendStatus, value);
+    }
+
+    public string OpenSslBackendStatus
+    {
+        get => _openSslBackendStatus;
+        set => SetProperty(ref _openSslBackendStatus, value);
+    }
+
+    public string OpenSslVersion
+    {
+        get => _openSslVersion;
+        set => SetProperty(ref _openSslVersion, value);
+    }
+
+    public string OpenSslCapabilities
+    {
+        get => _openSslCapabilities;
+        set => SetProperty(ref _openSslCapabilities, value);
+    }
+
+    public string RoutingSummary
+    {
+        get => _routingSummary;
+        set => SetProperty(ref _routingSummary, value);
+    }
+
+    public string AppVersion
+    {
+        get => _appVersion;
+        set => SetProperty(ref _appVersion, value);
+    }
+
+    public string SchemaVersion
+    {
+        get => _schemaVersion;
+        set => SetProperty(ref _schemaVersion, value);
     }
 
     public ICommand? CreateDatabaseCommand { get; set; }

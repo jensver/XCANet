@@ -167,9 +167,11 @@ public sealed class OpenSslSigningParityTests
         try
         {
             var result = OpenSslCliHarness.Run("crl", "-in", filePath, "-inform", "PEM", "-text", "-noout");
+            var expectedSerial = NormalizeSerialHex(leafCertificate.Value.Details.SerialNumber);
+            var normalizedOutput = NormalizeHex(result.StandardOutput);
             Assert.Equal(0, result.ExitCode);
             Assert.Contains("Issuer CA", result.StandardOutput);
-            Assert.Contains(NormalizeHex(leafCertificate.Value.Details.SerialNumber), NormalizeHex(result.StandardOutput));
+            Assert.Contains(expectedSerial, normalizedOutput);
         }
         finally
         {
@@ -210,5 +212,11 @@ public sealed class OpenSslSigningParityTests
     private static string NormalizeHex(string value)
     {
         return new string(value.Where(Uri.IsHexDigit).ToArray()).ToUpperInvariant();
+    }
+
+    private static string NormalizeSerialHex(string value)
+    {
+        var normalized = NormalizeHex(value).TrimStart('0');
+        return string.IsNullOrEmpty(normalized) ? "0" : normalized;
     }
 }

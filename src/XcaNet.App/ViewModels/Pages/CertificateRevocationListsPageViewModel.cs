@@ -11,6 +11,8 @@ public sealed class CertificateRevocationListsPageViewModel : SelectableItemsPag
     public CertificateRevocationListsPageViewModel()
         : base("CRLs")
     {
+        EmptyStateTitle = "No CRLs available";
+        EmptyStateMessage = "Generate a CRL from a CA certificate after revoking one or more issued certificates.";
     }
 
     public string PlaceholderMessage => "Generate CRLs from the certificates page for CA certificates with an available issuer key.";
@@ -20,6 +22,8 @@ public sealed class CertificateRevocationListsPageViewModel : SelectableItemsPag
         get => _inspector;
         set => SetProperty(ref _inspector, value);
     }
+
+    public ICommand? ExportSelectedCommand { get; set; }
 
     public ICommand? OpenIssuerCommand { get; set; }
 

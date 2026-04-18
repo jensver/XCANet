@@ -10,6 +10,12 @@
             <Button Grid.Column="1" Content="Open Key" Command="{Binding OpenSelectedPrivateKeyCommand}" Margin="0,0,10,0" />
             <Button Grid.Column="2" Content="Refresh" Command="{Binding RefreshCommand}" />
           </Grid>
+          <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="360">
             <ListBox.ItemTemplate>
               <DataTemplate>
@@ -33,6 +39,7 @@
       <Border Background="White" CornerRadius="12" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Sign Selected CSR" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="Choose a CA certificate and the matching issuer key to produce a managed or routed certificate according to the backend policy." Foreground="#475569" TextWrapping="Wrap" />
           <TextBox Text="{Binding IssuedCertificateDisplayName}" Watermark="Issued certificate display name" />
           <ComboBox ItemsSource="{Binding IssuerCertificates}" SelectedItem="{Binding SelectedIssuerCertificate}" />
           <ComboBox ItemsSource="{Binding IssuerPrivateKeys}" SelectedItem="{Binding SelectedIssuerPrivateKey}" />
@@ -47,7 +54,10 @@
         <StackPanel Spacing="10">
           <TextBlock Text="Export CSR" FontSize="18" FontWeight="SemiBold" />
           <ComboBox ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding SelectedExportFormat}" />
-          <Button Content="Export Selected CSR" HorizontalAlignment="Left" Command="{Binding ExportSelectedCommand}" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="Preview Export" Command="{Binding ExportSelectedCommand}" />
+            <Button Content="Export to File" Command="{Binding ExportSelectedToFileCommand}" />
+          </StackPanel>
           <TextBox Text="{Binding ExportPreview}" AcceptsReturn="True" Height="180" TextWrapping="Wrap" />
         </StackPanel>
       </Border>

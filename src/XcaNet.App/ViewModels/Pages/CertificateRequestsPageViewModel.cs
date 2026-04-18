@@ -16,6 +16,8 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     public CertificateRequestsPageViewModel()
         : base("CSRs")
     {
+        EmptyStateTitle = "No certificate signing requests";
+        EmptyStateMessage = "Create a CSR from the Private Keys page or import request files to review and sign them.";
     }
 
     public ObservableCollection<CertificateListItem> IssuerCertificates { get; } = [];
@@ -63,6 +65,8 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     public ICommand? SignSelectedCommand { get; set; }
 
     public ICommand? ExportSelectedCommand { get; set; }
+
+    public ICommand? ExportSelectedToFileCommand { get; set; }
 
     public ICommand? OpenSelectedPrivateKeyCommand { get; set; }
 

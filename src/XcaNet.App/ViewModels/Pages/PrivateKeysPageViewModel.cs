@@ -22,6 +22,8 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     public PrivateKeysPageViewModel()
         : base("Private Keys")
     {
+        EmptyStateTitle = "No private keys stored";
+        EmptyStateMessage = "Generate a key or import existing key material to begin issuing certificates and CSRs.";
     }
 
     public IReadOnlyList<KeyAlgorithmView> Algorithms { get; } = [KeyAlgorithmView.Rsa, KeyAlgorithmView.Ecdsa];
@@ -109,6 +111,8 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     public ICommand? CreateCertificateSigningRequestCommand { get; set; }
 
     public ICommand? ExportSelectedCommand { get; set; }
+
+    public ICommand? ExportSelectedToFileCommand { get; set; }
 
     protected override Guid GetItemId(PrivateKeyListItem item) => item.PrivateKeyId;
 }

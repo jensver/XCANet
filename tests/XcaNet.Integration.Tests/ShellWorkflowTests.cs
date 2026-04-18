@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using XcaNet.App.Services;
 using XcaNet.App.Commands;
 using XcaNet.App.ViewModels;
 using XcaNet.Application.DependencyInjection;
@@ -35,7 +36,7 @@ public sealed class ShellWorkflowTests
             new SignStoredCertificateSigningRequestRequest(csr.Value!.CertificateSigningRequestId, issuerCertificate.Value!.CertificateId, issuerKey.Value.PrivateKeyId, "Leaf Certificate", 180),
             CancellationToken.None);
 
-        var shell = new ShellViewModel(service, NullLogger<ShellViewModel>.Instance);
+        var shell = new ShellViewModel(service, new TestDesktopFileDialogService(), NullLogger<ShellViewModel>.Instance);
         await ((AsyncCommand)shell.CertificatesPage.RefreshCommand!).ExecuteAsync();
         shell.CertificatesPage.SelectedItem = shell.CertificatesPage.Items.Single(x => x.CertificateId == leafCertificate.Value!.CertificateId);
         await Task.Delay(50);
@@ -78,4 +79,17 @@ file static class CommandCastingExtensions
     {
         return (T)command;
     }
+}
+
+file sealed class TestDesktopFileDialogService : IDesktopFileDialogService
+{
+    public void SetOwner(Avalonia.Controls.Window? window)
+    {
+    }
+
+    public Task<IReadOnlyList<string>> PickImportFilesAsync(CancellationToken cancellationToken)
+        => Task.FromResult<IReadOnlyList<string>>([]);
+
+    public Task<string?> PickSavePathAsync(string suggestedFileName, CancellationToken cancellationToken)
+        => Task.FromResult<string?>(null);
 }

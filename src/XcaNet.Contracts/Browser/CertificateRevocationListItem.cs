@@ -9,4 +9,4 @@ public sealed record CertificateRevocationListItem(
     DateTimeOffset ThisUpdate,
     DateTimeOffset? NextUpdateUtc,
     int RevokedEntryCount,
-    NavigationTarget IssuerTarget);
+    NavigationTarget? IssuerTarget);

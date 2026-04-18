@@ -9,6 +9,8 @@ public sealed class TemplatesPageViewModel : ItemsPageViewModelBase<TemplateList
     public TemplatesPageViewModel()
         : base("Templates")
     {
+        EmptyStateTitle = "No templates saved";
+        EmptyStateMessage = "Template authoring is deferred, but saved template stubs will appear here when they are available.";
     }
 
     public string PlaceholderMessage => "Advanced template editing is deferred. Saved template stubs will appear here.";

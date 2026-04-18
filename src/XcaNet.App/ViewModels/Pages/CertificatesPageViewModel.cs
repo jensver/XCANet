@@ -9,12 +9,13 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
 {
     private CertificateFilterState _filter = new(null, null, null, null, null, CertificateValidityFilter.All, CertificateAuthorityFilter.All, 30);
     private CertificateInspectorData? _inspector;
+    private string _importPassword = string.Empty;
     private string _importDisplayName = "Imported Material";
     private string _importPayload = string.Empty;
-    private string _importPassword = string.Empty;
     private CryptoImportKindView _selectedImportKind = CryptoImportKindView.Certificate;
     private CryptoFormatView _selectedImportFormat = CryptoFormatView.Pem;
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
+    private CertificateExportTargetView _selectedExportTarget = CertificateExportTargetView.Certificate;
     private string _selectedExportPassword = string.Empty;
     private string _exportPreview = string.Empty;
     private CertificateRevocationReason _selectedRevocationReason = CertificateRevocationReason.Unspecified;
@@ -25,6 +26,8 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     public CertificatesPageViewModel()
         : base("Certificates")
     {
+        EmptyStateTitle = "No certificates yet";
+        EmptyStateMessage = "Import certificate material, create a self-signed CA, or sign a CSR to populate this workspace.";
     }
 
     public IReadOnlyList<CertificateValidityFilter> ValidityFilters { get; } =
@@ -41,6 +44,9 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
 
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } =
         [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs12];
+
+    public IReadOnlyList<CertificateExportTargetView> ExportTargets { get; } =
+        [CertificateExportTargetView.Certificate, CertificateExportTargetView.CertificateChain, CertificateExportTargetView.CertificateWithPrivateKeyPem, CertificateExportTargetView.Pkcs12Bundle];
 
     public IReadOnlyList<CertificateRevocationReason> RevocationReasons { get; } =
         Enum.GetValues<CertificateRevocationReason>();
@@ -93,6 +99,12 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
         set => SetProperty(ref _selectedExportFormat, value);
     }
 
+    public CertificateExportTargetView SelectedExportTarget
+    {
+        get => _selectedExportTarget;
+        set => SetProperty(ref _selectedExportTarget, value);
+    }
+
     public string SelectedExportPassword
     {
         get => _selectedExportPassword;
@@ -138,6 +150,8 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     }
 
     public ICommand? ImportMaterialCommand { get; set; }
+
+    public ICommand? ImportFilesCommand { get; set; }
 
     public ICommand? ExportSelectedCommand { get; set; }
 

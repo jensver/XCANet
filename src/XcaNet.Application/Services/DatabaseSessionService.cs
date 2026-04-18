@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 using XcaNet.Contracts.Browser;
 using XcaNet.Contracts.Crypto;
 using XcaNet.Contracts.Crypto.Workflow;
@@ -29,6 +30,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
     private readonly ICertificateService _certificateService;
     private readonly ICertificateSigningRequestService _certificateSigningRequestService;
     private readonly IImportExportService _importExportService;
+    private readonly ICryptoBackendDiagnosticsProvider _cryptoBackendDiagnosticsProvider;
     private readonly ILogger<DatabaseSessionService> _logger;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -52,6 +54,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         ICertificateService certificateService,
         ICertificateSigningRequestService certificateSigningRequestService,
         IImportExportService importExportService,
+        ICryptoBackendDiagnosticsProvider cryptoBackendDiagnosticsProvider,
         ILogger<DatabaseSessionService> logger)
     {
         _databaseMigrator = databaseMigrator;
@@ -67,6 +70,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         _certificateService = certificateService;
         _certificateSigningRequestService = certificateSigningRequestService;
         _importExportService = importExportService;
+        _cryptoBackendDiagnosticsProvider = cryptoBackendDiagnosticsProvider;
         _logger = logger;
     }
 
@@ -612,6 +616,25 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             return OperationResult<ImportStoredMaterialResult>.Failure(OperationErrorCode.DatabaseLocked, "Unlock the database before importing material.");
         }
 
+        if (request.Kind == CryptoImportKind.CertificateRevocationList)
+        {
+            var detailsResult = await _certificateService.ParseCertificateRevocationListAsync(
+                new CertificateRevocationListParseRequest(request.Data, request.Format),
+                cancellationToken);
+
+            if (!detailsResult.IsSuccess || detailsResult.Value is null)
+            {
+                return OperationResult<ImportStoredMaterialResult>.Failure(detailsResult.ErrorCode, detailsResult.Message);
+            }
+
+            var pemData = request.Format == CryptoDataFormat.Pem ? System.Text.Encoding.UTF8.GetString(request.Data) : null;
+            var crlId = await StoreCertificateRevocationListAsync(
+                new ImportedCertificateRevocationListMaterial(request.DisplayName, request.Format == CryptoDataFormat.Pem ? GetPemBody(request.Data) : request.Data, pemData, detailsResult.Value),
+                cancellationToken);
+
+            return OperationResult<ImportStoredMaterialResult>.Success(new ImportStoredMaterialResult([], [], [], [crlId]), "CRL imported.");
+        }
+
         var importResult = await _importExportService.ImportAsync(
             new ImportCertificateMaterialRequest(request.Kind, request.Format, request.Data, request.Password, request.DisplayName),
             cancellationToken);
@@ -624,6 +647,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         var privateKeyIds = new List<Guid>();
         var certificateIds = new List<Guid>();
         var csrIds = new List<Guid>();
+        var crlIds = new List<Guid>();
 
         foreach (var privateKey in importResult.Value.PrivateKeys)
         {
@@ -671,7 +695,60 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             csrIds.Add(csrId);
         }
 
-        return OperationResult<ImportStoredMaterialResult>.Success(new ImportStoredMaterialResult(privateKeyIds, certificateIds, csrIds), "Material imported.");
+        foreach (var certificateRevocationList in importResult.Value.CertificateRevocationLists)
+        {
+            var storedCrlId = await StoreCertificateRevocationListAsync(certificateRevocationList, cancellationToken);
+            crlIds.Add(storedCrlId);
+        }
+
+        return OperationResult<ImportStoredMaterialResult>.Success(new ImportStoredMaterialResult(privateKeyIds, certificateIds, csrIds, crlIds), "Material imported.");
+    }
+
+    public async Task<OperationResult<ImportStoredFilesResult>> ImportStoredFilesAsync(ImportStoredFilesRequest request, CancellationToken cancellationToken)
+    {
+        if (!IsUnlockedDatabase())
+        {
+            return OperationResult<ImportStoredFilesResult>.Failure(OperationErrorCode.DatabaseLocked, "Unlock the database before importing files.");
+        }
+
+        if (request.FilePaths.Count == 0)
+        {
+            return OperationResult<ImportStoredFilesResult>.Failure(OperationErrorCode.ValidationFailed, "Select at least one file to import.");
+        }
+
+        var importedFiles = new List<ImportedStoredFileItem>();
+
+        foreach (var filePath in request.FilePaths)
+        {
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            {
+                return OperationResult<ImportStoredFilesResult>.Failure(OperationErrorCode.ValidationFailed, $"The import file was not found: {filePath}");
+            }
+
+            var classifyResult = await ClassifyImportFileAsync(filePath, request.Password, cancellationToken);
+            if (!classifyResult.IsSuccess || classifyResult.Value is null)
+            {
+                return OperationResult<ImportStoredFilesResult>.Failure(classifyResult.ErrorCode, classifyResult.Message);
+            }
+
+            var importResult = await ImportStoredMaterialAsync(classifyResult.Value, cancellationToken);
+            if (!importResult.IsSuccess || importResult.Value is null)
+            {
+                return OperationResult<ImportStoredFilesResult>.Failure(importResult.ErrorCode, importResult.Message);
+            }
+
+            importedFiles.Add(
+                new ImportedStoredFileItem(
+                    filePath,
+                    classifyResult.Value.DisplayName,
+                    classifyResult.Value.Kind,
+                    importResult.Value.PrivateKeyIds,
+                    importResult.Value.CertificateIds,
+                    importResult.Value.CertificateSigningRequestIds,
+                    importResult.Value.CertificateRevocationListIds));
+        }
+
+        return OperationResult<ImportStoredFilesResult>.Success(new ImportStoredFilesResult(importedFiles), "Files imported.");
     }
 
     public async Task<OperationResult<ExportedArtifact>> ExportStoredMaterialAsync(ExportStoredMaterialRequest request, CancellationToken cancellationToken)
@@ -689,6 +766,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                 CryptoImportKind.PrivateKey => await ExportPrivateKeyMaterialAsync(request, cancellationToken),
                 CryptoImportKind.Certificate => await ExportCertificateMaterialAsync(request, cancellationToken),
                 CryptoImportKind.CertificateSigningRequest => await ExportCertificateSigningRequestMaterialAsync(request, cancellationToken),
+                CryptoImportKind.CertificateRevocationList => await ExportCertificateRevocationListMaterialAsync(request, cancellationToken),
                 _ => OperationResult<ExportedArtifact>.Failure(OperationErrorCode.ValidationFailed, "Unsupported export kind.")
             };
         }
@@ -696,6 +774,45 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         {
             _gate.Release();
         }
+    }
+
+    public async Task<OperationResult<ExportedArtifact>> ExportStoredMaterialToFileAsync(ExportStoredMaterialToFileRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.DestinationPath))
+        {
+            return OperationResult<ExportedArtifact>.Failure(OperationErrorCode.ValidationFailed, "Choose a destination path before exporting.");
+        }
+
+        var exportResult = await ExportStoredMaterialAsync(
+            new ExportStoredMaterialRequest(request.Kind, request.MaterialId, request.Format, request.Password, request.FileNameStem, request.Mode),
+            cancellationToken);
+
+        if (!exportResult.IsSuccess || exportResult.Value is null)
+        {
+            return OperationResult<ExportedArtifact>.Failure(exportResult.ErrorCode, exportResult.Message);
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(request.DestinationPath) ?? ".");
+        await File.WriteAllBytesAsync(request.DestinationPath, exportResult.Value.Data, cancellationToken);
+        return OperationResult<ExportedArtifact>.Success(exportResult.Value, "Material exported to file.");
+    }
+
+    public Task<OperationResult<ApplicationDiagnosticsSnapshot>> GetApplicationDiagnosticsAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var appVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
+            ?? typeof(DatabaseSessionService).Assembly.GetName().Version?.ToString()
+            ?? "0.0.0";
+
+        return Task.FromResult(
+            OperationResult<ApplicationDiagnosticsSnapshot>.Success(
+                new ApplicationDiagnosticsSnapshot(
+                    _cryptoBackendDiagnosticsProvider.GetSnapshot(),
+                    XcaNetDbContext.CurrentSchemaVersion,
+                    appVersion,
+                    _state),
+                "Application diagnostics loaded."));
     }
 
     public async Task<OperationResult<CertificateDetails>> GetCertificateDetailsAsync(Guid certificateId, CancellationToken cancellationToken)
@@ -970,7 +1087,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                     DateTime.SpecifyKind(x.ThisUpdateUtc, DateTimeKind.Utc),
                     x.NextUpdateUtc is null ? null : DateTime.SpecifyKind(x.NextUpdateUtc.Value, DateTimeKind.Utc),
                     x.RevokedEntries.Count,
-                    new NavigationTarget(BrowserEntityType.Certificate, x.IssuerCertificateId, NavigationFocusSection.Inspector)))
+                    x.IssuerCertificateId == Guid.Empty ? null : new NavigationTarget(BrowserEntityType.Certificate, x.IssuerCertificateId, NavigationFocusSection.Inspector)))
                 .OrderByDescending(x => x.ThisUpdate)
                 .ToList();
 
@@ -1003,7 +1120,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                     crl.Id,
                     crl.DisplayName,
                     crl.IssuerDisplayName,
-                    new NavigationTarget(BrowserEntityType.Certificate, crl.IssuerCertificateId, NavigationFocusSection.Inspector),
+                    crl.IssuerCertificateId == Guid.Empty ? null : new NavigationTarget(BrowserEntityType.Certificate, crl.IssuerCertificateId, NavigationFocusSection.Inspector),
                     crl.CrlNumber.ToString(),
                     DateTime.SpecifyKind(crl.ThisUpdateUtc, DateTimeKind.Utc),
                     crl.NextUpdateUtc is null ? null : DateTime.SpecifyKind(crl.NextUpdateUtc.Value, DateTimeKind.Utc),
@@ -1265,7 +1382,15 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
 
         OperationResult<ExportedArtifact> exportResult;
 
-        if (request.Format == CryptoDataFormat.Pkcs12)
+        if (request.Mode == StoredMaterialExportMode.CertificateChain)
+        {
+            exportResult = await ExportCertificateChainAsync(certificateEntity, request, cancellationToken);
+        }
+        else if (request.Mode == StoredMaterialExportMode.CertificateWithPrivateKeyBundle && request.Format != CryptoDataFormat.Pkcs12)
+        {
+            exportResult = await ExportCertificateWithPrivateKeyBundleAsync(certificateEntity, request, cancellationToken);
+        }
+        else if (request.Format == CryptoDataFormat.Pkcs12)
         {
             if (certificateEntity.PrivateKeyId is null)
             {
@@ -1316,6 +1441,280 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         return await _importExportService.ExportCertificateSigningRequestAsync(
             new ExportCertificateSigningRequestRequest(certificateRequestEntity.DerData, request.Format, request.FileNameStem),
             cancellationToken);
+    }
+
+    private async Task<OperationResult<ExportedArtifact>> ExportCertificateRevocationListMaterialAsync(ExportStoredMaterialRequest request, CancellationToken cancellationToken)
+    {
+        var certificateRevocationList = await _certificateRevocationListRepository.GetAsync(_currentDatabasePath!, request.MaterialId, cancellationToken);
+        if (certificateRevocationList is null)
+        {
+            return OperationResult<ExportedArtifact>.Failure(OperationErrorCode.DatabaseNotFound, "Certificate revocation list not found.");
+        }
+
+        var pemData = certificateRevocationList.PemData ?? System.Security.Cryptography.PemEncoding.WriteString("X509 CRL", certificateRevocationList.DerData);
+        ExportedArtifact? artifact = request.Format switch
+        {
+            CryptoDataFormat.Pem => new ExportedArtifact(
+                CryptoDataFormat.Pem,
+                System.Text.Encoding.UTF8.GetBytes(pemData),
+                pemData,
+                "application/pkix-crl",
+                $"{request.FileNameStem}.crl.pem"),
+            CryptoDataFormat.Der => new ExportedArtifact(
+                CryptoDataFormat.Der,
+                certificateRevocationList.DerData,
+                null,
+                "application/pkix-crl",
+                $"{request.FileNameStem}.crl"),
+            _ => null
+        };
+
+        if (artifact is null)
+        {
+            return OperationResult<ExportedArtifact>.Failure(OperationErrorCode.ValidationFailed, "Unsupported CRL export format.");
+        }
+
+        return OperationResult<ExportedArtifact>.Success(artifact, "Certificate revocation list exported.");
+    }
+
+    private async Task<OperationResult<ExportedArtifact>> ExportCertificateChainAsync(CertificateEntity certificateEntity, ExportStoredMaterialRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Format != CryptoDataFormat.Pem)
+        {
+            return OperationResult<ExportedArtifact>.Failure(OperationErrorCode.ValidationFailed, "Certificate chain export currently supports PEM only.");
+        }
+
+        var certificates = await _certificateRepository.ListAsync(_currentDatabasePath!, cancellationToken);
+        var chain = new List<CertificateEntity> { certificateEntity };
+        var current = certificateEntity;
+        while (current.IssuerCertificateId.HasValue)
+        {
+            var issuer = certificates.SingleOrDefault(x => x.Id == current.IssuerCertificateId.Value);
+            if (issuer is null)
+            {
+                break;
+            }
+
+            chain.Add(issuer);
+            current = issuer;
+        }
+
+        var parts = new List<string>();
+        foreach (var item in chain)
+        {
+            var exportResult = await _importExportService.ExportCertificateAsync(
+                new ExportCertificateRequest(item.DerData, CryptoDataFormat.Pem, request.FileNameStem),
+                cancellationToken);
+
+            if (!exportResult.IsSuccess || exportResult.Value?.TextRepresentation is null)
+            {
+                return OperationResult<ExportedArtifact>.Failure(exportResult.ErrorCode, exportResult.Message);
+            }
+
+            parts.Add(exportResult.Value.TextRepresentation.Trim());
+        }
+
+        var pem = string.Join(Environment.NewLine + Environment.NewLine, parts) + Environment.NewLine;
+        return OperationResult<ExportedArtifact>.Success(
+            new ExportedArtifact(CryptoDataFormat.Pem, System.Text.Encoding.UTF8.GetBytes(pem), pem, "application/x-pem-file", $"{request.FileNameStem}-chain.pem"),
+            "Certificate chain exported.");
+    }
+
+    private async Task<OperationResult<ExportedArtifact>> ExportCertificateWithPrivateKeyBundleAsync(CertificateEntity certificateEntity, ExportStoredMaterialRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Format != CryptoDataFormat.Pem)
+        {
+            return OperationResult<ExportedArtifact>.Failure(OperationErrorCode.ValidationFailed, "Certificate and private key bundle export currently supports PEM only.");
+        }
+
+        if (certificateEntity.PrivateKeyId is null)
+        {
+            return OperationResult<ExportedArtifact>.Failure(OperationErrorCode.ValidationFailed, "The certificate does not have an associated private key.");
+        }
+
+        var privateKeyEntity = await _privateKeyRepository.GetAsync(_currentDatabasePath!, certificateEntity.PrivateKeyId.Value, cancellationToken);
+        if (privateKeyEntity is null)
+        {
+            return OperationResult<ExportedArtifact>.Failure(OperationErrorCode.DatabaseNotFound, "Associated private key not found.");
+        }
+
+        var certificateExport = await _importExportService.ExportCertificateAsync(
+            new ExportCertificateRequest(certificateEntity.DerData, CryptoDataFormat.Pem, request.FileNameStem),
+            cancellationToken);
+        if (!certificateExport.IsSuccess || certificateExport.Value?.TextRepresentation is null)
+        {
+            return OperationResult<ExportedArtifact>.Failure(certificateExport.ErrorCode, certificateExport.Message);
+        }
+
+        var decryptedPrivateKey = DecryptPrivateKey(privateKeyEntity);
+        try
+        {
+            var keyExport = await _keyService.ExportPrivateKeyAsync(
+                new PrivateKeyExportRequest(request.FileNameStem, privateKeyEntity.Algorithm, decryptedPrivateKey, CryptoDataFormat.Pem, request.Password),
+                cancellationToken);
+
+            if (!keyExport.IsSuccess || keyExport.Value?.TextRepresentation is null)
+            {
+                return OperationResult<ExportedArtifact>.Failure(keyExport.ErrorCode, keyExport.Message);
+            }
+
+            var bundle = certificateExport.Value.TextRepresentation.Trim()
+                + Environment.NewLine + Environment.NewLine
+                + keyExport.Value.TextRepresentation.Trim()
+                + Environment.NewLine;
+
+            await _auditEventRepository.AddAsync(_currentDatabasePath!, CreateAuditEvent(AuditEventKind.PrivateKeyExported, "Private key exported."), cancellationToken);
+            return OperationResult<ExportedArtifact>.Success(
+                new ExportedArtifact(CryptoDataFormat.Pem, System.Text.Encoding.UTF8.GetBytes(bundle), bundle, "application/x-pem-file", $"{request.FileNameStem}-bundle.pem"),
+                "Certificate and private key bundle exported.");
+        }
+        finally
+        {
+            Array.Clear(decryptedPrivateKey, 0, decryptedPrivateKey.Length);
+        }
+    }
+
+    private async Task<Guid> StoreCertificateRevocationListAsync(ImportedCertificateRevocationListMaterial certificateRevocationList, CancellationToken cancellationToken)
+    {
+        var certificates = await _certificateRepository.ListAsync(_currentDatabasePath!, cancellationToken);
+        var issuer = certificates
+            .OrderBy(x => x.Subject.Equals(certificateRevocationList.Details.Issuer, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(x => x.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(x => x.Subject.Equals(certificateRevocationList.Details.Issuer, StringComparison.OrdinalIgnoreCase));
+
+        var crlId = Guid.NewGuid();
+        await _certificateRevocationListRepository.AddAsync(
+            _currentDatabasePath!,
+            new CertificateRevocationListEntity
+            {
+                Id = crlId,
+                DisplayName = certificateRevocationList.DisplayName,
+                IssuerCertificateId = issuer?.Id ?? Guid.Empty,
+                IssuerDisplayName = issuer?.DisplayName ?? certificateRevocationList.Details.Issuer,
+                CrlNumber = long.TryParse(certificateRevocationList.Details.CrlNumber, out var parsedCrlNumber) ? parsedCrlNumber : 0,
+                ThisUpdateUtc = certificateRevocationList.Details.ThisUpdate.UtcDateTime,
+                NextUpdateUtc = certificateRevocationList.Details.NextUpdate?.UtcDateTime,
+                DerData = certificateRevocationList.DerData,
+                PemData = certificateRevocationList.PemData,
+                RevokedEntries = certificateRevocationList.Details.RevokedCertificates
+                    .Select(x => new CertificateRevocationListEntryEntity
+                    {
+                        SerialNumber = x.SerialNumber,
+                        DisplayName = x.DisplayName,
+                        Subject = x.Subject,
+                        Reason = (int)x.Reason,
+                        RevokedAtUtc = x.RevokedAt.UtcDateTime
+                    })
+                    .ToList()
+            },
+            cancellationToken);
+
+        return crlId;
+    }
+
+    private async Task<OperationResult<ImportStoredMaterialRequest>> ClassifyImportFileAsync(string filePath, string? password, CancellationToken cancellationToken)
+    {
+        var data = await File.ReadAllBytesAsync(filePath, cancellationToken);
+        var displayName = Path.GetFileNameWithoutExtension(filePath);
+        var extension = Path.GetExtension(filePath);
+
+        if (LooksLikePem(data, "X509 CRL") || extension.Equals(".crl", StringComparison.OrdinalIgnoreCase))
+        {
+            var format = LooksLikePem(data, "X509 CRL") ? CryptoDataFormat.Pem : CryptoDataFormat.Der;
+            return OperationResult<ImportStoredMaterialRequest>.Success(
+                new ImportStoredMaterialRequest(displayName, CryptoImportKind.CertificateRevocationList, format, data, password),
+                "CRL import classified.");
+        }
+
+        if (LooksLikePem(data, "CERTIFICATE REQUEST") || extension.Equals(".csr", StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult<ImportStoredMaterialRequest>.Success(
+                new ImportStoredMaterialRequest(displayName, CryptoImportKind.CertificateSigningRequest, LooksLikePem(data, "CERTIFICATE REQUEST") ? CryptoDataFormat.Pem : CryptoDataFormat.Pkcs10, data, password),
+                "CSR import classified.");
+        }
+
+        if (LooksLikePem(data, "CERTIFICATE"))
+        {
+            return OperationResult<ImportStoredMaterialRequest>.Success(
+                new ImportStoredMaterialRequest(displayName, CryptoImportKind.Certificate, CryptoDataFormat.Pem, data, password),
+                "Certificate import classified.");
+        }
+
+        if (LooksLikePem(data, "PRIVATE KEY") || extension.Equals(".key", StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult<ImportStoredMaterialRequest>.Success(
+                new ImportStoredMaterialRequest(displayName, CryptoImportKind.PrivateKey, LooksLikePem(data, "PRIVATE KEY") ? CryptoDataFormat.Pem : CryptoDataFormat.Pkcs8, data, password),
+                "Private key import classified.");
+        }
+
+        if (extension.Equals(".pfx", StringComparison.OrdinalIgnoreCase) || extension.Equals(".p12", StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult<ImportStoredMaterialRequest>.Success(
+                new ImportStoredMaterialRequest(displayName, CryptoImportKind.Bundle, CryptoDataFormat.Pkcs12, data, password),
+                "Bundle import classified.");
+        }
+
+        if (extension.Equals(".der", StringComparison.OrdinalIgnoreCase) || extension.Equals(".cer", StringComparison.OrdinalIgnoreCase))
+        {
+            if (await CanParseCertificateAsync(data, cancellationToken))
+            {
+                return OperationResult<ImportStoredMaterialRequest>.Success(
+                    new ImportStoredMaterialRequest(displayName, CryptoImportKind.Certificate, CryptoDataFormat.Der, data, password),
+                    "Certificate import classified.");
+            }
+
+            if (await CanParseCertificateSigningRequestAsync(data, cancellationToken))
+            {
+                return OperationResult<ImportStoredMaterialRequest>.Success(
+                    new ImportStoredMaterialRequest(displayName, CryptoImportKind.CertificateSigningRequest, CryptoDataFormat.Pkcs10, data, password),
+                    "CSR import classified.");
+            }
+
+            if (await CanParseCertificateRevocationListAsync(data, cancellationToken))
+            {
+                return OperationResult<ImportStoredMaterialRequest>.Success(
+                    new ImportStoredMaterialRequest(displayName, CryptoImportKind.CertificateRevocationList, CryptoDataFormat.Der, data, password),
+                    "CRL import classified.");
+            }
+        }
+
+        return OperationResult<ImportStoredMaterialRequest>.Failure(OperationErrorCode.ValidationFailed, $"Unsupported file type: {Path.GetFileName(filePath)}");
+    }
+
+    private async Task<bool> CanParseCertificateAsync(byte[] data, CancellationToken cancellationToken)
+    {
+        var result = await _certificateService.ParseCertificateAsync(new CertificateParseRequest(data, CryptoDataFormat.Der), cancellationToken);
+        return result.IsSuccess;
+    }
+
+    private async Task<bool> CanParseCertificateSigningRequestAsync(byte[] data, CancellationToken cancellationToken)
+    {
+        var result = await _certificateSigningRequestService.ParseAsync(new CertificateSigningRequestParseRequest(data, CryptoDataFormat.Der), cancellationToken);
+        return result.IsSuccess;
+    }
+
+    private async Task<bool> CanParseCertificateRevocationListAsync(byte[] data, CancellationToken cancellationToken)
+    {
+        var result = await _certificateService.ParseCertificateRevocationListAsync(new CertificateRevocationListParseRequest(data, CryptoDataFormat.Der), cancellationToken);
+        return result.IsSuccess;
+    }
+
+    private static bool LooksLikePem(byte[] data, string label)
+    {
+        if (data.Length == 0)
+        {
+            return false;
+        }
+
+        var text = System.Text.Encoding.UTF8.GetString(data);
+        return text.Contains($"BEGIN {label}", StringComparison.Ordinal);
+    }
+
+    private static byte[] GetPemBody(byte[] data)
+    {
+        var text = System.Text.Encoding.UTF8.GetString(data);
+        var pemField = System.Security.Cryptography.PemEncoding.Find(text);
+        return Convert.FromBase64String(text[pemField.Base64Data].ToString());
     }
 
     private void ReplaceUnlockedKey(UnlockedDatabaseKey unlockedKey)

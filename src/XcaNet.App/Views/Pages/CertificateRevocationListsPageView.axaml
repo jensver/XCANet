@@ -9,6 +9,12 @@
           <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}" />
         </Grid>
         <TextBlock Text="{Binding PlaceholderMessage}" Foreground="#475569" TextWrapping="Wrap" />
+        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
         <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="500">
           <ListBox.ItemTemplate>
             <DataTemplate>
@@ -31,8 +37,12 @@
       <StackPanel Spacing="10">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Text="CRL Inspector" FontSize="18" FontWeight="SemiBold" />
-          <Button Grid.Column="1" Content="Open Issuer" Command="{Binding OpenIssuerCommand}" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+            <Button Content="Open Issuer" Command="{Binding OpenIssuerCommand}" />
+            <Button Content="Export" Command="{Binding ExportSelectedCommand}" />
+          </StackPanel>
         </Grid>
+        <TextBlock Text="Select a CRL to inspect issuer metadata, publication windows, and revoked entries." Foreground="#475569" TextWrapping="Wrap" />
         <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="8">
           <TextBlock Text="Issuer" />
           <TextBlock Grid.Column="1" Text="{Binding Inspector.IssuerDisplayName}" TextWrapping="Wrap" />

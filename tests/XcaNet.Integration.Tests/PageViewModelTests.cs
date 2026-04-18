@@ -76,6 +76,20 @@ public sealed class PageViewModelTests
         Assert.Equal(key.PrivateKeyId, page.IssuerPrivateKeys[0].PrivateKeyId);
     }
 
+    [Fact]
+    public void ItemsPages_ShouldExposeEmptyStateFlags()
+    {
+        var page = new CertificatesPageViewModel();
+
+        Assert.True(page.IsEmpty);
+        Assert.False(page.HasItems);
+
+        page.SetItems([CreateCertificateListItem(Guid.NewGuid(), "Alpha")]);
+
+        Assert.False(page.IsEmpty);
+        Assert.True(page.HasItems);
+    }
+
     private static CertificateListItem CreateCertificateListItem(Guid id, string displayName, bool isCertificateAuthority = false)
     {
         return new CertificateListItem(

@@ -32,7 +32,13 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<ImportStoredMaterialResult>> ImportStoredMaterialAsync(ImportStoredMaterialRequest request, CancellationToken cancellationToken);
 
+    Task<OperationResult<ImportStoredFilesResult>> ImportStoredFilesAsync(ImportStoredFilesRequest request, CancellationToken cancellationToken);
+
     Task<OperationResult<ExportedArtifact>> ExportStoredMaterialAsync(ExportStoredMaterialRequest request, CancellationToken cancellationToken);
+
+    Task<OperationResult<ExportedArtifact>> ExportStoredMaterialToFileAsync(ExportStoredMaterialToFileRequest request, CancellationToken cancellationToken);
+
+    Task<OperationResult<ApplicationDiagnosticsSnapshot>> GetApplicationDiagnosticsAsync(CancellationToken cancellationToken);
 
     Task<OperationResult<CertificateDetails>> GetCertificateDetailsAsync(Guid certificateId, CancellationToken cancellationToken);
 

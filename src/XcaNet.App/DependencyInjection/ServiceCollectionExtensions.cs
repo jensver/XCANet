@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using XcaNet.App.Services;
 using XcaNet.App.ViewModels;
 using XcaNet.App.Views;
 
@@ -8,6 +9,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddPresentation(this IServiceCollection services)
     {
+        services.AddSingleton<IDesktopFileDialogService, DesktopFileDialogService>();
         services.AddSingleton<MainWindow>();
         services.AddSingleton<ShellViewModel>();
         return services;

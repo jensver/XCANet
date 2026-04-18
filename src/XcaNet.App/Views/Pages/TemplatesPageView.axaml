@@ -9,6 +9,12 @@
           <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}" />
         </Grid>
         <TextBlock Text="{Binding PlaceholderMessage}" Foreground="#475569" TextWrapping="Wrap" />
+        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+          <StackPanel Spacing="6">
+            <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
         <ListBox ItemsSource="{Binding Items}" Height="420">
           <ListBox.ItemTemplate>
             <DataTemplate>

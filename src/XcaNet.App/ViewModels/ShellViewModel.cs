@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Text;
 using Microsoft.Extensions.Logging;
 using XcaNet.App.Commands;
+using XcaNet.App.Services;
 using XcaNet.App.ViewModels.Navigation;
 using XcaNet.App.ViewModels.Notifications;
 using XcaNet.App.ViewModels.Pages;
@@ -19,6 +20,7 @@ namespace XcaNet.App.ViewModels;
 public sealed class ShellViewModel : ViewModelBase
 {
     private readonly IDatabaseSessionService _databaseSessionService;
+    private readonly IDesktopFileDialogService _fileDialogService;
     private readonly ILogger<ShellViewModel> _logger;
 
     private readonly AsyncCommand _createDatabaseCommand;
@@ -27,8 +29,10 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _lockDatabaseCommand;
     private readonly AsyncCommand _refreshWorkspaceCommand;
     private readonly AsyncCommand _refreshCertificatesCommand;
+    private readonly AsyncCommand _importFilesCommand;
     private readonly AsyncCommand _importMaterialCommand;
     private readonly AsyncCommand _exportCertificateCommand;
+    private readonly AsyncCommand _exportCertificateToFileCommand;
     private readonly AsyncCommand _revokeCertificateCommand;
     private readonly AsyncCommand _generateCertificateRevocationListCommand;
     private readonly DelegateCommand _navigateIssuerCommand;
@@ -39,11 +43,14 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _createSelfSignedCaCommand;
     private readonly AsyncCommand _createCertificateSigningRequestCommand;
     private readonly AsyncCommand _exportPrivateKeyCommand;
+    private readonly AsyncCommand _exportPrivateKeyToFileCommand;
     private readonly AsyncCommand _refreshCertificateRequestsCommand;
     private readonly AsyncCommand _signCertificateSigningRequestCommand;
     private readonly AsyncCommand _exportCertificateSigningRequestCommand;
+    private readonly AsyncCommand _exportCertificateSigningRequestToFileCommand;
     private readonly DelegateCommand _navigateRequestPrivateKeyCommand;
     private readonly AsyncCommand _refreshCertificateRevocationListsCommand;
+    private readonly AsyncCommand _exportCertificateRevocationListToFileCommand;
     private readonly DelegateCommand _navigateCrlIssuerCommand;
     private readonly AsyncCommand _refreshTemplatesCommand;
 
@@ -52,9 +59,10 @@ public sealed class ShellViewModel : ViewModelBase
     private bool _isBusy;
     private string _busyMessage = string.Empty;
 
-    public ShellViewModel(IDatabaseSessionService databaseSessionService, ILogger<ShellViewModel> logger)
+    public ShellViewModel(IDatabaseSessionService databaseSessionService, IDesktopFileDialogService fileDialogService, ILogger<ShellViewModel> logger)
     {
         _databaseSessionService = databaseSessionService;
+        _fileDialogService = fileDialogService;
         _logger = logger;
 
         logger.LogInformation("Initializing XcaNet shell.");
@@ -73,8 +81,10 @@ public sealed class ShellViewModel : ViewModelBase
         _lockDatabaseCommand = new AsyncCommand(LockDatabaseAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
         _refreshWorkspaceCommand = new AsyncCommand(RefreshAllAsync, () => !IsBusy);
         _refreshCertificatesCommand = new AsyncCommand(LoadCertificatesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
+        _importFilesCommand = new AsyncCommand(ImportFilesFromPickerAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
         _importMaterialCommand = new AsyncCommand(ImportMaterialAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
         _exportCertificateCommand = new AsyncCommand(ExportSelectedCertificateAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.HasSelection);
+        _exportCertificateToFileCommand = new AsyncCommand(ExportSelectedCertificateToFileAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.HasSelection);
         _revokeCertificateCommand = new AsyncCommand(RevokeSelectedCertificateAsync, CanRevokeSelectedCertificate);
         _generateCertificateRevocationListCommand = new AsyncCommand(GenerateCertificateRevocationListAsync, CanGenerateCertificateRevocationList);
         _navigateIssuerCommand = new DelegateCommand(() => NavigateTo(CertificatesPage.Inspector?.Navigation.Issuer), () => CertificatesPage.Inspector?.Navigation.Issuer is not null);
@@ -85,12 +95,15 @@ public sealed class ShellViewModel : ViewModelBase
         _createSelfSignedCaCommand = new AsyncCommand(CreateSelfSignedCaAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _createCertificateSigningRequestCommand = new AsyncCommand(CreateCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _exportPrivateKeyCommand = new AsyncCommand(ExportSelectedPrivateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
+        _exportPrivateKeyToFileCommand = new AsyncCommand(ExportSelectedPrivateKeyToFileAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _refreshCertificateRequestsCommand = new AsyncCommand(LoadCertificateRequestsAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _signCertificateSigningRequestCommand = new AsyncCommand(SignCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection && CertificateRequestsPage.SelectedIssuerCertificate is not null && CertificateRequestsPage.SelectedIssuerPrivateKey is not null);
         _exportCertificateSigningRequestCommand = new AsyncCommand(ExportSelectedCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection);
+        _exportCertificateSigningRequestToFileCommand = new AsyncCommand(ExportSelectedCertificateSigningRequestToFileAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection);
         _navigateRequestPrivateKeyCommand = new DelegateCommand(() => NavigateTo(CertificateRequestsPage.SelectedItem?.PrivateKeyTarget), () => CertificateRequestsPage.SelectedItem?.PrivateKeyTarget is not null);
         _refreshCertificateRevocationListsCommand = new AsyncCommand(LoadCertificateRevocationListsAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
-        _navigateCrlIssuerCommand = new DelegateCommand(() => NavigateTo(CertificateRevocationListsPage.Inspector?.IssuerTarget), () => CertificateRevocationListsPage.Inspector is not null);
+        _exportCertificateRevocationListToFileCommand = new AsyncCommand(ExportSelectedCertificateRevocationListToFileAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRevocationListsPage.HasSelection);
+        _navigateCrlIssuerCommand = new DelegateCommand(() => NavigateTo(CertificateRevocationListsPage.Inspector?.IssuerTarget), () => CertificateRevocationListsPage.Inspector?.IssuerTarget is not null);
         _refreshTemplatesCommand = new AsyncCommand(LoadTemplatesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
@@ -99,8 +112,9 @@ public sealed class ShellViewModel : ViewModelBase
         SettingsSecurityPage.LockDatabaseCommand = _lockDatabaseCommand;
 
         CertificatesPage.RefreshCommand = _refreshCertificatesCommand;
+        CertificatesPage.ImportFilesCommand = _importFilesCommand;
         CertificatesPage.ImportMaterialCommand = _importMaterialCommand;
-        CertificatesPage.ExportSelectedCommand = _exportCertificateCommand;
+        CertificatesPage.ExportSelectedCommand = _exportCertificateToFileCommand;
         CertificatesPage.RevokeSelectedCommand = _revokeCertificateCommand;
         CertificatesPage.GenerateCertificateRevocationListCommand = _generateCertificateRevocationListCommand;
         CertificatesPage.OpenIssuerCommand = _navigateIssuerCommand;
@@ -112,13 +126,16 @@ public sealed class ShellViewModel : ViewModelBase
         PrivateKeysPage.CreateSelfSignedCaCommand = _createSelfSignedCaCommand;
         PrivateKeysPage.CreateCertificateSigningRequestCommand = _createCertificateSigningRequestCommand;
         PrivateKeysPage.ExportSelectedCommand = _exportPrivateKeyCommand;
+        PrivateKeysPage.ExportSelectedToFileCommand = _exportPrivateKeyToFileCommand;
 
         CertificateRequestsPage.RefreshCommand = _refreshCertificateRequestsCommand;
         CertificateRequestsPage.SignSelectedCommand = _signCertificateSigningRequestCommand;
         CertificateRequestsPage.ExportSelectedCommand = _exportCertificateSigningRequestCommand;
+        CertificateRequestsPage.ExportSelectedToFileCommand = _exportCertificateSigningRequestToFileCommand;
         CertificateRequestsPage.OpenSelectedPrivateKeyCommand = _navigateRequestPrivateKeyCommand;
 
         CertificateRevocationListsPage.RefreshCommand = _refreshCertificateRevocationListsCommand;
+        CertificateRevocationListsPage.ExportSelectedCommand = _exportCertificateRevocationListToFileCommand;
         CertificateRevocationListsPage.OpenIssuerCommand = _navigateCrlIssuerCommand;
         TemplatesPage.RefreshCommand = _refreshTemplatesCommand;
 
@@ -426,6 +443,66 @@ public sealed class ShellViewModel : ViewModelBase
         NotifySuccess("Material imported.");
     }
 
+    public async Task ImportFilesFromDropAsync(IReadOnlyList<string> filePaths)
+    {
+        if (filePaths.Count == 0)
+        {
+            return;
+        }
+
+        using var scope = BeginBusy("Importing dropped files");
+        await ImportFilesCoreAsync(filePaths);
+    }
+
+    private async Task ImportFilesFromPickerAsync()
+    {
+        var filePaths = await _fileDialogService.PickImportFilesAsync(CancellationToken.None);
+        if (filePaths.Count == 0)
+        {
+            return;
+        }
+
+        using var scope = BeginBusy("Importing files");
+        await ImportFilesCoreAsync(filePaths);
+    }
+
+    private async Task ImportFilesCoreAsync(IReadOnlyList<string> filePaths)
+    {
+        var result = await _databaseSessionService.ImportStoredFilesAsync(
+            new ImportStoredFilesRequest(filePaths, string.IsNullOrWhiteSpace(CertificatesPage.ImportPassword) ? null : CertificatesPage.ImportPassword),
+            CancellationToken.None);
+
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await RefreshAllAsync();
+        var firstImport = result.Value.ImportedFiles.FirstOrDefault();
+        if (firstImport is not null)
+        {
+            if (firstImport.CertificateIds.Count > 0)
+            {
+                NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, firstImport.CertificateIds[0], NavigationFocusSection.Inspector));
+            }
+            else if (firstImport.PrivateKeyIds.Count > 0)
+            {
+                NavigateTo(new NavigationTarget(BrowserEntityType.PrivateKey, firstImport.PrivateKeyIds[0], NavigationFocusSection.Overview));
+            }
+            else if (firstImport.CertificateSigningRequestIds.Count > 0)
+            {
+                NavigateTo(new NavigationTarget(BrowserEntityType.CertificateSigningRequest, firstImport.CertificateSigningRequestIds[0], NavigationFocusSection.Overview));
+            }
+            else if (firstImport.CertificateRevocationListIds.Count > 0)
+            {
+                NavigateTo(new NavigationTarget(BrowserEntityType.CertificateRevocationList, firstImport.CertificateRevocationListIds[0], NavigationFocusSection.Inspector));
+            }
+        }
+
+        NotifySuccess($"{result.Value.ImportedFiles.Count} file(s) imported.");
+    }
+
     private async Task ExportSelectedCertificateAsync()
     {
         if (!CertificatesPage.HasSelection || CertificatesPage.SelectedItem is null)
@@ -445,6 +522,57 @@ public sealed class ShellViewModel : ViewModelBase
             CancellationToken.None);
 
         ApplyExportResult(result, value => CertificatesPage.ExportPreview = value, "Certificate exported.");
+    }
+
+    private async Task ExportSelectedCertificateToFileAsync()
+    {
+        if (!CertificatesPage.HasSelection || CertificatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a certificate first.");
+            return;
+        }
+
+        var exportFormat = CertificatesPage.SelectedExportTarget == CertificateExportTargetView.Pkcs12Bundle
+            ? CryptoDataFormat.Pkcs12
+            : MapFormat(CertificatesPage.SelectedExportFormat);
+        var exportMode = CertificatesPage.SelectedExportTarget switch
+        {
+            CertificateExportTargetView.CertificateChain => StoredMaterialExportMode.CertificateChain,
+            CertificateExportTargetView.CertificateWithPrivateKeyPem => StoredMaterialExportMode.CertificateWithPrivateKeyBundle,
+            CertificateExportTargetView.Pkcs12Bundle => StoredMaterialExportMode.CertificateWithPrivateKeyBundle,
+            _ => StoredMaterialExportMode.Default
+        };
+
+        var suggestedFileName = BuildSuggestedFileName(
+            CertificatesPage.SelectedItem.DisplayName,
+            exportFormat,
+            exportMode,
+            CryptoImportKind.Certificate);
+        var destinationPath = await _fileDialogService.PickSavePathAsync(suggestedFileName, CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            return;
+        }
+
+        using var scope = BeginBusy("Exporting certificate to file");
+        var result = await _databaseSessionService.ExportStoredMaterialToFileAsync(
+            new ExportStoredMaterialToFileRequest(
+                CryptoImportKind.Certificate,
+                CertificatesPage.SelectedItem.CertificateId,
+                exportFormat,
+                destinationPath,
+                string.IsNullOrWhiteSpace(CertificatesPage.SelectedExportPassword) ? null : CertificatesPage.SelectedExportPassword,
+                SlugifyFileName(CertificatesPage.SelectedItem.DisplayName),
+                exportMode),
+            CancellationToken.None);
+
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        NotifySuccess($"Certificate exported to {destinationPath}.");
     }
 
     private async Task ExportSelectedPrivateKeyAsync()
@@ -468,6 +596,43 @@ public sealed class ShellViewModel : ViewModelBase
         ApplyExportResult(result, value => PrivateKeysPage.ExportPreview = value, "Private key exported.");
     }
 
+    private async Task ExportSelectedPrivateKeyToFileAsync()
+    {
+        if (!PrivateKeysPage.HasSelection || PrivateKeysPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a private key first.");
+            return;
+        }
+
+        var format = MapFormat(PrivateKeysPage.SelectedExportFormat);
+        var destinationPath = await _fileDialogService.PickSavePathAsync(
+            BuildSuggestedFileName(PrivateKeysPage.SelectedItem.DisplayName, format, StoredMaterialExportMode.Default, CryptoImportKind.PrivateKey),
+            CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            return;
+        }
+
+        using var scope = BeginBusy("Exporting private key to file");
+        var result = await _databaseSessionService.ExportStoredMaterialToFileAsync(
+            new ExportStoredMaterialToFileRequest(
+                CryptoImportKind.PrivateKey,
+                PrivateKeysPage.SelectedItem.PrivateKeyId,
+                format,
+                destinationPath,
+                string.IsNullOrWhiteSpace(PrivateKeysPage.SelectedExportPassword) ? null : PrivateKeysPage.SelectedExportPassword,
+                SlugifyFileName(PrivateKeysPage.SelectedItem.DisplayName)),
+            CancellationToken.None);
+
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        NotifySuccess($"Private key exported to {destinationPath}.");
+    }
+
     private async Task ExportSelectedCertificateSigningRequestAsync()
     {
         if (!CertificateRequestsPage.HasSelection || CertificateRequestsPage.SelectedItem is null)
@@ -489,10 +654,84 @@ public sealed class ShellViewModel : ViewModelBase
         ApplyExportResult(result, value => CertificateRequestsPage.ExportPreview = value, "Certificate signing request exported.");
     }
 
+    private async Task ExportSelectedCertificateSigningRequestToFileAsync()
+    {
+        if (!CertificateRequestsPage.HasSelection || CertificateRequestsPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a CSR first.");
+            return;
+        }
+
+        var format = MapFormat(CertificateRequestsPage.SelectedExportFormat);
+        var destinationPath = await _fileDialogService.PickSavePathAsync(
+            BuildSuggestedFileName(CertificateRequestsPage.SelectedItem.DisplayName, format, StoredMaterialExportMode.Default, CryptoImportKind.CertificateSigningRequest),
+            CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            return;
+        }
+
+        using var scope = BeginBusy("Exporting CSR to file");
+        var result = await _databaseSessionService.ExportStoredMaterialToFileAsync(
+            new ExportStoredMaterialToFileRequest(
+                CryptoImportKind.CertificateSigningRequest,
+                CertificateRequestsPage.SelectedItem.CertificateSigningRequestId,
+                format,
+                destinationPath,
+                null,
+                SlugifyFileName(CertificateRequestsPage.SelectedItem.DisplayName)),
+            CancellationToken.None);
+
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        NotifySuccess($"CSR exported to {destinationPath}.");
+    }
+
+    private async Task ExportSelectedCertificateRevocationListToFileAsync()
+    {
+        if (!CertificateRevocationListsPage.HasSelection || CertificateRevocationListsPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a CRL first.");
+            return;
+        }
+
+        var destinationPath = await _fileDialogService.PickSavePathAsync(
+            BuildSuggestedFileName(CertificateRevocationListsPage.SelectedItem.DisplayName, CryptoDataFormat.Pem, StoredMaterialExportMode.Default, CryptoImportKind.CertificateRevocationList),
+            CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(destinationPath))
+        {
+            return;
+        }
+
+        using var scope = BeginBusy("Exporting CRL to file");
+        var result = await _databaseSessionService.ExportStoredMaterialToFileAsync(
+            new ExportStoredMaterialToFileRequest(
+                CryptoImportKind.CertificateRevocationList,
+                CertificateRevocationListsPage.SelectedItem.CertificateRevocationListId,
+                CryptoDataFormat.Pem,
+                destinationPath,
+                null,
+                SlugifyFileName(CertificateRevocationListsPage.SelectedItem.DisplayName)),
+            CancellationToken.None);
+
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        NotifySuccess($"CRL exported to {destinationPath}.");
+    }
+
     private async Task RefreshAllAsync()
     {
         using var scope = BeginBusy("Refreshing workspace");
         ApplySnapshot(Snapshot);
+        await LoadDiagnosticsAsync();
 
         if (Snapshot.State == DatabaseSessionState.Closed || string.IsNullOrWhiteSpace(Snapshot.DatabasePath))
         {
@@ -593,6 +832,32 @@ public sealed class ShellViewModel : ViewModelBase
 
         var result = await _databaseSessionService.ListTemplatesAsync(CancellationToken.None);
         TemplatesPage.SetItems(result.IsSuccess && result.Value is not null ? result.Value : []);
+    }
+
+    private async Task LoadDiagnosticsAsync()
+    {
+        var result = await _databaseSessionService.GetApplicationDiagnosticsAsync(CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            SettingsSecurityPage.ManagedBackendStatus = "Unknown";
+            SettingsSecurityPage.OpenSslBackendStatus = "Unknown";
+            SettingsSecurityPage.OpenSslVersion = "Unavailable";
+            SettingsSecurityPage.OpenSslCapabilities = "Unknown";
+            SettingsSecurityPage.RoutingSummary = result.Message;
+            return;
+        }
+
+        SettingsSecurityPage.ManagedBackendStatus = result.Value.CryptoBackends.ManagedBackendAvailable ? "Available" : "Unavailable";
+        SettingsSecurityPage.OpenSslBackendStatus = result.Value.CryptoBackends.OpenSslBackendAvailable
+            ? "Available"
+            : $"Unavailable{(string.IsNullOrWhiteSpace(result.Value.CryptoBackends.OpenSslLoadError) ? string.Empty : $" ({result.Value.CryptoBackends.OpenSslLoadError})")}";
+        SettingsSecurityPage.OpenSslVersion = result.Value.CryptoBackends.OpenSslVersion ?? "Not loaded";
+        SettingsSecurityPage.OpenSslCapabilities = result.Value.CryptoBackends.OpenSslCapabilities.Count == 0
+            ? "None"
+            : string.Join(", ", result.Value.CryptoBackends.OpenSslCapabilities);
+        SettingsSecurityPage.RoutingSummary = result.Value.CryptoBackends.RoutingSummary;
+        SettingsSecurityPage.AppVersion = result.Value.AppVersion;
+        SettingsSecurityPage.SchemaVersion = result.Value.SchemaVersion.ToString();
     }
 
     private async Task LoadSelectedCertificateInspectorAsync()
@@ -814,8 +1079,10 @@ public sealed class ShellViewModel : ViewModelBase
         _lockDatabaseCommand.RaiseCanExecuteChanged();
         _refreshWorkspaceCommand.RaiseCanExecuteChanged();
         _refreshCertificatesCommand.RaiseCanExecuteChanged();
+        _importFilesCommand.RaiseCanExecuteChanged();
         _importMaterialCommand.RaiseCanExecuteChanged();
         _exportCertificateCommand.RaiseCanExecuteChanged();
+        _exportCertificateToFileCommand.RaiseCanExecuteChanged();
         _revokeCertificateCommand.RaiseCanExecuteChanged();
         _generateCertificateRevocationListCommand.RaiseCanExecuteChanged();
         _navigateIssuerCommand.RaiseCanExecuteChanged();
@@ -826,11 +1093,14 @@ public sealed class ShellViewModel : ViewModelBase
         _createSelfSignedCaCommand.RaiseCanExecuteChanged();
         _createCertificateSigningRequestCommand.RaiseCanExecuteChanged();
         _exportPrivateKeyCommand.RaiseCanExecuteChanged();
+        _exportPrivateKeyToFileCommand.RaiseCanExecuteChanged();
         _refreshCertificateRequestsCommand.RaiseCanExecuteChanged();
         _signCertificateSigningRequestCommand.RaiseCanExecuteChanged();
         _exportCertificateSigningRequestCommand.RaiseCanExecuteChanged();
+        _exportCertificateSigningRequestToFileCommand.RaiseCanExecuteChanged();
         _navigateRequestPrivateKeyCommand.RaiseCanExecuteChanged();
         _refreshCertificateRevocationListsCommand.RaiseCanExecuteChanged();
+        _exportCertificateRevocationListToFileCommand.RaiseCanExecuteChanged();
         _navigateCrlIssuerCommand.RaiseCanExecuteChanged();
         _refreshTemplatesCommand.RaiseCanExecuteChanged();
     }
@@ -863,6 +1133,29 @@ public sealed class ShellViewModel : ViewModelBase
             CryptoFormatView.Pkcs12 => CryptoDataFormat.Pkcs12,
             _ => CryptoDataFormat.Pem
         };
+    }
+
+    private static string BuildSuggestedFileName(string displayName, CryptoDataFormat format, StoredMaterialExportMode mode, CryptoImportKind kind)
+    {
+        var baseName = SlugifyFileName(displayName);
+        return kind switch
+        {
+            CryptoImportKind.PrivateKey => format == CryptoDataFormat.Pem ? $"{baseName}.key.pem" : $"{baseName}.key",
+            CryptoImportKind.CertificateSigningRequest => format == CryptoDataFormat.Pem ? $"{baseName}.csr.pem" : $"{baseName}.csr",
+            CryptoImportKind.CertificateRevocationList => format == CryptoDataFormat.Der ? $"{baseName}.crl" : $"{baseName}.crl.pem",
+            CryptoImportKind.Certificate when format == CryptoDataFormat.Pkcs12 => $"{baseName}.pfx",
+            CryptoImportKind.Certificate when mode == StoredMaterialExportMode.CertificateChain => $"{baseName}-chain.pem",
+            CryptoImportKind.Certificate when mode == StoredMaterialExportMode.CertificateWithPrivateKeyBundle => $"{baseName}-bundle.pem",
+            CryptoImportKind.Certificate when format == CryptoDataFormat.Der => $"{baseName}.cer",
+            _ => $"{baseName}.pem"
+        };
+    }
+
+    private static string SlugifyFileName(string value)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var sanitized = new string(value.Select(ch => invalid.Contains(ch) ? '-' : ch).ToArray()).Trim();
+        return string.IsNullOrWhiteSpace(sanitized) ? "xcanet-export" : sanitized;
     }
 
     private sealed class BusyScope : IDisposable
