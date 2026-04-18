@@ -51,7 +51,7 @@ public sealed class OpenSslCryptoBackendTests
     [Fact]
     public void RoutingPolicy_ShouldSelectManagedByDefault()
     {
-        var policy = new CryptoBackendRoutingPolicy(new CryptoBackendRoutingOptions(), new OpenSslDiagnosticsSnapshot(false, null, OpenSslBridgeCapabilities.None, "missing"));
+        var policy = new CryptoBackendRoutingPolicy(new CryptoBackendRoutingOptions(), new OpenSslDiagnosticsSnapshot(false, null, OpenSslBridgeCapabilities.None, "missing", null));
 
         var decision = policy.SelectCertificateSigningBackend(null);
 
@@ -66,7 +66,7 @@ public sealed class OpenSslCryptoBackendTests
             {
                 DefaultPreference = CryptoBackendPreference.PreferOpenSsl
             },
-            new OpenSslDiagnosticsSnapshot(false, null, OpenSslBridgeCapabilities.None, "missing"));
+            new OpenSslDiagnosticsSnapshot(false, null, OpenSslBridgeCapabilities.None, "missing", null));
 
         var decision = policy.SelectCertificateSigningBackend(CryptoBackendPreference.PreferOpenSsl);
 
@@ -79,7 +79,7 @@ public sealed class OpenSslCryptoBackendTests
     {
         var policy = new CryptoBackendRoutingPolicy(
             new CryptoBackendRoutingOptions(),
-            new OpenSslDiagnosticsSnapshot(true, "OpenSSL 3", OpenSslBridgeCapabilities.SupportsCertificateSigningRequestSigning, null));
+            new OpenSslDiagnosticsSnapshot(true, "OpenSSL 3", OpenSslBridgeCapabilities.SupportsCertificateSigningRequestSigning, null, "/tmp/libxcanet_ossl_bridge.dylib"));
 
         var decision = policy.SelectCertificateSigningBackend(CryptoBackendPreference.PreferManaged);
 
@@ -92,7 +92,7 @@ public sealed class OpenSslCryptoBackendTests
     {
         var policy = new CryptoBackendRoutingPolicy(
             new CryptoBackendRoutingOptions(),
-            new OpenSslDiagnosticsSnapshot(false, null, OpenSslBridgeCapabilities.None, "bridge missing"));
+            new OpenSslDiagnosticsSnapshot(false, null, OpenSslBridgeCapabilities.None, "bridge missing", null));
 
         var decision = policy.SelectCertificateSigningBackend(CryptoBackendPreference.OpenSslOnly);
 

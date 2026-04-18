@@ -30,18 +30,22 @@ public sealed class RoutedCryptoBackendDiagnosticsProvider : ICryptoBackendDiagn
 
     private string BuildRoutingSummary(OpenSslDiagnosticsSnapshot diagnostics)
     {
+        var librarySegment = diagnostics.IsAvailable && !string.IsNullOrWhiteSpace(diagnostics.ResolvedLibraryPath)
+            ? $" Loaded bridge: {diagnostics.ResolvedLibraryPath}."
+            : string.Empty;
+
         return _options.DefaultPreference switch
-        {
+            {
             CryptoBackendPreference.PreferOpenSsl when diagnostics.IsAvailable
-                => "OpenSSL is preferred when supported. Managed remains the fallback for unavailable operations.",
+                => $"OpenSSL is preferred when supported. Managed remains the fallback for unavailable operations.{librarySegment}",
             CryptoBackendPreference.PreferOpenSsl
                 => "OpenSSL is preferred by configuration, but managed fallback is active because the bridge is unavailable.",
             CryptoBackendPreference.OpenSslOnly when diagnostics.IsAvailable
-                => "OpenSSL-only routing is configured for supported operations.",
+                => $"OpenSSL-only routing is configured for supported operations.{librarySegment}",
             CryptoBackendPreference.OpenSslOnly
                 => "OpenSSL-only routing is configured, but the bridge is currently unavailable.",
             _ when diagnostics.IsAvailable
-                => "Managed remains the default backend. OpenSSL is available only when explicitly requested for supported operations.",
+                => $"Managed remains the default backend. OpenSSL is available only when explicitly requested for supported operations.{librarySegment}",
             _ => "Managed remains the default backend. OpenSSL is optional and currently unavailable."
         };
     }

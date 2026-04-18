@@ -107,3 +107,21 @@ Milestone 8 focuses on desktop usability rather than backend expansion:
 - Settings / Security now shows read-only backend diagnostics for managed availability, OpenSSL availability/version/capabilities, routing summary, and schema/app version data
 
 The file picker layer only gathers paths. Parsing, classification, preview, persistence, and export generation remain below the UI layer. Diagnostics are informational only: there is still no backend picker UI, and the managed backend remains the default path.
+
+## Release And Packaging
+
+Milestone 9 adds a repeatable packaging lane without moving packaging concerns into the core app layers:
+
+- `packaging/build-native-bridge.sh` builds the optional native bridge into `artifacts/native/<rid>/`
+- `packaging/package-app.sh` publishes the desktop app into `artifacts/publish/<rid>/<Configuration>/app/`
+- `packaging/verify-layout.sh` validates the expected publish layout
+- `.github/workflows/ci.yml` exercises build, test, publish, and layout verification in CI
+
+The application still runs correctly without any OpenSSL bridge present. If the bridge is missing, invalid, or built for the wrong architecture, startup diagnostics and the Settings / Security page report the failure while managed mode remains available.
+
+Desktop startup now also writes support logs under the local application-data log directory:
+
+- `startup.log`
+- `startup-failure-<timestamp>.log`
+
+Those logs are intended for operator troubleshooting and packaging verification. They do not change backend routing or introduce backend selection UI.

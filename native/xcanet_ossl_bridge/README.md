@@ -17,3 +17,14 @@ Build a local artifact with:
 ```
 
 The bridge exposes a C ABI only and is intentionally small. Application and UI layers never talk to it directly.
+
+For packaged app layouts introduced in M9, the expected runtime locations are:
+
+- `<app>/native/`
+- `<app>/bridges/`
+- `<app>/runtimes/<rid>/native/`
+
+You can also point the app at a specific bridge file through:
+
+- `XCANET_OPENSSL_BRIDGE_PATH`
+- `Crypto:OpenSslBridgePath`

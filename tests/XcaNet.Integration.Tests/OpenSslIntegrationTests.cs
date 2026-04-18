@@ -31,9 +31,13 @@ public sealed class OpenSslIntegrationTests
         var leafKey = await service.GenerateStoredKeyAsync(new GenerateStoredKeyRequest("Leaf Key", KeyAlgorithmKind.Ecdsa, null, EllipticCurveKind.P256), CancellationToken.None);
         var csr = await service.CreateCertificateSigningRequestAsync(new CreateCertificateSigningRequestWorkflowRequest(leafKey.Value!.PrivateKeyId, "Leaf CSR", "CN=leaf.example.test", [new SanEntry("leaf.example.test")]), CancellationToken.None);
         var leafCertificate = await service.SignCertificateSigningRequestAsync(new SignStoredCertificateSigningRequestRequest(csr.Value!.CertificateSigningRequestId, issuerCertificate.Value!.CertificateId, issuerKey.Value.PrivateKeyId, "Leaf Certificate", 180), CancellationToken.None);
+        var diagnostics = await service.GetApplicationDiagnosticsAsync(CancellationToken.None);
 
         Assert.True(leafCertificate.IsSuccess, leafCertificate.Message);
         Assert.Equal(CryptoBackendKind.Managed, leafCertificate.Value!.BackendUsed);
+        Assert.True(diagnostics.IsSuccess, diagnostics.Message);
+        Assert.False(diagnostics.Value!.CryptoBackends.OpenSslBackendAvailable);
+        Assert.Contains("fallback", diagnostics.Value.CryptoBackends.RoutingSummary, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -59,11 +63,16 @@ public sealed class OpenSslIntegrationTests
         var leafCertificate = await service.SignCertificateSigningRequestAsync(new SignStoredCertificateSigningRequestRequest(csr.Value!.CertificateSigningRequestId, issuerCertificate.Value!.CertificateId, issuerKey.Value.PrivateKeyId, "Leaf Certificate", 180), CancellationToken.None);
         var revoke = await service.RevokeCertificateAsync(new RevokeStoredCertificateRequest(leafCertificate.Value!.CertificateId, Contracts.Revocation.CertificateRevocationReason.KeyCompromise, DateTimeOffset.UtcNow), CancellationToken.None);
         var crl = await service.GenerateCertificateRevocationListAsync(new GenerateCertificateRevocationListWorkflowRequest(issuerCertificate.Value.CertificateId, issuerKey.Value.PrivateKeyId, "Issuer CRL", 7), CancellationToken.None);
+        var diagnostics = await service.GetApplicationDiagnosticsAsync(CancellationToken.None);
 
         Assert.True(leafCertificate.IsSuccess, leafCertificate.Message);
         Assert.Equal(CryptoBackendKind.OpenSsl, leafCertificate.Value!.BackendUsed);
         Assert.True(revoke.IsSuccess, revoke.Message);
         Assert.True(crl.IsSuccess, crl.Message);
+        Assert.True(diagnostics.IsSuccess, diagnostics.Message);
+        Assert.True(diagnostics.Value!.CryptoBackends.OpenSslBackendAvailable);
+        Assert.Contains("Loaded bridge", diagnostics.Value.CryptoBackends.RoutingSummary, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(1, diagnostics.Value.SchemaVersion);
     }
 
     [Fact]

@@ -52,6 +52,12 @@ This keeps backend selection explicit and testable without leaking native concer
 
 The M8 desktop diagnostics view only reports this state. It does not change routing behavior, enable backend selection, or expose native-specific controls.
 
+M9 adds startup logs and stronger load diagnostics, but still does not change backend strategy:
+
+- managed remains the default
+- OpenSSL remains optional
+- packaging and runtime hardening only improve visibility into why the optional bridge did or did not load
+
 M7 hardened the routing expectations with test coverage for:
 
 - managed default even when the bridge is present

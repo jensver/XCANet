@@ -2,6 +2,7 @@ using Avalonia;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using XcaNet.App.Desktop.Startup;
 using XcaNet.App;
 using XcaNet.App.Composition;
 using XcaNet.App.DependencyInjection;
@@ -13,13 +14,25 @@ namespace XcaNet.App.Desktop;
 internal static class Program
 {
     [STAThread]
-    public static void Main(string[] args)
+    public static int Main(string[] args)
     {
-        var configuration = BuildConfiguration();
-        var services = BuildServices(configuration);
-        ServiceProviderAccessor.Initialize(services);
+        try
+        {
+            var configuration = BuildConfiguration();
+            var services = BuildServices(configuration);
+            ServiceProviderAccessor.Initialize(services);
+            StartupDiagnosticsWriter.Write(services, configuration);
 
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            var reportPath = StartupFailureReporter.Write(ex);
+            Console.Error.WriteLine($"XcaNet failed to start. Details were written to: {reportPath}");
+            Console.Error.WriteLine(ex.Message);
+            return 1;
+        }
     }
 
     private static IConfiguration BuildConfiguration()
@@ -39,8 +52,17 @@ internal static class Program
         services.AddLogging(logging =>
         {
             logging.ClearProviders();
+            logging.SetMinimumLevel(
+#if DEBUG
+                LogLevel.Debug
+#else
+                LogLevel.Information
+#endif
+            );
             logging.AddSimpleConsole(options => options.SingleLine = true);
+#if DEBUG
             logging.AddDebug();
+#endif
         });
 
         services.AddXcaNetCryptoServices(configuration);
@@ -52,8 +74,11 @@ internal static class Program
 
     private static AppBuilder BuildAvaloniaApp()
     {
-        return AppBuilder.Configure<App>()
-            .UsePlatformDetect()
-            .LogToTrace();
+        var builder = AppBuilder.Configure<App>()
+            .UsePlatformDetect();
+#if DEBUG
+        builder = builder.LogToTrace();
+#endif
+        return builder;
     }
 }

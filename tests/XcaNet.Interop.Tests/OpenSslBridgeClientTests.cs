@@ -15,6 +15,7 @@ public sealed class OpenSslBridgeClientTests
 
         Assert.False(client.Diagnostics.IsAvailable);
         Assert.NotNull(client.Diagnostics.LastLoadError);
+        Assert.Contains("Managed fallback remains available", client.Diagnostics.LastLoadError);
     }
 
     [Fact]
@@ -34,6 +35,7 @@ public sealed class OpenSslBridgeClientTests
         Assert.True(probe.Value!.IsAvailable);
         Assert.Contains("OpenSSL", probe.Value.Version, StringComparison.OrdinalIgnoreCase);
         Assert.True(probe.Value.Capabilities.HasFlag(OpenSslBridgeCapabilities.SupportsCertificateSigningRequestSigning));
+        Assert.Equal(build.LibraryPath, probe.Value.ResolvedLibraryPath);
         Assert.True(client.SelfTest().IsSuccess);
     }
 

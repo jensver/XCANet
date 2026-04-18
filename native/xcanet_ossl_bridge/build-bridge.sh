@@ -1,7 +1,7 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_DIR="${0:A:h}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -L)"
 OUTPUT_DIR="${1:-$SCRIPT_DIR/build}"
 SOURCE_FILE="$SCRIPT_DIR/xcanet_ossl_bridge.c"
 HEADER_DIR="$SCRIPT_DIR"

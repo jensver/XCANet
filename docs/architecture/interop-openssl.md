@@ -48,16 +48,21 @@ The interop client converts these into managed `OperationResult` failures before
 
 - an explicit configured path
 - `XCANET_OPENSSL_BRIDGE_PATH`
-- common local output locations
+- `<app>/`
+- `<app>/native/`
+- `<app>/bridges/`
+- `<app>/runtimes/<rid>/native/`
+- common local repository output locations used during development
 
 If loading fails:
 
 - diagnostics report `IsAvailable = false`
 - the app still starts
 - routing falls back to the managed backend unless OpenSSL-only execution was explicitly requested
+- load diagnostics include attempted paths, architecture/runtime hints, and dependency guidance
 
 ## Native Build
 
 Use `native/xcanet_ossl_bridge/build-bridge.sh <output-dir>` to produce a local bridge artifact.
 
-M6 does not add packaging polish for the native artifact yet. The bridge is optional and can be omitted entirely when only the managed backend is desired.
+M9 adds explicit packaging conventions for the native artifact. The bridge remains optional and can be omitted entirely when only the managed backend is desired.

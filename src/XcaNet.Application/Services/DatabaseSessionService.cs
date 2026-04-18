@@ -793,7 +793,16 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         }
 
         Directory.CreateDirectory(Path.GetDirectoryName(request.DestinationPath) ?? ".");
-        await File.WriteAllBytesAsync(request.DestinationPath, exportResult.Value.Data, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(exportResult.Value.TextRepresentation)
+            && (exportResult.Value.Format == CryptoDataFormat.Pem || request.DestinationPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+        {
+            await File.WriteAllTextAsync(request.DestinationPath, exportResult.Value.TextRepresentation, cancellationToken);
+        }
+        else
+        {
+            await File.WriteAllBytesAsync(request.DestinationPath, exportResult.Value.Data, cancellationToken);
+        }
+
         return OperationResult<ExportedArtifact>.Success(exportResult.Value, "Material exported to file.");
     }
 
