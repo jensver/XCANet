@@ -5,7 +5,7 @@ namespace XcaNet.Storage.Persistence;
 
 public sealed class XcaNetDbContext : DbContext
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
 
     public XcaNetDbContext(DbContextOptions<XcaNetDbContext> options)
         : base(options)
@@ -88,7 +88,18 @@ public sealed class XcaNetDbContext : DbContext
         {
             entity.HasKey(x => x.Id);
             entity.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.IntendedUsage).HasMaxLength(64).IsRequired();
+            entity.Property(x => x.SubjectDefault).HasMaxLength(400);
+            entity.Property(x => x.SubjectAlternativeNames).HasMaxLength(4000).IsRequired();
+            entity.Property(x => x.KeyAlgorithm).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.Curve).HasMaxLength(32);
+            entity.Property(x => x.SignatureAlgorithm).HasMaxLength(32).IsRequired();
+            entity.Property(x => x.KeyUsages).HasMaxLength(2000).IsRequired();
+            entity.Property(x => x.EnhancedKeyUsages).HasMaxLength(2000).IsRequired();
             entity.HasIndex(x => x.Name);
+            entity.HasIndex(x => x.IntendedUsage);
+            entity.HasIndex(x => x.IsEnabled);
+            entity.HasIndex(x => x.IsFavorite);
         });
 
         modelBuilder.Entity<AuthorityEntity>(entity =>

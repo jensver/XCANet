@@ -87,11 +87,14 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
         try
         {
             using var loadedKey = LoadPrivateKey(request.Pkcs8PrivateKey, CryptoDataFormat.Pkcs8);
-            var certificateRequest = CreateCertificateRequest(request.SubjectName, loadedKey, []);
-            certificateRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(true, false, 0, true));
-            certificateRequest.CertificateExtensions.Add(new X509KeyUsageExtension(
-                X509KeyUsageFlags.KeyCertSign | X509KeyUsageFlags.CrlSign | X509KeyUsageFlags.DigitalSignature,
-                true));
+            var certificateRequest = CreateCertificateRequest(
+                request.SubjectName,
+                loadedKey,
+                request.SubjectAlternativeNames ?? [],
+                request.IsCertificateAuthority,
+                request.PathLengthConstraint,
+                request.KeyUsages ?? ["KeyCertSign", "CrlSign", "DigitalSignature"],
+                request.EnhancedKeyUsages ?? []);
             certificateRequest.CertificateExtensions.Add(new X509SubjectKeyIdentifierExtension(certificateRequest.PublicKey, false));
 
             var notBefore = DateTimeOffset.UtcNow.AddMinutes(-5);
@@ -217,7 +220,14 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
         try
         {
             using var loadedKey = LoadPrivateKey(request.Pkcs8PrivateKey, CryptoDataFormat.Pkcs8);
-            var certificateRequest = CreateCertificateRequest(request.SubjectName, loadedKey, request.SubjectAlternativeNames);
+            var certificateRequest = CreateCertificateRequest(
+                request.SubjectName,
+                loadedKey,
+                request.SubjectAlternativeNames,
+                request.IsCertificateAuthority,
+                request.PathLengthConstraint,
+                request.KeyUsages ?? [],
+                request.EnhancedKeyUsages ?? []);
             var der = certificateRequest.CreateSigningRequest();
             return Task.FromResult(OperationResult<CertificateSigningRequestResult>.Success(
                 new CertificateSigningRequestResult(
@@ -225,7 +235,10 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
                     new CertificateSigningRequestDetails(
                         certificateRequest.SubjectName.Name ?? request.SubjectName,
                         loadedKey.Algorithm,
-                        request.SubjectAlternativeNames.Select(x => x.Value).ToArray())),
+                        request.SubjectAlternativeNames.Select(x => x.Value).ToArray(),
+                        request.IsCertificateAuthority,
+                        request.KeyUsages ?? [],
+                        request.EnhancedKeyUsages ?? [])),
                 "Certificate signing request created."));
         }
         catch (CryptographicException)
@@ -398,7 +411,14 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
         return new ExportedArtifact(request.Format, data, null, "application/pkcs8", $"{request.DisplayName}.key");
     }
 
-    private static CertificateRequest CreateCertificateRequest(string subjectName, LoadedPrivateKey loadedKey, IReadOnlyList<SanEntry> sans)
+    private static CertificateRequest CreateCertificateRequest(
+        string subjectName,
+        LoadedPrivateKey loadedKey,
+        IReadOnlyList<SanEntry> sans,
+        bool isCertificateAuthority,
+        int? pathLengthConstraint,
+        IReadOnlyList<string> keyUsages,
+        IReadOnlyList<string> enhancedKeyUsages)
     {
         var distinguishedName = new X500DistinguishedName(subjectName);
         var certificateRequest = loadedKey.Algorithm switch
@@ -417,6 +437,28 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
             }
 
             certificateRequest.CertificateExtensions.Add(builder.Build());
+        }
+
+        certificateRequest.CertificateExtensions.Add(new X509BasicConstraintsExtension(
+            isCertificateAuthority,
+            pathLengthConstraint.HasValue,
+            pathLengthConstraint.GetValueOrDefault(),
+            true));
+
+        if (keyUsages.Count > 0)
+        {
+            certificateRequest.CertificateExtensions.Add(new X509KeyUsageExtension(ParseKeyUsages(keyUsages), true));
+        }
+
+        if (enhancedKeyUsages.Count > 0)
+        {
+            var collection = new OidCollection();
+            foreach (var enhancedKeyUsage in enhancedKeyUsages)
+            {
+                collection.Add(new Oid(MapEnhancedKeyUsageOid(enhancedKeyUsage), enhancedKeyUsage));
+            }
+
+            certificateRequest.CertificateExtensions.Add(new X509EnhancedKeyUsageExtension(collection, false));
         }
 
         return certificateRequest;
@@ -503,10 +545,50 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
     private static CertificateSigningRequestDetails ParseCertificateSigningRequest(CertificateRequest request)
     {
         var san = request.CertificateExtensions.SingleOrDefault(x => x.Oid?.Value == "2.5.29.17");
+        var basicConstraints = request.CertificateExtensions.OfType<X509BasicConstraintsExtension>().SingleOrDefault();
+        var keyUsage = request.CertificateExtensions.OfType<X509KeyUsageExtension>().SingleOrDefault();
+        var eku = request.CertificateExtensions.OfType<X509EnhancedKeyUsageExtension>().SingleOrDefault();
         return new CertificateSigningRequestDetails(
             request.SubjectName.Name ?? string.Empty,
             GetPublicKeyAlgorithm(request.PublicKey.Oid?.Value),
-            ParseSubjectAlternativeNames(san?.RawData));
+            ParseSubjectAlternativeNames(san?.RawData),
+            basicConstraints?.CertificateAuthority ?? false,
+            keyUsage is null ? [] : keyUsage.KeyUsages.ToString().Split(", ", StringSplitOptions.RemoveEmptyEntries),
+            eku is null ? [] : eku.EnhancedKeyUsages.Cast<Oid>().Select(x => x.FriendlyName ?? x.Value ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).ToArray());
+    }
+
+    private static X509KeyUsageFlags ParseKeyUsages(IEnumerable<string> keyUsages)
+    {
+        var flags = (X509KeyUsageFlags)0;
+        foreach (var keyUsage in keyUsages)
+        {
+            flags |= keyUsage.Trim() switch
+            {
+                "DigitalSignature" => X509KeyUsageFlags.DigitalSignature,
+                "KeyEncipherment" => X509KeyUsageFlags.KeyEncipherment,
+                "DataEncipherment" => X509KeyUsageFlags.DataEncipherment,
+                "KeyAgreement" => X509KeyUsageFlags.KeyAgreement,
+                "KeyCertSign" => X509KeyUsageFlags.KeyCertSign,
+                "CrlSign" => X509KeyUsageFlags.CrlSign,
+                _ => throw new CryptographicException($"Unsupported key usage '{keyUsage}'.")
+            };
+        }
+
+        return flags;
+    }
+
+    private static string MapEnhancedKeyUsageOid(string enhancedKeyUsage)
+    {
+        return enhancedKeyUsage switch
+        {
+            "Server Authentication" => "1.3.6.1.5.5.7.3.1",
+            "Client Authentication" => "1.3.6.1.5.5.7.3.2",
+            "Code Signing" => "1.3.6.1.5.5.7.3.3",
+            "Email Protection" => "1.3.6.1.5.5.7.3.4",
+            "Time Stamping" => "1.3.6.1.5.5.7.3.8",
+            "OCSP Signing" => "1.3.6.1.5.5.7.3.9",
+            _ => throw new CryptographicException($"Unsupported enhanced key usage '{enhancedKeyUsage}'.")
+        };
     }
 
     private static string[] ParseSubjectAlternativeNames(byte[]? rawData)

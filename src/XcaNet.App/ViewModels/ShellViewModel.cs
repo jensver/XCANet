@@ -53,6 +53,15 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _exportCertificateRevocationListToFileCommand;
     private readonly DelegateCommand _navigateCrlIssuerCommand;
     private readonly AsyncCommand _refreshTemplatesCommand;
+    private readonly AsyncCommand _createTemplateCommand;
+    private readonly AsyncCommand _saveTemplateCommand;
+    private readonly AsyncCommand _cloneTemplateCommand;
+    private readonly AsyncCommand _toggleTemplateFavoriteCommand;
+    private readonly AsyncCommand _toggleTemplateEnabledCommand;
+    private readonly AsyncCommand _deleteTemplateCommand;
+    private readonly AsyncCommand _applySelfSignedCaTemplateCommand;
+    private readonly AsyncCommand _applyCertificateSigningRequestTemplateCommand;
+    private readonly AsyncCommand _applyIssuanceTemplateCommand;
 
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
@@ -105,6 +114,15 @@ public sealed class ShellViewModel : ViewModelBase
         _exportCertificateRevocationListToFileCommand = new AsyncCommand(ExportSelectedCertificateRevocationListToFileAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRevocationListsPage.HasSelection);
         _navigateCrlIssuerCommand = new DelegateCommand(() => NavigateTo(CertificateRevocationListsPage.Inspector?.IssuerTarget), () => CertificateRevocationListsPage.Inspector?.IssuerTarget is not null);
         _refreshTemplatesCommand = new AsyncCommand(LoadTemplatesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
+        _createTemplateCommand = new AsyncCommand(CreateNewTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
+        _saveTemplateCommand = new AsyncCommand(SaveTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
+        _cloneTemplateCommand = new AsyncCommand(CloneTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
+        _toggleTemplateFavoriteCommand = new AsyncCommand(ToggleTemplateFavoriteAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
+        _toggleTemplateEnabledCommand = new AsyncCommand(ToggleTemplateEnabledAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
+        _deleteTemplateCommand = new AsyncCommand(DeleteTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
+        _applySelfSignedCaTemplateCommand = new AsyncCommand(ApplySelfSignedCaTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && PrivateKeysPage.SelectedSelfSignedCaTemplate is not null);
+        _applyCertificateSigningRequestTemplateCommand = new AsyncCommand(ApplyCertificateSigningRequestTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && PrivateKeysPage.SelectedCertificateSigningRequestTemplate is not null);
+        _applyIssuanceTemplateCommand = new AsyncCommand(ApplyIssuanceTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && CertificateRequestsPage.SelectedIssuanceTemplate is not null);
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
         SettingsSecurityPage.OpenDatabaseCommand = _openDatabaseCommand;
@@ -125,11 +143,14 @@ public sealed class ShellViewModel : ViewModelBase
         PrivateKeysPage.GenerateKeyCommand = _generateKeyCommand;
         PrivateKeysPage.CreateSelfSignedCaCommand = _createSelfSignedCaCommand;
         PrivateKeysPage.CreateCertificateSigningRequestCommand = _createCertificateSigningRequestCommand;
+        PrivateKeysPage.ApplySelfSignedCaTemplateCommand = _applySelfSignedCaTemplateCommand;
+        PrivateKeysPage.ApplyCertificateSigningRequestTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
         PrivateKeysPage.ExportSelectedCommand = _exportPrivateKeyCommand;
         PrivateKeysPage.ExportSelectedToFileCommand = _exportPrivateKeyToFileCommand;
 
         CertificateRequestsPage.RefreshCommand = _refreshCertificateRequestsCommand;
         CertificateRequestsPage.SignSelectedCommand = _signCertificateSigningRequestCommand;
+        CertificateRequestsPage.ApplyIssuanceTemplateCommand = _applyIssuanceTemplateCommand;
         CertificateRequestsPage.ExportSelectedCommand = _exportCertificateSigningRequestCommand;
         CertificateRequestsPage.ExportSelectedToFileCommand = _exportCertificateSigningRequestToFileCommand;
         CertificateRequestsPage.OpenSelectedPrivateKeyCommand = _navigateRequestPrivateKeyCommand;
@@ -138,6 +159,12 @@ public sealed class ShellViewModel : ViewModelBase
         CertificateRevocationListsPage.ExportSelectedCommand = _exportCertificateRevocationListToFileCommand;
         CertificateRevocationListsPage.OpenIssuerCommand = _navigateCrlIssuerCommand;
         TemplatesPage.RefreshCommand = _refreshTemplatesCommand;
+        TemplatesPage.CreateNewCommand = _createTemplateCommand;
+        TemplatesPage.SaveTemplateCommand = _saveTemplateCommand;
+        TemplatesPage.CloneTemplateCommand = _cloneTemplateCommand;
+        TemplatesPage.ToggleFavoriteCommand = _toggleTemplateFavoriteCommand;
+        TemplatesPage.ToggleEnabledCommand = _toggleTemplateEnabledCommand;
+        TemplatesPage.DeleteTemplateCommand = _deleteTemplateCommand;
 
         NavigationItems =
         [
@@ -156,6 +183,7 @@ public sealed class ShellViewModel : ViewModelBase
         PrivateKeysPage.PropertyChanged += OnPageSelectionChanged;
         CertificateRequestsPage.PropertyChanged += OnPageSelectionChanged;
         CertificateRevocationListsPage.PropertyChanged += OnPageSelectionChanged;
+        TemplatesPage.PropertyChanged += OnPageSelectionChanged;
 
         SelectPage(DashboardPage);
         ApplySnapshot(Snapshot);
@@ -279,7 +307,8 @@ public sealed class ShellViewModel : ViewModelBase
                 PrivateKeysPage.SelectedItem.PrivateKeyId,
                 PrivateKeysPage.SelfSignedCaDisplayName,
                 PrivateKeysPage.SelfSignedCaSubjectName,
-                Math.Max(1, PrivateKeysPage.SelfSignedCaValidityDays)),
+                Math.Max(1, PrivateKeysPage.SelfSignedCaValidityDays),
+                PrivateKeysPage.SelectedSelfSignedCaTemplate?.TemplateId),
             CancellationToken.None);
 
         if (!result.IsSuccess || result.Value is null)
@@ -307,7 +336,12 @@ public sealed class ShellViewModel : ViewModelBase
                 PrivateKeysPage.SelectedItem.PrivateKeyId,
                 PrivateKeysPage.CertificateSigningRequestDisplayName,
                 PrivateKeysPage.CertificateSigningRequestSubjectName,
-                ParseSubjectAlternativeNames(PrivateKeysPage.CertificateSigningRequestSubjectAlternativeNames)),
+                ParseSubjectAlternativeNames(PrivateKeysPage.CertificateSigningRequestSubjectAlternativeNames),
+                PrivateKeysPage.SelectedCertificateSigningRequestTemplate?.IntendedUsage == TemplateIntendedUsage.IntermediateCa,
+                PrivateKeysPage.SelectedCertificateSigningRequestTemplate?.IntendedUsage == TemplateIntendedUsage.IntermediateCa ? 0 : null,
+                [],
+                [],
+                PrivateKeysPage.SelectedCertificateSigningRequestTemplate?.TemplateId),
             CancellationToken.None);
 
         if (!result.IsSuccess || result.Value is null)
@@ -338,7 +372,8 @@ public sealed class ShellViewModel : ViewModelBase
                 CertificateRequestsPage.SelectedIssuerCertificate.CertificateId,
                 CertificateRequestsPage.SelectedIssuerPrivateKey.PrivateKeyId,
                 CertificateRequestsPage.IssuedCertificateDisplayName,
-                Math.Max(1, CertificateRequestsPage.ValidityDays)),
+                Math.Max(1, CertificateRequestsPage.ValidityDays),
+                CertificateRequestsPage.SelectedIssuanceTemplate?.TemplateId),
             CancellationToken.None);
 
         if (!result.IsSuccess || result.Value is null)
@@ -826,12 +861,223 @@ public sealed class ShellViewModel : ViewModelBase
     {
         if (Snapshot.State == DatabaseSessionState.Closed)
         {
-            TemplatesPage.SetItems([]);
+            TemplatesPage.SetTemplates([]);
+            PrivateKeysPage.SetTemplates([]);
+            CertificateRequestsPage.SetTemplates([]);
             return;
         }
 
         var result = await _databaseSessionService.ListTemplatesAsync(CancellationToken.None);
-        TemplatesPage.SetItems(result.IsSuccess && result.Value is not null ? result.Value : []);
+        var templates = result.IsSuccess && result.Value is not null ? result.Value : [];
+        TemplatesPage.SetTemplates(templates);
+        PrivateKeysPage.SetTemplates(templates);
+        CertificateRequestsPage.SetTemplates(templates);
+        await LoadSelectedTemplateAsync();
+    }
+
+    private async Task LoadSelectedTemplateAsync()
+    {
+        if (TemplatesPage.SelectedItem is null || Snapshot.State == DatabaseSessionState.Closed)
+        {
+            return;
+        }
+
+        var result = await _databaseSessionService.GetTemplateAsync(TemplatesPage.SelectedItem.TemplateId, CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        TemplatesPage.LoadTemplate(result.Value);
+    }
+
+    private async Task CreateNewTemplateAsync()
+    {
+        TemplatesPage.PrepareNewTemplate();
+        await Task.CompletedTask;
+    }
+
+    private async Task SaveTemplateAsync()
+    {
+        using var scope = BeginBusy("Saving template");
+        var result = await _databaseSessionService.SaveTemplateAsync(TemplatesPage.BuildSaveRequest(), CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            TemplatesPage.ValidationSummary = result.Message;
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await LoadTemplatesAsync();
+        TemplatesPage.SelectedItem = TemplatesPage.Items.FirstOrDefault(x => x.TemplateId == result.Value.TemplateId);
+        TemplatesPage.LoadTemplate(result.Value);
+        NotifySuccess(result.Message);
+    }
+
+    private async Task CloneTemplateAsync()
+    {
+        if (TemplatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a template first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Cloning template");
+        var result = await _databaseSessionService.CloneTemplateAsync(new CloneTemplateRequest(TemplatesPage.SelectedItem.TemplateId, null), CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await LoadTemplatesAsync();
+        TemplatesPage.SelectedItem = TemplatesPage.Items.FirstOrDefault(x => x.TemplateId == result.Value.TemplateId);
+        TemplatesPage.LoadTemplate(result.Value);
+        NotifySuccess("Template cloned.");
+    }
+
+    private async Task ToggleTemplateFavoriteAsync()
+    {
+        if (TemplatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a template first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Updating template");
+        var result = await _databaseSessionService.SetTemplateFavoriteAsync(
+            new SetTemplateFavoriteRequest(TemplatesPage.SelectedItem.TemplateId, !TemplatesPage.SelectedItem.IsFavorite),
+            CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await LoadTemplatesAsync();
+        TemplatesPage.SelectedItem = TemplatesPage.Items.FirstOrDefault(x => x.TemplateId == result.Value.TemplateId);
+        TemplatesPage.LoadTemplate(result.Value);
+        NotifySuccess("Template favorite state updated.");
+    }
+
+    private async Task ToggleTemplateEnabledAsync()
+    {
+        if (TemplatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a template first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Updating template");
+        var result = await _databaseSessionService.SetTemplateEnabledAsync(
+            new SetTemplateEnabledRequest(TemplatesPage.SelectedItem.TemplateId, !TemplatesPage.SelectedItem.IsEnabled),
+            CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await LoadTemplatesAsync();
+        TemplatesPage.SelectedItem = TemplatesPage.Items.FirstOrDefault(x => x.TemplateId == result.Value.TemplateId);
+        TemplatesPage.LoadTemplate(result.Value);
+        NotifySuccess("Template enabled state updated.");
+    }
+
+    private async Task DeleteTemplateAsync()
+    {
+        if (TemplatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a template first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Deleting template");
+        var result = await _databaseSessionService.DeleteTemplateAsync(TemplatesPage.SelectedItem.TemplateId, CancellationToken.None);
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        TemplatesPage.PrepareNewTemplate();
+        await LoadTemplatesAsync();
+        NotifySuccess("Template deleted.");
+    }
+
+    private async Task ApplySelfSignedCaTemplateAsync()
+    {
+        if (PrivateKeysPage.SelectedSelfSignedCaTemplate is null)
+        {
+            NotifyFailure("Select a template first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Applying template defaults");
+        var result = await _databaseSessionService.ApplyTemplateAsync(
+            new ApplyTemplateRequest(PrivateKeysPage.SelectedSelfSignedCaTemplate.TemplateId, TemplateWorkflowKind.SelfSignedCa),
+            CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        PrivateKeysPage.SelfSignedCaDisplayName = result.Value.DisplayNameDefault;
+        PrivateKeysPage.SelfSignedCaSubjectName = result.Value.SubjectDefault ?? PrivateKeysPage.SelfSignedCaSubjectName;
+        PrivateKeysPage.SelfSignedCaValidityDays = Math.Max(1, result.Value.ValidityDays);
+        NotifySuccess("Self-signed CA template applied.");
+    }
+
+    private async Task ApplyCertificateSigningRequestTemplateAsync()
+    {
+        if (PrivateKeysPage.SelectedCertificateSigningRequestTemplate is null)
+        {
+            NotifyFailure("Select a template first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Applying template defaults");
+        var result = await _databaseSessionService.ApplyTemplateAsync(
+            new ApplyTemplateRequest(PrivateKeysPage.SelectedCertificateSigningRequestTemplate.TemplateId, TemplateWorkflowKind.CertificateSigningRequest),
+            CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        PrivateKeysPage.NewKeyDisplayName = result.Value.DisplayNameDefault;
+        PrivateKeysPage.SelectedAlgorithm = result.Value.KeyAlgorithm == KeyAlgorithmKind.Rsa ? KeyAlgorithmView.Rsa : KeyAlgorithmView.Ecdsa;
+        PrivateKeysPage.SelectedCurve = result.Value.Curve == EllipticCurveKind.P384 ? EllipticCurveView.P384 : EllipticCurveView.P256;
+        PrivateKeysPage.CertificateSigningRequestDisplayName = result.Value.DisplayNameDefault;
+        PrivateKeysPage.CertificateSigningRequestSubjectName = result.Value.SubjectDefault ?? PrivateKeysPage.CertificateSigningRequestSubjectName;
+        PrivateKeysPage.CertificateSigningRequestSubjectAlternativeNames = string.Join(", ", result.Value.SubjectAlternativeNames);
+        NotifySuccess("CSR template applied.");
+    }
+
+    private async Task ApplyIssuanceTemplateAsync()
+    {
+        if (CertificateRequestsPage.SelectedIssuanceTemplate is null)
+        {
+            NotifyFailure("Select a template first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Applying template defaults");
+        var result = await _databaseSessionService.ApplyTemplateAsync(
+            new ApplyTemplateRequest(CertificateRequestsPage.SelectedIssuanceTemplate.TemplateId, TemplateWorkflowKind.SignCertificateSigningRequest),
+            CancellationToken.None);
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        CertificateRequestsPage.IssuedCertificateDisplayName = result.Value.DisplayNameDefault;
+        CertificateRequestsPage.ValidityDays = Math.Max(1, result.Value.ValidityDays);
+        NotifySuccess("Issuance template applied.");
     }
 
     private async Task LoadDiagnosticsAsync()
@@ -917,6 +1163,7 @@ public sealed class ShellViewModel : ViewModelBase
                 break;
             case BrowserEntityType.Template:
                 SelectPage(TemplatesPage);
+                TemplatesPage.SelectedItem = TemplatesPage.Items.FirstOrDefault(x => x.TemplateId == target.EntityId);
                 break;
         }
     }
@@ -949,14 +1196,23 @@ public sealed class ShellViewModel : ViewModelBase
     private void OnPageSelectionChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PrivateKeysPageViewModel.SelectedItem)
+            or nameof(PrivateKeysPageViewModel.SelectedSelfSignedCaTemplate)
+            or nameof(PrivateKeysPageViewModel.SelectedCertificateSigningRequestTemplate)
             or nameof(CertificateRequestsPageViewModel.SelectedItem)
             or nameof(CertificateRequestsPageViewModel.SelectedIssuerCertificate)
             or nameof(CertificateRequestsPageViewModel.SelectedIssuerPrivateKey)
+            or nameof(CertificateRequestsPageViewModel.SelectedIssuanceTemplate)
+            or nameof(TemplatesPageViewModel.SelectedItem)
             or nameof(CertificateRevocationListsPageViewModel.SelectedItem))
         {
             if (sender == CertificateRevocationListsPage && e.PropertyName == nameof(CertificateRevocationListsPageViewModel.SelectedItem))
             {
                 _ = LoadSelectedCertificateRevocationListInspectorAsync();
+            }
+
+            if (sender == TemplatesPage && e.PropertyName == nameof(TemplatesPageViewModel.SelectedItem))
+            {
+                _ = LoadSelectedTemplateAsync();
             }
 
             RefreshCommandStates();
@@ -1013,7 +1269,10 @@ public sealed class ShellViewModel : ViewModelBase
         CertificateRequestsPage.SetIssuers([], []);
         CertificateRevocationListsPage.SetItems([]);
         CertificateRevocationListsPage.Inspector = null;
-        TemplatesPage.SetItems([]);
+        TemplatesPage.SetTemplates([]);
+        TemplatesPage.PrepareNewTemplate();
+        PrivateKeysPage.SetTemplates([]);
+        CertificateRequestsPage.SetTemplates([]);
         RefreshCommandStates();
     }
 
@@ -1103,6 +1362,15 @@ public sealed class ShellViewModel : ViewModelBase
         _exportCertificateRevocationListToFileCommand.RaiseCanExecuteChanged();
         _navigateCrlIssuerCommand.RaiseCanExecuteChanged();
         _refreshTemplatesCommand.RaiseCanExecuteChanged();
+        _createTemplateCommand.RaiseCanExecuteChanged();
+        _saveTemplateCommand.RaiseCanExecuteChanged();
+        _cloneTemplateCommand.RaiseCanExecuteChanged();
+        _toggleTemplateFavoriteCommand.RaiseCanExecuteChanged();
+        _toggleTemplateEnabledCommand.RaiseCanExecuteChanged();
+        _deleteTemplateCommand.RaiseCanExecuteChanged();
+        _applySelfSignedCaTemplateCommand.RaiseCanExecuteChanged();
+        _applyCertificateSigningRequestTemplateCommand.RaiseCanExecuteChanged();
+        _applyIssuanceTemplateCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)

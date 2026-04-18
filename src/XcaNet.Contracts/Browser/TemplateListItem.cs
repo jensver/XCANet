@@ -4,5 +4,7 @@ public sealed record TemplateListItem(
     Guid TemplateId,
     string Name,
     string? Description,
+    TemplateIntendedUsage IntendedUsage,
     bool IsFavorite,
-    bool IsDisabled);
+    bool IsEnabled,
+    string Summary);

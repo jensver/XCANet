@@ -1,37 +1,89 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="XcaNet.App.Views.Pages.TemplatesPageView">
-  <StackPanel Spacing="14">
-    <Border Background="White" CornerRadius="12" Padding="16">
-      <StackPanel Spacing="10">
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBlock Text="Templates" FontSize="18" FontWeight="SemiBold" />
-          <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}" />
-        </Grid>
-        <TextBlock Text="{Binding PlaceholderMessage}" Foreground="#475569" TextWrapping="Wrap" />
-        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
-          <StackPanel Spacing="6">
-            <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-        <ListBox ItemsSource="{Binding Items}" Height="420">
-          <ListBox.ItemTemplate>
-            <DataTemplate>
-              <Border Padding="8">
-                <Grid ColumnDefinitions="2*,Auto,Auto" ColumnSpacing="10">
-                  <StackPanel>
-                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+  <Grid ColumnDefinitions="1.05*,1.1*" ColumnSpacing="16">
+    <StackPanel Spacing="14">
+      <Border Background="White" CornerRadius="12" Padding="16">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+            <TextBlock Text="Templates" FontSize="18" FontWeight="SemiBold" />
+            <ComboBox Grid.Column="1" Width="160" ItemsSource="{Binding UsageFilters}" SelectedItem="{Binding UsageFilter}" />
+            <ComboBox Grid.Column="2" Width="140" ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding StatusFilter}" />
+            <Button Grid.Column="3" Content="Refresh" Command="{Binding RefreshCommand}" />
+          </Grid>
+          <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+            <StackPanel Spacing="6">
+              <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+          <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="520">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Padding="10">
+                  <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                      <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                      <TextBlock Grid.Column="1" Text="{Binding IntendedUsage}" Foreground="#1D4ED8" />
+                      <TextBlock Grid.Column="2" Text="{Binding Summary}" Foreground="#475569" />
+                    </Grid>
                     <TextBlock Text="{Binding Description}" Foreground="#475569" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Summary}" Foreground="#64748B" TextWrapping="Wrap" />
                   </StackPanel>
-                  <TextBlock Grid.Column="1" Text="{Binding IsFavorite}" />
-                  <TextBlock Grid.Column="2" Text="{Binding IsDisabled}" />
-                </Grid>
-              </Border>
-            </DataTemplate>
-          </ListBox.ItemTemplate>
-        </ListBox>
-      </StackPanel>
-    </Border>
-  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+
+    <StackPanel Grid.Column="1" Spacing="14">
+      <Border Background="White" CornerRadius="12" Padding="16">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
+            <TextBlock Text="Template Editor" FontSize="18" FontWeight="SemiBold" />
+            <Button Grid.Column="1" Content="New" Command="{Binding CreateNewCommand}" />
+            <Button Grid.Column="2" Content="Save" Command="{Binding SaveTemplateCommand}" />
+            <Button Grid.Column="3" Content="Clone" Command="{Binding CloneTemplateCommand}" />
+            <Button Grid.Column="4" Content="Favorite" Command="{Binding ToggleFavoriteCommand}" />
+            <Button Grid.Column="5" Content="Enable / Disable" Command="{Binding ToggleEnabledCommand}" />
+          </Grid>
+          <TextBox Text="{Binding Name}" Watermark="Template name" />
+          <TextBox Text="{Binding Description}" Watermark="Description" AcceptsReturn="True" Height="70" TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+            <ComboBox ItemsSource="{Binding IntendedUsages}" SelectedItem="{Binding IntendedUsage}" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding KeyAlgorithms}" SelectedItem="{Binding KeyAlgorithm}" />
+          </Grid>
+          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+            <NumericUpDown Minimum="3072" Maximum="16384" Value="{Binding RsaKeySize}" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding Curves}" SelectedItem="{Binding Curve}" />
+            <NumericUpDown Grid.Column="2" Minimum="1" Maximum="36500" Value="{Binding ValidityDays}" />
+          </Grid>
+          <TextBox Text="{Binding SubjectDefault}" Watermark="Subject default" />
+          <TextBox Text="{Binding SubjectAlternativeNames}" Watermark="SAN defaults separated by comma or semicolon" />
+          <Grid ColumnDefinitions="Auto,120,Auto,120,*,*" ColumnSpacing="10">
+            <CheckBox Content="Enabled" IsChecked="{Binding IsEnabled}" />
+            <CheckBox Grid.Column="1" Content="Favorite" IsChecked="{Binding IsFavorite}" />
+            <CheckBox Grid.Column="2" Content="CA" IsChecked="{Binding IsCertificateAuthority}" />
+            <CheckBox Grid.Column="3" Content="Path length" IsChecked="{Binding HasPathLengthConstraint}" />
+            <NumericUpDown Grid.Column="4" Minimum="0" Maximum="16" Value="{Binding PathLengthConstraint}" />
+            <TextBox Grid.Column="5" Text="{Binding SignatureAlgorithm}" Watermark="Signature algorithm" />
+          </Grid>
+          <TextBox Text="{Binding KeyUsages}" Watermark="Key usages separated by comma or semicolon" />
+          <TextBox Text="{Binding EnhancedKeyUsages}" Watermark="Enhanced key usages separated by comma or semicolon" />
+          <Button Content="Delete" HorizontalAlignment="Left" Command="{Binding DeleteTemplateCommand}" />
+        </StackPanel>
+      </Border>
+
+      <Border Background="White" CornerRadius="12" Padding="16">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Template Summary" FontSize="18" FontWeight="SemiBold" />
+          <TextBox Text="{Binding PreviewSummary}" IsReadOnly="True" AcceptsReturn="True" Height="150" TextWrapping="Wrap" />
+          <TextBlock Text="Validation" FontSize="16" FontWeight="SemiBold" />
+          <TextBox Text="{Binding ValidationSummary}" IsReadOnly="True" AcceptsReturn="True" Height="110" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Grid>
 </UserControl>

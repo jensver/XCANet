@@ -5,4 +5,5 @@ public sealed record SignStoredCertificateSigningRequestRequest(
     Guid IssuerCertificateId,
     Guid IssuerPrivateKeyId,
     string DisplayName,
-    int ValidityDays);
+    int ValidityDays,
+    Guid? TemplateId = null);

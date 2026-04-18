@@ -7,6 +7,7 @@ using XcaNet.Contracts.Database;
 using XcaNet.Contracts.Revocation;
 using XcaNet.Contracts.Results;
 using XcaNet.Crypto.Abstractions;
+using XcaNet.Application.Templates;
 using XcaNet.Core.Enums;
 using XcaNet.Security.Protection;
 using XcaNet.Storage.Persistence;
@@ -308,15 +309,40 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         await _gate.WaitAsync(cancellationToken);
         try
         {
+            if (!TryGetUnlockedDatabasePath<StoredCertificateResult>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
             var privateKeyEntity = await EnsureUnlockedPrivateKeyAsync(request.PrivateKeyId, cancellationToken);
             if (privateKeyEntity is null)
             {
                 return OperationResult<StoredCertificateResult>.Failure(OperationErrorCode.DatabaseLocked, "Unlock the database before certificate operations.");
             }
 
+            AppliedTemplateDefaults? appliedTemplate = null;
+            if (request.TemplateId is not null)
+            {
+                var templateDefaultsResult = await ResolveTemplateDefaultsAsync(request.TemplateId.Value, TemplateWorkflowKind.SelfSignedCa, cancellationToken);
+                if (!templateDefaultsResult.IsSuccess)
+                {
+                    return OperationResult<StoredCertificateResult>.Failure(templateDefaultsResult.ErrorCode, templateDefaultsResult.Message);
+                }
+
+                appliedTemplate = templateDefaultsResult.Value;
+            }
             var decryptedPrivateKey = DecryptPrivateKey(privateKeyEntity);
             var createResult = await _certificateService.CreateSelfSignedCaAsync(
-                new SelfSignedCaCertificateRequest(request.SubjectName, decryptedPrivateKey, privateKeyEntity.Algorithm, request.ValidityDays),
+                new SelfSignedCaCertificateRequest(
+                    string.IsNullOrWhiteSpace(request.SubjectName) ? appliedTemplate?.SubjectDefault ?? string.Empty : request.SubjectName,
+                    decryptedPrivateKey,
+                    privateKeyEntity.Algorithm,
+                    request.ValidityDays > 0 ? request.ValidityDays : appliedTemplate?.ValidityDays ?? 3650,
+                    appliedTemplate?.SubjectAlternativeNames.Select(x => new SanEntry(x)).ToArray(),
+                    appliedTemplate?.IsCertificateAuthority ?? true,
+                    appliedTemplate?.PathLengthConstraint,
+                    appliedTemplate?.KeyUsages ?? [],
+                    appliedTemplate?.EnhancedKeyUsages ?? []),
                 cancellationToken);
 
             Array.Clear(decryptedPrivateKey, 0, decryptedPrivateKey.Length);
@@ -327,8 +353,9 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             }
 
             var certificateId = Guid.NewGuid();
-            await _certificateRepository.AddAsync(_currentDatabasePath!, CreateCertificateEntity(certificateId, request.DisplayName, createResult.Value.DerData, createResult.Value.Details, request.PrivateKeyId, null), cancellationToken);
-            await _auditEventRepository.AddAsync(_currentDatabasePath!, CreateAuditEvent(AuditEventKind.CertificateCreated, "Certificate created."), cancellationToken);
+            var displayName = string.IsNullOrWhiteSpace(request.DisplayName) ? appliedTemplate?.DisplayNameDefault ?? "Self-Signed CA" : request.DisplayName;
+            await _certificateRepository.AddAsync(databasePath, CreateCertificateEntity(certificateId, displayName, createResult.Value.DerData, createResult.Value.Details, request.PrivateKeyId, null), cancellationToken);
+            await _auditEventRepository.AddAsync(databasePath, CreateAuditEvent(AuditEventKind.CertificateCreated, "Certificate created."), cancellationToken);
 
             return OperationResult<StoredCertificateResult>.Success(
                 new StoredCertificateResult(certificateId, request.PrivateKeyId, createResult.Value.Details, createResult.Value.BackendUsed),
@@ -345,15 +372,48 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         await _gate.WaitAsync(cancellationToken);
         try
         {
+            if (!TryGetUnlockedDatabasePath<StoredCertificateSigningRequestResult>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
             var privateKeyEntity = await EnsureUnlockedPrivateKeyAsync(request.PrivateKeyId, cancellationToken);
             if (privateKeyEntity is null)
             {
                 return OperationResult<StoredCertificateSigningRequestResult>.Failure(OperationErrorCode.DatabaseLocked, "Unlock the database before CSR operations.");
             }
 
+            AppliedTemplateDefaults? appliedTemplate = null;
+            if (request.TemplateId is not null)
+            {
+                var templateDefaultsResult = await ResolveTemplateDefaultsAsync(request.TemplateId.Value, TemplateWorkflowKind.CertificateSigningRequest, cancellationToken);
+                if (!templateDefaultsResult.IsSuccess)
+                {
+                    return OperationResult<StoredCertificateSigningRequestResult>.Failure(templateDefaultsResult.ErrorCode, templateDefaultsResult.Message);
+                }
+
+                appliedTemplate = templateDefaultsResult.Value;
+            }
+            var subjectAlternativeNames = request.SubjectAlternativeNames.Count > 0
+                ? request.SubjectAlternativeNames
+                : appliedTemplate?.SubjectAlternativeNames.Select(x => new SanEntry(x)).ToArray() ?? [];
+            var keyUsages = request.KeyUsages?.Count > 0
+                ? request.KeyUsages
+                : appliedTemplate?.KeyUsages ?? [];
+            var enhancedKeyUsages = request.EnhancedKeyUsages?.Count > 0
+                ? request.EnhancedKeyUsages
+                : appliedTemplate?.EnhancedKeyUsages ?? [];
             var decryptedPrivateKey = DecryptPrivateKey(privateKeyEntity);
             var csrResult = await _certificateSigningRequestService.CreateAsync(
-                new CreateCertificateSigningRequestRequest(request.SubjectName, decryptedPrivateKey, privateKeyEntity.Algorithm, request.SubjectAlternativeNames),
+                new CreateCertificateSigningRequestRequest(
+                    string.IsNullOrWhiteSpace(request.SubjectName) ? appliedTemplate?.SubjectDefault ?? string.Empty : request.SubjectName,
+                    decryptedPrivateKey,
+                    privateKeyEntity.Algorithm,
+                    subjectAlternativeNames,
+                    request.IsCertificateAuthority || appliedTemplate?.IsCertificateAuthority == true,
+                    request.PathLengthConstraint ?? appliedTemplate?.PathLengthConstraint,
+                    keyUsages,
+                    enhancedKeyUsages),
                 cancellationToken);
 
             Array.Clear(decryptedPrivateKey, 0, decryptedPrivateKey.Length);
@@ -365,11 +425,11 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
 
             var csrId = Guid.NewGuid();
             await _certificateRequestRepository.AddAsync(
-                _currentDatabasePath!,
+                databasePath,
                 new CertificateRequestEntity
                 {
                     Id = csrId,
-                    DisplayName = request.DisplayName,
+                    DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? appliedTemplate?.DisplayNameDefault ?? "Certificate Signing Request" : request.DisplayName,
                     Subject = csrResult.Value.Details.Subject,
                     PrivateKeyId = request.PrivateKeyId,
                     DerData = csrResult.Value.DerData,
@@ -380,7 +440,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                 },
                 cancellationToken);
 
-            await _auditEventRepository.AddAsync(_currentDatabasePath!, CreateAuditEvent(AuditEventKind.CertificateSigningRequestCreated, "Certificate signing request created."), cancellationToken);
+            await _auditEventRepository.AddAsync(databasePath, CreateAuditEvent(AuditEventKind.CertificateSigningRequestCreated, "Certificate signing request created."), cancellationToken);
 
             return OperationResult<StoredCertificateSigningRequestResult>.Success(
                 new StoredCertificateSigningRequestResult(csrId, request.PrivateKeyId, csrResult.Value.Details),
@@ -397,20 +457,31 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         await _gate.WaitAsync(cancellationToken);
         try
         {
-            if (!IsUnlockedDatabase())
+            if (!TryGetUnlockedDatabasePath<StoredCertificateResult>(out var databasePath, out var failure))
             {
-                return OperationResult<StoredCertificateResult>.Failure(OperationErrorCode.DatabaseLocked, "Unlock the database before signing CSRs.");
+                return failure!;
             }
 
-            var csrEntity = await _certificateRequestRepository.GetAsync(_currentDatabasePath!, request.CertificateSigningRequestId, cancellationToken);
-            var issuerCertificate = await _certificateRepository.GetAsync(_currentDatabasePath!, request.IssuerCertificateId, cancellationToken);
-            var issuerPrivateKey = await _privateKeyRepository.GetAsync(_currentDatabasePath!, request.IssuerPrivateKeyId, cancellationToken);
+            var csrEntity = await _certificateRequestRepository.GetAsync(databasePath, request.CertificateSigningRequestId, cancellationToken);
+            var issuerCertificate = await _certificateRepository.GetAsync(databasePath, request.IssuerCertificateId, cancellationToken);
+            var issuerPrivateKey = await _privateKeyRepository.GetAsync(databasePath, request.IssuerPrivateKeyId, cancellationToken);
 
             if (csrEntity is null || issuerCertificate is null || issuerPrivateKey is null)
             {
                 return OperationResult<StoredCertificateResult>.Failure(OperationErrorCode.DatabaseNotFound, "The requested CSR or issuer material could not be found.");
             }
 
+            AppliedTemplateDefaults? appliedTemplate = null;
+            if (request.TemplateId is not null)
+            {
+                var templateDefaultsResult = await ResolveTemplateDefaultsAsync(request.TemplateId.Value, TemplateWorkflowKind.SignCertificateSigningRequest, cancellationToken);
+                if (!templateDefaultsResult.IsSuccess)
+                {
+                    return OperationResult<StoredCertificateResult>.Failure(templateDefaultsResult.ErrorCode, templateDefaultsResult.Message);
+                }
+
+                appliedTemplate = templateDefaultsResult.Value;
+            }
             var decryptedIssuerKey = DecryptPrivateKey(issuerPrivateKey);
             var signResult = await _certificateService.SignCertificateSigningRequestAsync(
                 new SignCertificateSigningRequestRequest(
@@ -418,7 +489,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                     issuerCertificate.DerData,
                     decryptedIssuerKey,
                     issuerPrivateKey.Algorithm,
-                    request.ValidityDays),
+                    request.ValidityDays > 0 ? request.ValidityDays : appliedTemplate?.ValidityDays ?? 365),
                 cancellationToken);
 
             Array.Clear(decryptedIssuerKey, 0, decryptedIssuerKey.Length);
@@ -431,11 +502,17 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             var certificateId = Guid.NewGuid();
             Guid? subjectPrivateKeyId = csrEntity.PrivateKeyId == Guid.Empty ? null : csrEntity.PrivateKeyId;
             await _certificateRepository.AddAsync(
-                _currentDatabasePath!,
-                CreateCertificateEntity(certificateId, request.DisplayName, signResult.Value.DerData, signResult.Value.Details, subjectPrivateKeyId, request.IssuerCertificateId),
+                databasePath,
+                CreateCertificateEntity(
+                    certificateId,
+                    string.IsNullOrWhiteSpace(request.DisplayName) ? appliedTemplate?.DisplayNameDefault ?? "Issued Certificate" : request.DisplayName,
+                    signResult.Value.DerData,
+                    signResult.Value.Details,
+                    subjectPrivateKeyId,
+                    request.IssuerCertificateId),
                 cancellationToken);
 
-            await _auditEventRepository.AddAsync(_currentDatabasePath!, CreateAuditEvent(AuditEventKind.CertificateSigningRequestSigned, "Certificate signing request signed."), cancellationToken);
+            await _auditEventRepository.AddAsync(databasePath, CreateAuditEvent(AuditEventKind.CertificateSigningRequestSigned, "Certificate signing request signed."), cancellationToken);
 
             return OperationResult<StoredCertificateResult>.Success(
                 new StoredCertificateResult(certificateId, subjectPrivateKeyId, signResult.Value.Details, signResult.Value.BackendUsed),
@@ -1162,10 +1239,165 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             }
 
             var items = (await _templateRepository.ListAsync(databasePath, cancellationToken))
-                .Select(x => new TemplateListItem(x.Id, x.Name, x.Description, x.IsFavorite, x.IsDisabled))
+                .Select(TemplateModelMapper.ToListItem)
                 .ToList();
 
             return OperationResult<IReadOnlyList<TemplateListItem>>.Success(items, "Templates loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<TemplateDetails>> GetTemplateAsync(Guid templateId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<TemplateDetails>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var template = await _templateRepository.GetAsync(databasePath, templateId, cancellationToken);
+            return template is null
+                ? OperationResult<TemplateDetails>.Failure(OperationErrorCode.DatabaseNotFound, "Template not found.")
+                : OperationResult<TemplateDetails>.Success(TemplateModelMapper.ToDetails(template), "Template loaded.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<TemplateDetails>> SaveTemplateAsync(SaveTemplateRequest request, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<TemplateDetails>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var templateId = request.TemplateId ?? Guid.NewGuid();
+            var entity = TemplateModelMapper.ToEntity(request, templateId);
+            var validation = TemplateModelMapper.Validate(entity);
+            if (validation.Errors.Count > 0)
+            {
+                return OperationResult<TemplateDetails>.Failure(OperationErrorCode.ValidationFailed, string.Join(" ", validation.Errors));
+            }
+
+            var saved = await _templateRepository.SaveAsync(databasePath, entity, cancellationToken);
+            return OperationResult<TemplateDetails>.Success(TemplateModelMapper.ToDetails(saved), request.TemplateId is null ? "Template created." : "Template updated.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<TemplateDetails>> CloneTemplateAsync(CloneTemplateRequest request, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<TemplateDetails>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            var clone = await _templateRepository.CloneAsync(databasePath, request.TemplateId, request.NewName, cancellationToken);
+            return clone is null
+                ? OperationResult<TemplateDetails>.Failure(OperationErrorCode.DatabaseNotFound, "Template not found.")
+                : OperationResult<TemplateDetails>.Success(TemplateModelMapper.ToDetails(clone), "Template cloned.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<TemplateDetails>> SetTemplateFavoriteAsync(SetTemplateFavoriteRequest request, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<TemplateDetails>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            if (!await _templateRepository.SetFavoriteAsync(databasePath, request.TemplateId, request.IsFavorite, cancellationToken))
+            {
+                return OperationResult<TemplateDetails>.Failure(OperationErrorCode.DatabaseNotFound, "Template not found.");
+            }
+
+            var template = await _templateRepository.GetAsync(databasePath, request.TemplateId, cancellationToken);
+            return OperationResult<TemplateDetails>.Success(TemplateModelMapper.ToDetails(template!), "Template favorite state updated.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<TemplateDetails>> SetTemplateEnabledAsync(SetTemplateEnabledRequest request, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<TemplateDetails>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            if (!await _templateRepository.SetEnabledAsync(databasePath, request.TemplateId, request.IsEnabled, cancellationToken))
+            {
+                return OperationResult<TemplateDetails>.Failure(OperationErrorCode.DatabaseNotFound, "Template not found.");
+            }
+
+            var template = await _templateRepository.GetAsync(databasePath, request.TemplateId, cancellationToken);
+            return OperationResult<TemplateDetails>.Success(TemplateModelMapper.ToDetails(template!), "Template enabled state updated.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult> DeleteTemplateAsync(Guid templateId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<object>(out var databasePath, out var failure))
+            {
+                return OperationResult.Failure(failure!.ErrorCode, failure.Message);
+            }
+
+            return await _templateRepository.DeleteAsync(databasePath, templateId, cancellationToken)
+                ? OperationResult.Success("Template deleted.")
+                : OperationResult.Failure(OperationErrorCode.DatabaseNotFound, "Template not found.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<AppliedTemplateDefaults>> ApplyTemplateAsync(ApplyTemplateRequest request, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<AppliedTemplateDefaults>(out var databasePath, out var failure))
+            {
+                return failure!;
+            }
+
+            return await ResolveTemplateDefaultsAsync(request.TemplateId, request.Workflow, cancellationToken);
         }
         finally
         {
@@ -1237,6 +1469,39 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         }
 
         return AuditEventKind.PrivateKeyStored;
+    }
+
+    private async Task<OperationResult<AppliedTemplateDefaults>> ResolveTemplateDefaultsAsync(Guid templateId, TemplateWorkflowKind workflow, CancellationToken cancellationToken)
+    {
+        if (templateId == Guid.Empty)
+        {
+            return OperationResult<AppliedTemplateDefaults>.Failure(OperationErrorCode.ValidationFailed, "Template selection is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(_currentDatabasePath))
+        {
+            return OperationResult<AppliedTemplateDefaults>.Failure(OperationErrorCode.DatabaseNotOpen, "Open a database before using templates.");
+        }
+
+        var template = await _templateRepository.GetAsync(_currentDatabasePath, templateId, cancellationToken);
+        if (template is null)
+        {
+            return OperationResult<AppliedTemplateDefaults>.Failure(OperationErrorCode.DatabaseNotFound, "Template not found.");
+        }
+
+        var validation = TemplateModelMapper.Validate(template);
+        if (validation.Errors.Count > 0)
+        {
+            return OperationResult<AppliedTemplateDefaults>.Failure(OperationErrorCode.ValidationFailed, string.Join(" ", validation.Errors));
+        }
+
+        var compatibilityFailure = TemplateModelMapper.ValidateWorkflowCompatibility(template, workflow);
+        if (!string.IsNullOrWhiteSpace(compatibilityFailure))
+        {
+            return OperationResult<AppliedTemplateDefaults>.Failure(OperationErrorCode.ValidationFailed, compatibilityFailure);
+        }
+
+        return OperationResult<AppliedTemplateDefaults>.Success(TemplateModelMapper.ToAppliedDefaults(template, workflow), "Template defaults applied.");
     }
 
     private bool TryGetOpenDatabasePath<T>(out string databasePath, out OperationResult<T>? failure)

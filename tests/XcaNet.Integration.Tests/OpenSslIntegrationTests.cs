@@ -72,7 +72,7 @@ public sealed class OpenSslIntegrationTests
         Assert.True(diagnostics.IsSuccess, diagnostics.Message);
         Assert.True(diagnostics.Value!.CryptoBackends.OpenSslBackendAvailable);
         Assert.Contains("Loaded bridge", diagnostics.Value.CryptoBackends.RoutingSummary, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(1, diagnostics.Value.SchemaVersion);
+        Assert.Equal(2, diagnostics.Value.SchemaVersion);
     }
 
     [Fact]

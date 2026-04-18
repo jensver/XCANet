@@ -10,6 +10,7 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     private PrivateKeyListItem? _selectedIssuerPrivateKey;
     private string _issuedCertificateDisplayName = "Issued Certificate";
     private int _validityDays = 365;
+    private TemplateListItem? _selectedIssuanceTemplate;
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
     private string _exportPreview = string.Empty;
 
@@ -23,6 +24,8 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     public ObservableCollection<CertificateListItem> IssuerCertificates { get; } = [];
 
     public ObservableCollection<PrivateKeyListItem> IssuerPrivateKeys { get; } = [];
+
+    public ObservableCollection<TemplateListItem> IssuanceTemplates { get; } = [];
 
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs10];
 
@@ -50,6 +53,12 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
         set => SetProperty(ref _validityDays, value);
     }
 
+    public TemplateListItem? SelectedIssuanceTemplate
+    {
+        get => _selectedIssuanceTemplate;
+        set => SetProperty(ref _selectedIssuanceTemplate, value);
+    }
+
     public CryptoFormatView SelectedExportFormat
     {
         get => _selectedExportFormat;
@@ -70,6 +79,8 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
 
     public ICommand? OpenSelectedPrivateKeyCommand { get; set; }
 
+    public ICommand? ApplyIssuanceTemplateCommand { get; set; }
+
     public void SetIssuers(IEnumerable<CertificateListItem> certificates, IEnumerable<PrivateKeyListItem> privateKeys)
     {
         IssuerCertificates.Clear();
@@ -86,6 +97,19 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
 
         SelectedIssuerCertificate ??= IssuerCertificates.FirstOrDefault();
         SelectedIssuerPrivateKey ??= IssuerPrivateKeys.FirstOrDefault();
+    }
+
+    public void SetTemplates(IEnumerable<TemplateListItem> templates)
+    {
+        IssuanceTemplates.Clear();
+        foreach (var template in templates.Where(x => x.IsEnabled && (
+                     x.IntendedUsage == TemplateIntendedUsage.IntermediateCa
+                     || x.IntendedUsage == TemplateIntendedUsage.EndEntityCertificate)))
+        {
+            IssuanceTemplates.Add(template);
+        }
+
+        SelectedIssuanceTemplate ??= IssuanceTemplates.FirstOrDefault();
     }
 
     protected override Guid GetItemId(CertificateRequestListItem item) => item.CertificateSigningRequestId;

@@ -40,6 +40,10 @@
         <StackPanel Spacing="10">
           <TextBlock Text="Sign Selected CSR" FontSize="18" FontWeight="SemiBold" />
           <TextBlock Text="Choose a CA certificate and the matching issuer key to produce a managed or routed certificate according to the backend policy." Foreground="#475569" TextWrapping="Wrap" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <ComboBox ItemsSource="{Binding IssuanceTemplates}" SelectedItem="{Binding SelectedIssuanceTemplate}" />
+            <Button Grid.Column="1" Content="Apply Template" Command="{Binding ApplyIssuanceTemplateCommand}" />
+          </Grid>
           <TextBox Text="{Binding IssuedCertificateDisplayName}" Watermark="Issued certificate display name" />
           <ComboBox ItemsSource="{Binding IssuerCertificates}" SelectedItem="{Binding SelectedIssuerCertificate}" />
           <ComboBox ItemsSource="{Binding IssuerPrivateKeys}" SelectedItem="{Binding SelectedIssuerPrivateKey}" />

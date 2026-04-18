@@ -90,6 +90,48 @@ public sealed class PageViewModelTests
         Assert.True(page.HasItems);
     }
 
+    [Fact]
+    public void TemplatesPageViewModel_ShouldFilterAndBuildSaveRequest()
+    {
+        var page = new TemplatesPageViewModel();
+        var enabled = new TemplateListItem(Guid.NewGuid(), "Leaf", null, TemplateIntendedUsage.EndEntityCertificate, false, true, "RSA 3072 | 365 day(s)");
+        var disabled = new TemplateListItem(Guid.NewGuid(), "Disabled", null, TemplateIntendedUsage.SelfSignedCa, false, false, "RSA 3072 | 3650 day(s)");
+
+        page.SetTemplates([enabled, disabled]);
+        page.StatusFilter = TemplateStatusFilterView.All;
+        page.UsageFilter = TemplateUsageFilterView.EndEntityCertificate;
+        page.SelectedItem = enabled;
+        page.LoadTemplate(
+            new TemplateDetails(
+                enabled.TemplateId,
+                enabled.Name,
+                null,
+                false,
+                true,
+                TemplateIntendedUsage.EndEntityCertificate,
+                "CN=leaf.example.test",
+                ["leaf.example.test"],
+                KeyAlgorithmKind.Ecdsa,
+                null,
+                EllipticCurveKind.P256,
+                "SHA-256",
+                180,
+                false,
+                null,
+                ["DigitalSignature", "KeyEncipherment"],
+                ["Server Authentication"],
+                new TemplatePreviewSummary("EndEntityCertificate", "CN=leaf.example.test", "leaf.example.test", "ECDSA P256", "180 day(s)", "Leaf", "Enabled"),
+                new TemplateValidationSummary([], [])));
+
+        var saveRequest = page.BuildSaveRequest();
+
+        Assert.Single(page.Items);
+        Assert.Equal(enabled.TemplateId, page.SelectedItem!.TemplateId);
+        Assert.Equal("CN=leaf.example.test", saveRequest.SubjectDefault);
+        Assert.Equal(KeyAlgorithmKind.Ecdsa, saveRequest.KeyAlgorithm);
+        Assert.Contains("Server Authentication", saveRequest.EnhancedKeyUsages);
+    }
+
     private static CertificateListItem CreateCertificateListItem(Guid id, string displayName, bool isCertificateAuthority = false)
     {
         return new CertificateListItem(

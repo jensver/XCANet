@@ -108,6 +108,18 @@ Milestone 8 focuses on desktop usability rather than backend expansion:
 
 The file picker layer only gathers paths. Parsing, classification, preview, persistence, and export generation remain below the UI layer. Diagnostics are informational only: there is still no backend picker UI, and the managed backend remains the default path.
 
+## Template System And Policy Refinement
+
+Milestone 10 turns templates into real workflow helpers instead of browse-only placeholders:
+
+- templates are durable editable entities with name, description, enabled/favorite state, intended usage, subject defaults, SAN defaults, key defaults, validity defaults, and extension defaults
+- operators can create, edit, clone, delete, enable/disable, and favorite templates from the Templates page
+- templates can pre-populate self-signed CA, CSR, and CSR-signing workflows without creating parallel crypto implementations
+- template validation catches obvious conflicts such as CA/basic-constraints mismatches, invalid algorithm defaults, unsupported KU/EKU values, and disabled or incompatible template use
+- CSR templates now carry SAN, key-usage, EKU, and CA/basic-constraints defaults into the managed issuance path so signed certificates reflect those defaults when the CSR is used for issuance
+
+Template usage is intentionally lightweight rather than policy-engine heavy. The existing issuance flows still work without templates, and the managed backend remains the default routing path.
+
 ## Release And Packaging
 
 Milestone 9 adds a repeatable packaging lane without moving packaging concerns into the core app layers:

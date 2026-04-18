@@ -51,6 +51,10 @@
       <Border Background="White" CornerRadius="12" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Create Self-Signed CA" FontSize="18" FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <ComboBox ItemsSource="{Binding SelfSignedCaTemplates}" SelectedItem="{Binding SelectedSelfSignedCaTemplate}" />
+            <Button Grid.Column="1" Content="Apply Template" Command="{Binding ApplySelfSignedCaTemplateCommand}" />
+          </Grid>
           <TextBox Text="{Binding SelfSignedCaDisplayName}" Watermark="Certificate display name" />
           <TextBox Text="{Binding SelfSignedCaSubjectName}" Watermark="Subject name" />
           <Grid ColumnDefinitions="180,Auto" ColumnSpacing="10">
@@ -63,6 +67,10 @@
       <Border Background="White" CornerRadius="12" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Create CSR" FontSize="18" FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <ComboBox ItemsSource="{Binding CertificateSigningRequestTemplates}" SelectedItem="{Binding SelectedCertificateSigningRequestTemplate}" />
+            <Button Grid.Column="1" Content="Apply Template" Command="{Binding ApplyCertificateSigningRequestTemplateCommand}" />
+          </Grid>
           <TextBox Text="{Binding CertificateSigningRequestDisplayName}" Watermark="CSR display name" />
           <TextBox Text="{Binding CertificateSigningRequestSubjectName}" Watermark="Subject name" />
           <TextBox Text="{Binding CertificateSigningRequestSubjectAlternativeNames}" Watermark="SAN entries separated by comma or semicolon" />

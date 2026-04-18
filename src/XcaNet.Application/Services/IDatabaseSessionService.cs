@@ -58,5 +58,19 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<IReadOnlyList<TemplateListItem>>> ListTemplatesAsync(CancellationToken cancellationToken);
 
+    Task<OperationResult<TemplateDetails>> GetTemplateAsync(Guid templateId, CancellationToken cancellationToken);
+
+    Task<OperationResult<TemplateDetails>> SaveTemplateAsync(SaveTemplateRequest request, CancellationToken cancellationToken);
+
+    Task<OperationResult<TemplateDetails>> CloneTemplateAsync(CloneTemplateRequest request, CancellationToken cancellationToken);
+
+    Task<OperationResult<TemplateDetails>> SetTemplateFavoriteAsync(SetTemplateFavoriteRequest request, CancellationToken cancellationToken);
+
+    Task<OperationResult<TemplateDetails>> SetTemplateEnabledAsync(SetTemplateEnabledRequest request, CancellationToken cancellationToken);
+
+    Task<OperationResult> DeleteTemplateAsync(Guid templateId, CancellationToken cancellationToken);
+
+    Task<OperationResult<AppliedTemplateDefaults>> ApplyTemplateAsync(ApplyTemplateRequest request, CancellationToken cancellationToken);
+
     DatabaseSessionSnapshot GetSnapshot();
 }

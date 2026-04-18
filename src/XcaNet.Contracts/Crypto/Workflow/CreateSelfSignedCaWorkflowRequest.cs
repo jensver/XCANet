@@ -4,4 +4,5 @@ public sealed record CreateSelfSignedCaWorkflowRequest(
     Guid PrivateKeyId,
     string DisplayName,
     string SubjectName,
-    int ValidityDays);
+    int ValidityDays,
+    Guid? TemplateId = null);

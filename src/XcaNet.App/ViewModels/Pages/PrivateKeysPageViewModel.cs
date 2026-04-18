@@ -12,9 +12,11 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     private string _selfSignedCaDisplayName = "Self-Signed CA";
     private string _selfSignedCaSubjectName = "CN=XcaNet Root CA";
     private int _selfSignedCaValidityDays = 3650;
+    private TemplateListItem? _selectedSelfSignedCaTemplate;
     private string _certificateSigningRequestDisplayName = "Certificate Signing Request";
     private string _certificateSigningRequestSubjectName = "CN=service.example.test";
     private string _certificateSigningRequestSubjectAlternativeNames = "service.example.test";
+    private TemplateListItem? _selectedCertificateSigningRequestTemplate;
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
     private string _selectedExportPassword = string.Empty;
     private string _exportPreview = string.Empty;
@@ -31,6 +33,10 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     public IReadOnlyList<EllipticCurveView> Curves { get; } = [EllipticCurveView.P256, EllipticCurveView.P384];
 
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs8];
+
+    public ObservableCollection<TemplateListItem> SelfSignedCaTemplates { get; } = [];
+
+    public ObservableCollection<TemplateListItem> CertificateSigningRequestTemplates { get; } = [];
 
     public string NewKeyDisplayName
     {
@@ -68,6 +74,12 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
         set => SetProperty(ref _selfSignedCaValidityDays, value);
     }
 
+    public TemplateListItem? SelectedSelfSignedCaTemplate
+    {
+        get => _selectedSelfSignedCaTemplate;
+        set => SetProperty(ref _selectedSelfSignedCaTemplate, value);
+    }
+
     public string CertificateSigningRequestDisplayName
     {
         get => _certificateSigningRequestDisplayName;
@@ -84,6 +96,12 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     {
         get => _certificateSigningRequestSubjectAlternativeNames;
         set => SetProperty(ref _certificateSigningRequestSubjectAlternativeNames, value);
+    }
+
+    public TemplateListItem? SelectedCertificateSigningRequestTemplate
+    {
+        get => _selectedCertificateSigningRequestTemplate;
+        set => SetProperty(ref _selectedCertificateSigningRequestTemplate, value);
     }
 
     public CryptoFormatView SelectedExportFormat
@@ -110,9 +128,36 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
 
     public ICommand? CreateCertificateSigningRequestCommand { get; set; }
 
+    public ICommand? ApplySelfSignedCaTemplateCommand { get; set; }
+
+    public ICommand? ApplyCertificateSigningRequestTemplateCommand { get; set; }
+
     public ICommand? ExportSelectedCommand { get; set; }
 
     public ICommand? ExportSelectedToFileCommand { get; set; }
+
+    public void SetTemplates(IEnumerable<TemplateListItem> templates)
+    {
+        ResetTemplateCollection(SelfSignedCaTemplates, templates.Where(x => x.IntendedUsage == TemplateIntendedUsage.SelfSignedCa && x.IsEnabled));
+        ResetTemplateCollection(
+            CertificateSigningRequestTemplates,
+            templates.Where(x => x.IsEnabled && (
+                x.IntendedUsage == TemplateIntendedUsage.IntermediateCa
+                || x.IntendedUsage == TemplateIntendedUsage.EndEntityCertificate
+                || x.IntendedUsage == TemplateIntendedUsage.CertificateSigningRequest)));
+
+        SelectedSelfSignedCaTemplate ??= SelfSignedCaTemplates.FirstOrDefault();
+        SelectedCertificateSigningRequestTemplate ??= CertificateSigningRequestTemplates.FirstOrDefault();
+    }
+
+    private static void ResetTemplateCollection(ObservableCollection<TemplateListItem> target, IEnumerable<TemplateListItem> templates)
+    {
+        target.Clear();
+        foreach (var template in templates)
+        {
+            target.Add(template);
+        }
+    }
 
     protected override Guid GetItemId(PrivateKeyListItem item) => item.PrivateKeyId;
 }
