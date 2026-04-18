@@ -80,6 +80,13 @@ Milestone 6 adds an optional OpenSSL integration without making native code part
 - backend routing is centralized and explicit
 - the first OpenSSL-backed operation is CSR signing
 - parity tests cover managed vs OpenSSL output for that operation
+- managed remains the default even when an OpenSSL bridge is present
+
+M7 hardens the compatibility story rather than expanding features:
+
+- richer parity fixtures now cover SAN-heavy signing, extension-rich signing, malformed input, PKCS#12 inspection, and CRL inspection
+- managed PKCS#12 and CRL artifacts were validated against the OpenSSL CLI
+- no second OpenSSL-backed operation was added because the new evidence did not justify it
 
 Build the native bridge locally with:
 

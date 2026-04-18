@@ -800,7 +800,7 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
             return Task.FromResult(OperationResult<ImportCertificateMaterialResult>.Failure(OperationErrorCode.ValidationFailed, "Bundle import currently supports PKCS#12 only."));
         }
 
-        using var certificate = X509CertificateLoader.LoadPkcs12(request.Data, request.Password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+        using var certificate = LoadPkcs12WithCompatibleFlags(request.Data, request.Password);
         var certificates = new List<ImportedCertificateMaterial>
         {
             new(request.DisplayName, certificate.Export(X509ContentType.Cert), ParseCertificate(certificate))
@@ -823,6 +823,18 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
         return Task.FromResult(OperationResult<ImportCertificateMaterialResult>.Success(
             new ImportCertificateMaterialResult(privateKeys, certificates, []),
             "Bundle material imported."));
+    }
+
+    private static X509Certificate2 LoadPkcs12WithCompatibleFlags(byte[] data, string? password)
+    {
+        try
+        {
+            return X509CertificateLoader.LoadPkcs12(data, password, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.EphemeralKeySet);
+        }
+        catch (PlatformNotSupportedException)
+        {
+            return X509CertificateLoader.LoadPkcs12(data, password, X509KeyStorageFlags.Exportable);
+        }
     }
 
     private sealed class LoadedPrivateKey : IDisposable

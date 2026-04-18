@@ -26,6 +26,8 @@
 
   <ItemGroup>
     <Compile Include="..\Shared\OpenSslBridgeTestHarness.cs" Link="Support\OpenSslBridgeTestHarness.cs" />
+    <Compile Include="..\Shared\OpenSslCliHarness.cs" Link="Support\OpenSslCliHarness.cs" />
+    <Compile Include="..\Shared\CryptoFixtureFactory.cs" Link="Support\CryptoFixtureFactory.cs" />
   </ItemGroup>
 
 </Project>

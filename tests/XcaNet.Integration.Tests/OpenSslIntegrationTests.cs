@@ -66,6 +66,31 @@ public sealed class OpenSslIntegrationTests
         Assert.True(crl.IsSuccess, crl.Message);
     }
 
+    [Fact]
+    public async Task ApplicationStack_ShouldRemainManagedByDefaultEvenWhenBridgeIsPresent()
+    {
+        var build = OpenSslBridgeTestHarness.BuildNativeBridge();
+        Assert.True(build.IsSuccess, build.FailureReason);
+
+        using var provider = BuildServiceProvider(options =>
+        {
+            options.OpenSslBridgePath = build.LibraryPath;
+        });
+
+        var service = provider.GetRequiredService<IDatabaseSessionService>();
+        var databasePath = GetDatabasePath();
+
+        await service.CreateDatabaseAsync(new CreateDatabaseRequest(databasePath, "correct horse battery staple", "M7 Managed Default"), CancellationToken.None);
+        var issuerKey = await service.GenerateStoredKeyAsync(new GenerateStoredKeyRequest("Issuer Key", KeyAlgorithmKind.Rsa, 3072, null), CancellationToken.None);
+        var issuerCertificate = await service.CreateSelfSignedCaAsync(new CreateSelfSignedCaWorkflowRequest(issuerKey.Value!.PrivateKeyId, "Issuer CA", "CN=Issuer CA", 365), CancellationToken.None);
+        var leafKey = await service.GenerateStoredKeyAsync(new GenerateStoredKeyRequest("Leaf Key", KeyAlgorithmKind.Ecdsa, null, EllipticCurveKind.P256), CancellationToken.None);
+        var csr = await service.CreateCertificateSigningRequestAsync(new CreateCertificateSigningRequestWorkflowRequest(leafKey.Value!.PrivateKeyId, "Leaf CSR", "CN=leaf.example.test", [new SanEntry("leaf.example.test")]), CancellationToken.None);
+        var leafCertificate = await service.SignCertificateSigningRequestAsync(new SignStoredCertificateSigningRequestRequest(csr.Value!.CertificateSigningRequestId, issuerCertificate.Value!.CertificateId, issuerKey.Value.PrivateKeyId, "Leaf Certificate", 180), CancellationToken.None);
+
+        Assert.True(leafCertificate.IsSuccess, leafCertificate.Message);
+        Assert.Equal(CryptoBackendKind.Managed, leafCertificate.Value!.BackendUsed);
+    }
+
     private static ServiceProvider BuildServiceProvider(Action<CryptoBackendRoutingOptions> configure)
     {
         var services = new ServiceCollection();

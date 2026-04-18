@@ -56,4 +56,34 @@ public sealed class DotNetManagedCryptoTests
         Assert.Equal("CN=service.example.test", parseResult.Value!.Subject);
         Assert.Contains("service.example.test", parseResult.Value.SubjectAlternativeNames);
     }
+
+    [Fact]
+    public async Task ImportAsync_WithMalformedPkcs12Bundle_ShouldFail()
+    {
+        var result = await _backend.ImportAsync(
+            new ImportCertificateMaterialRequest(CryptoImportKind.Bundle, CryptoDataFormat.Pkcs12, [1, 2, 3, 4], "wrong", "Broken Bundle"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+    }
+
+    [Fact]
+    public async Task ImportAsync_WithWrongPkcs12Password_ShouldFail()
+    {
+        var keyResult = await _backend.GenerateAsync(
+            new GenerateKeyPairRequest("Bundle Key", KeyAlgorithmKind.Rsa, 3072, null),
+            CancellationToken.None);
+        var certificateResult = await _backend.CreateSelfSignedCaAsync(
+            new SelfSignedCaCertificateRequest("CN=Bundle CA", keyResult.Value!.Pkcs8PrivateKey, keyResult.Value.Algorithm, 365),
+            CancellationToken.None);
+        var exportResult = await _backend.ExportPkcs12Async(
+            new ExportPkcs12Request(certificateResult.Value!.DerData, keyResult.Value.Pkcs8PrivateKey, keyResult.Value.Algorithm, "bundle", "correct-password"),
+            CancellationToken.None);
+
+        var importResult = await _backend.ImportAsync(
+            new ImportCertificateMaterialRequest(CryptoImportKind.Bundle, CryptoDataFormat.Pkcs12, exportResult.Value!.Data, "wrong-password", "Broken Bundle"),
+            CancellationToken.None);
+
+        Assert.False(importResult.IsSuccess);
+    }
 }
