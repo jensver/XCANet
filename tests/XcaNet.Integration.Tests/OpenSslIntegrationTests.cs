@@ -100,6 +100,18 @@ public sealed class OpenSslIntegrationTests
         Assert.Equal(CryptoBackendKind.Managed, leafCertificate.Value!.BackendUsed);
     }
 
+    [Fact]
+    public async Task Diagnostics_ShouldReportReleaseCandidateVersion()
+    {
+        using var provider = BuildServiceProvider(_ => { });
+        var service = provider.GetRequiredService<IDatabaseSessionService>();
+
+        var diagnostics = await service.GetApplicationDiagnosticsAsync(CancellationToken.None);
+
+        Assert.True(diagnostics.IsSuccess, diagnostics.Message);
+        Assert.Equal("0.1.0", diagnostics.Value!.AppVersion);
+    }
+
     private static ServiceProvider BuildServiceProvider(Action<CryptoBackendRoutingOptions> configure)
     {
         var services = new ServiceCollection();

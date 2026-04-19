@@ -12,6 +12,16 @@ The packaging scripts use a predictable artifact layout:
 
 The desktop publish directory is the runtime payload. Optional native bridge artifacts are copied into `app/native/`.
 
+Each packaged output also includes `artifacts/packages/<rid>/<Configuration>/manifest.txt` with:
+
+- target RID
+- build configuration
+- release version
+- publish directory
+- bridge path
+- bridge mode (`managed-only` or `optional-openssl-present`)
+- packaging timestamp
+
 ## Scripts
 
 - `packaging/build-native-bridge.sh <rid> [output-root]`
@@ -25,6 +35,12 @@ The desktop publish directory is the runtime payload. Optional native bridge art
 3. Publish the desktop app for a target RID.
 4. Verify the publish layout.
 5. Distribute the contents of `artifacts/publish/<rid>/Release/app/`.
+
+For a release-candidate verification pass, also validate:
+
+1. managed-only packaging
+2. OpenSSL-enhanced packaging when a bridge artifact is available
+3. startup diagnostics and Settings / Security diagnostics after launch
 
 ## Managed-only vs OpenSSL-enhanced Packages
 

@@ -99,6 +99,64 @@ public sealed class FileWorkflowIntegrationTests
         Assert.Contains("Unsupported file type", result.Message);
     }
 
+    [Fact]
+    public async Task ImportStoredFilesAsync_ShouldRejectEmptyFilesClearly()
+    {
+        using var provider = BuildServiceProvider();
+        var service = provider.GetRequiredService<IDatabaseSessionService>();
+        var databasePath = GetDatabasePath();
+
+        await service.CreateDatabaseAsync(new CreateDatabaseRequest(databasePath, "correct horse battery staple", "M12 Empty Import"), CancellationToken.None);
+
+        var emptyPath = Path.Combine(Path.GetTempPath(), $"xcanet-empty-{Guid.NewGuid():N}.cer");
+        await File.WriteAllBytesAsync(emptyPath, []);
+
+        var result = await service.ImportStoredFilesAsync(new ImportStoredFilesRequest([emptyPath], null), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("empty", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ImportStoredFilesAsync_ShouldRejectMalformedDerPayloadClearly()
+    {
+        using var provider = BuildServiceProvider();
+        var service = provider.GetRequiredService<IDatabaseSessionService>();
+        var databasePath = GetDatabasePath();
+
+        await service.CreateDatabaseAsync(new CreateDatabaseRequest(databasePath, "correct horse battery staple", "M12 Bad DER"), CancellationToken.None);
+
+        var invalidPath = Path.Combine(Path.GetTempPath(), $"xcanet-malformed-{Guid.NewGuid():N}.cer");
+        await File.WriteAllBytesAsync(invalidPath, [0x01, 0x02, 0x03, 0x04]);
+
+        var result = await service.ImportStoredFilesAsync(new ImportStoredFilesRequest([invalidPath], null), CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("could not be recognized", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task ExportStoredMaterialToFileAsync_ShouldFailGracefullyWhenDestinationIsInvalid()
+    {
+        using var provider = BuildServiceProvider();
+        var service = provider.GetRequiredService<IDatabaseSessionService>();
+        var databasePath = GetDatabasePath();
+
+        await service.CreateDatabaseAsync(new CreateDatabaseRequest(databasePath, "correct horse battery staple", "M12 Export Failure"), CancellationToken.None);
+        var key = await service.GenerateStoredKeyAsync(new GenerateStoredKeyRequest("Issuer Key", KeyAlgorithmKind.Rsa, 3072, null), CancellationToken.None);
+        var certificate = await service.CreateSelfSignedCaAsync(new CreateSelfSignedCaWorkflowRequest(key.Value!.PrivateKeyId, "Issuer CA", "CN=Issuer CA", 365), CancellationToken.None);
+        var directoryPath = Path.Combine(Path.GetTempPath(), $"xcanet-export-dir-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directoryPath);
+
+        var result = await service.ExportStoredMaterialToFileAsync(
+            new ExportStoredMaterialToFileRequest(CryptoImportKind.Certificate, certificate.Value!.CertificateId, CryptoDataFormat.Pem, directoryPath, null, "issuer-ca"),
+            CancellationToken.None);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(XcaNet.Contracts.Results.OperationErrorCode.StorageFailure, result.ErrorCode);
+        Assert.Contains("Could not export", result.Message);
+    }
+
     private static ServiceProvider BuildServiceProvider()
     {
         var services = new ServiceCollection();

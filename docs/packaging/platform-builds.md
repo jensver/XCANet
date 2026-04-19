@@ -14,6 +14,8 @@ Build and test:
 ```bash
 dotnet build XcaNet.sln
 dotnet test XcaNet.sln --no-build
+dotnet build XcaNet.sln -c Release
+dotnet test XcaNet.sln -c Release --no-build
 ```
 
 Package a managed-only app:
@@ -36,6 +38,7 @@ packaging/verify-layout.sh osx-arm64 Release artifacts
 - `dotnet publish` works for `win-x64` from the normal .NET SDK flow.
 - The native bridge build script uses a C toolchain and OpenSSL development headers/libraries. On Windows, use a compatible environment such as MSYS2/MinGW or another toolchain that can produce `xcanet_ossl_bridge.dll`.
 - Managed-only packaging remains valid even if no native bridge is built.
+- Packaging manifests include the release version and whether the package contains the optional bridge.
 
 ## macOS Notes
 

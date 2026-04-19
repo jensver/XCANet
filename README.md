@@ -2,6 +2,69 @@
 
 XcaNet is a clean-architecture rewrite of a cross-platform PKI manager in `.NET 10`, following the structure defined in `spec/SPEC.md`.
 
+## What It Does
+
+XcaNet is a desktop PKI workbench for operators who need to:
+
+- create and store private keys securely in SQLite
+- create self-signed CA certificates
+- create and sign CSRs
+- revoke certificates and generate CRLs
+- import and export common certificate, key, CSR, PFX, and CRL formats
+- apply reusable issuance templates
+
+The managed `.NET` crypto backend is the default for all workflows. An optional OpenSSL bridge can be added for compatibility-sensitive CSR signing without becoming a runtime requirement.
+
+## v0.1.0 Release Candidate Scope
+
+The current release-candidate target is `v0.1.0`.
+
+Included:
+
+- secure local database workflow
+- managed crypto workflows for keys, certificates, CSRs, revocation, and CRLs
+- optional OpenSSL-enhanced CSR signing
+- template-assisted issuance defaults
+- desktop import/export, diagnostics, and packaging support
+
+Not included:
+
+- OpenSSL as a general-purpose backend replacement
+- advanced template policy engine behavior
+- CRL publishing/distribution infrastructure
+- certificate issuance beyond the currently implemented managed/OpenSSL-routed paths
+
+Draft release notes are in `docs/release/v0.1.0.md`.
+
+## Quick Start
+
+Build and test:
+
+```bash
+dotnet build XcaNet.sln
+dotnet test XcaNet.sln --no-build
+```
+
+Run the desktop app:
+
+```bash
+dotnet run --project src/XcaNet.App.Desktop/XcaNet.App.Desktop.csproj
+```
+
+Typical first-run flow:
+
+1. Open `Settings / Security`.
+2. Create a database and unlock it.
+3. Generate a private key.
+4. Create a self-signed CA or create a CSR.
+5. Export/import material as needed.
+
+Operator guides:
+
+- `docs/operator/quickstart.md`
+- `docs/operator/templates.md`
+- `docs/packaging/README.md`
+
 ## Solution Structure
 
 - `src/XcaNet.App` contains the shared Avalonia shell, page views, navigation state, list/detail view models, and workflow wiring.
@@ -96,6 +159,19 @@ native/xcanet_ossl_bridge/build-bridge.sh <output-dir>
 
 To use a specific bridge artifact, set `XCANET_OPENSSL_BRIDGE_PATH` or configure `Crypto:OpenSslBridgePath`. If no bridge is configured, the managed backend remains active.
 
+## Managed vs OpenSSL
+
+- Managed backend:
+  - default for all workflows
+  - fully supported for normal operation
+  - required for zero-native-dependency installs
+- OpenSSL backend:
+  - optional
+  - currently used only when routing policy selects the OpenSSL CSR-signing path
+  - should be treated as a compatibility enhancement, not a startup requirement
+
+If the bridge is missing, invalid, or built for the wrong architecture, XcaNet stays usable in managed mode and exposes that failure through diagnostics.
+
 ## UX Completion And Operator Workflows
 
 Milestone 8 focuses on desktop usability rather than backend expansion:
@@ -138,6 +214,12 @@ Desktop startup now also writes support logs under the local application-data lo
 
 Those logs are intended for operator troubleshooting and packaging verification. They do not change backend routing or introduce backend selection UI.
 
+For repeatable release packaging and troubleshooting:
+
+- `docs/packaging/README.md`
+- `docs/packaging/platform-builds.md`
+- `docs/packaging/troubleshooting.md`
+
 ## Theme-Safe Desktop UI
 
 Milestone 11 hardens the desktop UI for both light and dark mode without changing backend behavior:
@@ -161,3 +243,28 @@ These integrations are developer tooling only. They are not required for app run
 - example workspace config: `tooling/mcp/workspace.mcp.example.json`
 
 Use Microsoft Learn MCP for trusted .NET and Microsoft platform reference work, and Avalonia Build MCP for Avalonia documentation and UI implementation guidance.
+
+## Diagnostics And Troubleshooting
+
+The `Settings / Security` page exposes read-only diagnostics for:
+
+- app version
+- schema version
+- managed backend availability
+- OpenSSL backend availability/version/capabilities
+- routing summary
+
+Startup logs are written to the platform-specific app-data log directory. Those logs are the first place to check when:
+
+- the app fails to start
+- the OpenSSL bridge does not load
+- a packaged app behaves differently from a development run
+
+## Related Docs
+
+- `docs/operator/quickstart.md`
+- `docs/operator/templates.md`
+- `docs/packaging/README.md`
+- `docs/packaging/troubleshooting.md`
+- `docs/architecture/crypto-backends.md`
+- `docs/architecture/interop-openssl.md`

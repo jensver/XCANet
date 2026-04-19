@@ -802,7 +802,18 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                 return OperationResult<ImportStoredFilesResult>.Failure(OperationErrorCode.ValidationFailed, $"The import file was not found: {filePath}");
             }
 
-            var classifyResult = await ClassifyImportFileAsync(filePath, request.Password, cancellationToken);
+            OperationResult<ImportStoredMaterialRequest> classifyResult;
+            try
+            {
+                classifyResult = await ClassifyImportFileAsync(filePath, request.Password, cancellationToken);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
+            {
+                return OperationResult<ImportStoredFilesResult>.Failure(
+                    OperationErrorCode.StorageFailure,
+                    $"Could not read import file '{Path.GetFileName(filePath)}': {ex.Message}");
+            }
+
             if (!classifyResult.IsSuccess || classifyResult.Value is null)
             {
                 return OperationResult<ImportStoredFilesResult>.Failure(classifyResult.ErrorCode, classifyResult.Message);
@@ -869,15 +880,24 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             return OperationResult<ExportedArtifact>.Failure(exportResult.ErrorCode, exportResult.Message);
         }
 
-        Directory.CreateDirectory(Path.GetDirectoryName(request.DestinationPath) ?? ".");
-        if (!string.IsNullOrWhiteSpace(exportResult.Value.TextRepresentation)
-            && (exportResult.Value.Format == CryptoDataFormat.Pem || request.DestinationPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+        try
         {
-            await File.WriteAllTextAsync(request.DestinationPath, exportResult.Value.TextRepresentation, cancellationToken);
+            Directory.CreateDirectory(Path.GetDirectoryName(request.DestinationPath) ?? ".");
+            if (!string.IsNullOrWhiteSpace(exportResult.Value.TextRepresentation)
+                && (exportResult.Value.Format == CryptoDataFormat.Pem || request.DestinationPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+            {
+                await File.WriteAllTextAsync(request.DestinationPath, exportResult.Value.TextRepresentation, cancellationToken);
+            }
+            else
+            {
+                await File.WriteAllBytesAsync(request.DestinationPath, exportResult.Value.Data, cancellationToken);
+            }
         }
-        else
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException)
         {
-            await File.WriteAllBytesAsync(request.DestinationPath, exportResult.Value.Data, cancellationToken);
+            return OperationResult<ExportedArtifact>.Failure(
+                OperationErrorCode.StorageFailure,
+                $"Could not export '{request.FileNameStem}' to '{request.DestinationPath}': {ex.Message}");
         }
 
         return OperationResult<ExportedArtifact>.Success(exportResult.Value, "Material exported to file.");
@@ -887,7 +907,9 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var appVersion = Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
+        var appVersion = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
+            ?? typeof(DatabaseSessionService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
             ?? typeof(DatabaseSessionService).Assembly.GetName().Version?.ToString()
             ?? "0.0.0";
 
@@ -1892,6 +1914,11 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         var displayName = Path.GetFileNameWithoutExtension(filePath);
         var extension = Path.GetExtension(filePath);
 
+        if (data.Length == 0)
+        {
+            return OperationResult<ImportStoredMaterialRequest>.Failure(OperationErrorCode.ValidationFailed, $"The selected import file is empty: {Path.GetFileName(filePath)}");
+        }
+
         if (LooksLikePem(data, "X509 CRL") || extension.Equals(".crl", StringComparison.OrdinalIgnoreCase))
         {
             var format = LooksLikePem(data, "X509 CRL") ? CryptoDataFormat.Pem : CryptoDataFormat.Der;
@@ -1950,9 +1977,15 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                     new ImportStoredMaterialRequest(displayName, CryptoImportKind.CertificateRevocationList, CryptoDataFormat.Der, data, password),
                     "CRL import classified.");
             }
+
+            return OperationResult<ImportStoredMaterialRequest>.Failure(
+                OperationErrorCode.ValidationFailed,
+                $"The file '{Path.GetFileName(filePath)}' could not be recognized as a certificate, CSR, or CRL.");
         }
 
-        return OperationResult<ImportStoredMaterialRequest>.Failure(OperationErrorCode.ValidationFailed, $"Unsupported file type: {Path.GetFileName(filePath)}");
+        return OperationResult<ImportStoredMaterialRequest>.Failure(
+            OperationErrorCode.ValidationFailed,
+            $"Unsupported file type: {Path.GetFileName(filePath)}. Supported imports include PEM, DER/CER, KEY, CSR, CRL, PFX, and P12.");
     }
 
     private async Task<bool> CanParseCertificateAsync(byte[] data, CancellationToken cancellationToken)

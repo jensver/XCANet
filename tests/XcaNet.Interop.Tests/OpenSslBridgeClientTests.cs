@@ -19,6 +19,23 @@ public sealed class OpenSslBridgeClientTests
     }
 
     [Fact]
+    public async Task InvalidBinary_ShouldReportLoadFailureWithoutThrowing()
+    {
+        var invalidPath = Path.Combine(Path.GetTempPath(), $"xcanet-invalid-bridge-{Guid.NewGuid():N}.dylib");
+        await File.WriteAllTextAsync(invalidPath, "not a native library");
+
+        var client = new OpenSslBridgeClient(new OpenSslBridgeOptions
+        {
+            LibraryPath = invalidPath
+        });
+
+        Assert.False(client.Diagnostics.IsAvailable);
+        Assert.NotNull(client.Diagnostics.LastLoadError);
+        Assert.Contains("Managed fallback remains available", client.Diagnostics.LastLoadError);
+        Assert.Contains(invalidPath, client.Diagnostics.LastLoadError);
+    }
+
+    [Fact]
     public void BuildAndProbe_ShouldReturnVersionCapabilitiesAndSelfTest()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();

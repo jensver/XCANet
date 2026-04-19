@@ -16,6 +16,8 @@ Check:
 - `app/bridges/`
 - `app/runtimes/<rid>/native/`
 
+Also confirm the packaged manifest at `artifacts/packages/<rid>/<Configuration>/manifest.txt` matches the bridge mode you expected to ship.
+
 ## Wrong Architecture Bridge
 
 If the bridge binary architecture does not match the process architecture, diagnostics should report an architecture mismatch or invalid binary load failure.
@@ -29,6 +31,35 @@ Build a bridge for the same architecture as the published app:
 ## Missing Native Dependencies
 
 If the bridge exists but `libssl` / `libcrypto` cannot be loaded, diagnostics should report a missing dependency failure. Managed mode still remains available.
+
+## Import Failures
+
+Common import failures include:
+
+- unsupported extension
+- empty file
+- malformed DER/CER payload
+- incorrect password for PKCS#12 or encrypted key material
+
+XcaNet should fail these imports with a clear validation or storage message rather than crashing.
+
+If an operator reports import trouble, confirm:
+
+- the file type is one of the supported formats
+- the file is non-empty
+- the password is correct when required
+- the payload is really a certificate, CSR, CRL, key, or PFX rather than mislabeled content
+
+## Export Failures
+
+Common export failures include:
+
+- invalid destination path
+- directory selected instead of file path
+- insufficient filesystem permissions
+- locked database or missing selection
+
+The application should report export failures clearly and keep the rest of the session usable.
 
 ## Startup Failure Logs
 

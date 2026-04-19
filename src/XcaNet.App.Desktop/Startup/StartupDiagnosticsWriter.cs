@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,7 @@ internal static class StartupDiagnosticsWriter
         var builder = new StringBuilder()
             .AppendLine($"Timestamp: {DateTimeOffset.UtcNow:u}")
             .AppendLine($"BuildConfiguration: {GetBuildConfiguration()}")
-            .AppendLine($"AppVersion: {typeof(Program).Assembly.GetName().Version}")
+            .AppendLine($"AppVersion: {GetDisplayVersion()}")
             .AppendLine($"ConfiguredBridgePath: {configuration["Crypto:OpenSslBridgePath"] ?? Environment.GetEnvironmentVariable("XCANET_OPENSSL_BRIDGE_PATH") ?? "(none)"}");
 
         if (diagnostics.IsSuccess && diagnostics.Value is not null)
@@ -50,5 +51,12 @@ internal static class StartupDiagnosticsWriter
 #else
         return "Release";
 #endif
+    }
+
+    private static string GetDisplayVersion()
+    {
+        return typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+            ?? typeof(Program).Assembly.GetName().Version?.ToString()
+            ?? "0.0.0";
     }
 }
