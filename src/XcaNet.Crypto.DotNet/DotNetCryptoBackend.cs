@@ -207,7 +207,7 @@ public sealed class DotNetCryptoBackend : IKeyService, ICertificateService, ICer
                 ParseCertificateRevocationList(request.Data, request.Format),
                 "Certificate revocation list parsed."));
         }
-        catch (CryptographicException)
+        catch (Exception ex) when (ex is CryptographicException or AsnContentException)
         {
             return Task.FromResult(OperationResult<CertificateRevocationListDetails>.Failure(OperationErrorCode.ValidationFailed, "Invalid certificate revocation list data."));
         }

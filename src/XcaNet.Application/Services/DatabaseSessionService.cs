@@ -907,10 +907,10 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var appVersion = Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-            ?? Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
-            ?? typeof(DatabaseSessionService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        var appVersion = NormalizeVersion(typeof(DatabaseSessionService).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion)
             ?? typeof(DatabaseSessionService).Assembly.GetName().Version?.ToString()
+            ?? NormalizeVersion(Assembly.GetEntryAssembly()?.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion)
+            ?? Assembly.GetEntryAssembly()?.GetName().Version?.ToString()
             ?? "0.0.0";
 
         return Task.FromResult(
@@ -922,6 +922,9 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                     _state),
                 "Application diagnostics loaded."));
     }
+
+    private static string? NormalizeVersion(string? version)
+        => string.IsNullOrWhiteSpace(version) ? null : version.Split('+', 2)[0];
 
     public async Task<OperationResult<CertificateDetails>> GetCertificateDetailsAsync(Guid certificateId, CancellationToken cancellationToken)
     {
