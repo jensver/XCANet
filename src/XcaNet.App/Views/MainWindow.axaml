@@ -8,17 +8,19 @@
         DragDrop.AllowDrop="True"
         Title="XcaNet">
   <Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,*">
-    <Border Grid.RowSpan="3" Background="#14202A" Padding="18">
+    <Border Grid.RowSpan="3" Background="{DynamicResource ShellSidebarBrush}" Padding="18">
       <StackPanel Spacing="16">
         <StackPanel Spacing="4">
-          <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="Bold" Foreground="White" />
-          <TextBlock Text="{Binding Subtitle}" Foreground="#C7D4E2" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource ShellSidebarTextBrush}" />
+          <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource ShellSidebarMutedTextBrush}" TextWrapping="Wrap" />
         </StackPanel>
 
         <ItemsControl ItemsSource="{Binding NavigationItems}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Button Command="{Binding Command}"
+                      Classes="nav-item"
+                      Classes.is-selected="{Binding IsSelected}"
                       HorizontalContentAlignment="Left"
                       Padding="14,10"
                       Margin="0,0,0,8">
@@ -33,23 +35,22 @@
       </StackPanel>
     </Border>
 
-    <Border Grid.Column="1" Background="#F5F7FA" Padding="20,16" BorderBrush="#D7DEE6" BorderThickness="0,0,0,1">
+    <Border Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Padding="20,16" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="4">
           <TextBlock Text="{Binding CurrentPage.Title}" FontSize="26" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding SettingsSecurityPage.StatusMessage}" Foreground="#475569" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding SettingsSecurityPage.StatusMessage}" Classes="secondary-text" TextWrapping="Wrap" />
         </StackPanel>
         <Border Grid.Column="1"
-                Background="#E6EEF7"
+                Classes="status-pill"
                 Padding="12,8"
-                CornerRadius="10"
                 IsVisible="{Binding IsBusy}">
           <TextBlock Text="{Binding BusyMessage}" FontWeight="SemiBold" />
         </Border>
       </Grid>
     </Border>
 
-    <Border Grid.Row="1" Grid.Column="1" Padding="20,10" BorderBrush="#D7DEE6" BorderThickness="0,0,0,1">
+    <Border Grid.Row="1" Grid.Column="1" Padding="20,10" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
       <ItemsControl ItemsSource="{Binding Notifications}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
@@ -58,10 +59,11 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Border Background="#FFFFFF"
-                    BorderBrush="#CBD5E1"
-                    BorderThickness="1"
-                    CornerRadius="10"
+            <Border Classes="notification-chip"
+                    Classes.success="{Binding IsSuccess}"
+                    Classes.warning="{Binding IsWarning}"
+                    Classes.error="{Binding IsError}"
+                    Classes.info="{Binding IsInfo}"
                     Padding="12,8">
               <StackPanel Spacing="2">
                 <TextBlock Text="{Binding Level}" FontWeight="SemiBold" />
@@ -73,6 +75,6 @@
       </ItemsControl>
     </Border>
 
-    <ContentControl Grid.Row="2" Grid.Column="1" Content="{Binding CurrentPage}" Margin="20" />
+    <ContentControl Grid.Row="2" Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Content="{Binding CurrentPage}" Margin="20" />
   </Grid>
 </Window>

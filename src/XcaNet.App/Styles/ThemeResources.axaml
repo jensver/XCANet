@@ -1,0 +1,191 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F7FB" />
+          <SolidColorBrush x:Key="ShellSidebarBrush" Color="#163047" />
+          <SolidColorBrush x:Key="ShellSidebarTextBrush" Color="#F8FAFC" />
+          <SolidColorBrush x:Key="ShellSidebarMutedTextBrush" Color="#C9D6E3" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#F8FAFC" />
+          <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#EEF4FA" />
+          <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D7E0EA" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#B7C5D6" />
+          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#102132" />
+          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#405769" />
+          <SolidColorBrush x:Key="TextMutedBrush" Color="#61788C" />
+          <SolidColorBrush x:Key="AccentBrush" Color="#0F6CBD" />
+          <SolidColorBrush x:Key="AccentMutedBrush" Color="#DCEBFA" />
+          <SolidColorBrush x:Key="SelectedSurfaceBrush" Color="#DCEBFA" />
+          <SolidColorBrush x:Key="SelectedBorderBrush" Color="#6EA9DE" />
+          <SolidColorBrush x:Key="DisabledSurfaceBrush" Color="#EDF2F7" />
+          <SolidColorBrush x:Key="DisabledTextBrush" Color="#7B8795" />
+          <SolidColorBrush x:Key="SuccessBrush" Color="#1F7A4D" />
+          <SolidColorBrush x:Key="SuccessMutedBrush" Color="#DCF4E7" />
+          <SolidColorBrush x:Key="WarningBrush" Color="#A15C00" />
+          <SolidColorBrush x:Key="WarningMutedBrush" Color="#FFF1D6" />
+          <SolidColorBrush x:Key="ErrorBrush" Color="#B42318" />
+          <SolidColorBrush x:Key="ErrorMutedBrush" Color="#FEE4E2" />
+          <SolidColorBrush x:Key="InfoBrush" Color="#0F6CBD" />
+          <SolidColorBrush x:Key="InfoMutedBrush" Color="#DCEBFA" />
+          <SolidColorBrush x:Key="EmptyStateBrush" Color="#F7FAFD" />
+          <SolidColorBrush x:Key="ValidationBrush" Color="#FFF4E5" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#111827" />
+          <SolidColorBrush x:Key="ShellSidebarBrush" Color="#081624" />
+          <SolidColorBrush x:Key="ShellSidebarTextBrush" Color="#F8FAFC" />
+          <SolidColorBrush x:Key="ShellSidebarMutedTextBrush" Color="#A9BCD0" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#162130" />
+          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#101A27" />
+          <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#1D2A39" />
+          <SolidColorBrush x:Key="BorderSubtleBrush" Color="#314355" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#486078" />
+          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E5EDF5" />
+          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B8C7D6" />
+          <SolidColorBrush x:Key="TextMutedBrush" Color="#90A4B8" />
+          <SolidColorBrush x:Key="AccentBrush" Color="#7CC2FF" />
+          <SolidColorBrush x:Key="AccentMutedBrush" Color="#17304A" />
+          <SolidColorBrush x:Key="SelectedSurfaceBrush" Color="#17304A" />
+          <SolidColorBrush x:Key="SelectedBorderBrush" Color="#7CC2FF" />
+          <SolidColorBrush x:Key="DisabledSurfaceBrush" Color="#162130" />
+          <SolidColorBrush x:Key="DisabledTextBrush" Color="#70859A" />
+          <SolidColorBrush x:Key="SuccessBrush" Color="#76D7A4" />
+          <SolidColorBrush x:Key="SuccessMutedBrush" Color="#123223" />
+          <SolidColorBrush x:Key="WarningBrush" Color="#F8C471" />
+          <SolidColorBrush x:Key="WarningMutedBrush" Color="#3D2A10" />
+          <SolidColorBrush x:Key="ErrorBrush" Color="#FF9C94" />
+          <SolidColorBrush x:Key="ErrorMutedBrush" Color="#441716" />
+          <SolidColorBrush x:Key="InfoBrush" Color="#8FCCFF" />
+          <SolidColorBrush x:Key="InfoMutedBrush" Color="#17304A" />
+          <SolidColorBrush x:Key="EmptyStateBrush" Color="#101A27" />
+          <SolidColorBrush x:Key="ValidationBrush" Color="#3D2A10" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <Style Selector="Window">
+    <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+  </Style>
+
+  <Style Selector="Border.surface-card">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+  </Style>
+
+  <Style Selector="Border.surface-subtle">
+    <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
+  <Style Selector="Border.status-pill">
+    <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
+  <Style Selector="Border.empty-state">
+    <Setter Property="Background" Value="{DynamicResource EmptyStateBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
+  <Style Selector="Border.info-panel">
+    <Setter Property="Background" Value="{DynamicResource InfoMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
+  <Style Selector="Border.validation-panel">
+    <Setter Property="Background" Value="{DynamicResource ValidationBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
+  <Style Selector="Border.notification-chip">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+  </Style>
+
+  <Style Selector="Border.notification-chip.success">
+    <Setter Property="Background" Value="{DynamicResource SuccessMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+
+  <Style Selector="Border.notification-chip.warning">
+    <Setter Property="Background" Value="{DynamicResource WarningMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
+  </Style>
+
+  <Style Selector="Border.notification-chip.error">
+    <Setter Property="Background" Value="{DynamicResource ErrorMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+  </Style>
+
+  <Style Selector="Border.notification-chip.info">
+    <Setter Property="Background" Value="{DynamicResource InfoMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource InfoBrush}" />
+  </Style>
+
+  <Style Selector="Button.nav-item">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Foreground" Value="{DynamicResource ShellSidebarTextBrush}" />
+  </Style>
+
+  <Style Selector="Button.nav-item:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AccentMutedBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" />
+  </Style>
+
+  <Style Selector="Button.nav-item.is-selected">
+    <Setter Property="Background" Value="{DynamicResource SelectedSurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource SelectedBorderBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource ShellSidebarTextBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.secondary-text">
+    <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.muted-text">
+    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.accent-text">
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.success-text">
+    <Setter Property="Foreground" Value="{DynamicResource SuccessBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.warning-text">
+    <Setter Property="Foreground" Value="{DynamicResource WarningBrush}" />
+  </Style>
+
+  <Style Selector="TextBlock.error-text">
+    <Setter Property="Foreground" Value="{DynamicResource ErrorBrush}" />
+  </Style>
+
+  <Style Selector="TextBox.readonly-surface">
+    <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+  </Style>
+</Styles>

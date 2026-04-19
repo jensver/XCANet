@@ -3,16 +3,16 @@
              x:Class="XcaNet.App.Views.Pages.PrivateKeysPageView">
   <Grid ColumnDefinitions="1.2*,1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
-      <Border Background="White" CornerRadius="12" Padding="12">
+      <Border Classes="surface-card" Padding="12">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto">
             <TextBlock Text="Stored Private Keys" FontSize="18" FontWeight="SemiBold" />
             <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}" />
           </Grid>
-          <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+          <Border Classes="empty-state" Padding="16" IsVisible="{Binding IsEmpty}">
             <StackPanel Spacing="6">
               <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding EmptyStateMessage}" Classes="secondary-text" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="320">
@@ -22,7 +22,7 @@
                   <Grid ColumnDefinitions="2*,Auto,Auto" ColumnSpacing="10">
                     <StackPanel>
                       <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding PublicKeyFingerprint}" Foreground="#475569" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding PublicKeyFingerprint}" Classes="secondary-text" TextWrapping="Wrap" />
                     </StackPanel>
                     <TextBlock Grid.Column="1" Text="{Binding Algorithm}" />
                     <TextBlock Grid.Column="2" Text="{Binding LinkedCertificateCount}" />
@@ -34,7 +34,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Generate Key" FontSize="18" FontWeight="SemiBold" />
           <Grid ColumnDefinitions="*,180,180,Auto" ColumnSpacing="10">
@@ -48,7 +48,7 @@
     </StackPanel>
 
     <StackPanel Grid.Column="1" Spacing="14">
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Create Self-Signed CA" FontSize="18" FontWeight="SemiBold" />
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
@@ -64,7 +64,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Create CSR" FontSize="18" FontWeight="SemiBold" />
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
@@ -78,7 +78,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Export Private Key" FontSize="18" FontWeight="SemiBold" />
           <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
@@ -89,7 +89,7 @@
             <Button Content="Preview Export" Command="{Binding ExportSelectedCommand}" />
             <Button Content="Export to File" Command="{Binding ExportSelectedToFileCommand}" />
           </StackPanel>
-          <TextBox Text="{Binding ExportPreview}" AcceptsReturn="True" Height="160" TextWrapping="Wrap" />
+          <TextBox Classes="readonly-surface" Text="{Binding ExportPreview}" AcceptsReturn="True" Height="160" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
     </StackPanel>

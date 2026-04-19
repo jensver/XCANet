@@ -3,17 +3,17 @@
              x:Class="XcaNet.App.Views.Pages.CertificateRequestsPageView">
   <Grid ColumnDefinitions="1.1*,1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
-      <Border Background="White" CornerRadius="12" Padding="12">
+      <Border Classes="surface-card" Padding="12">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto,Auto">
             <TextBlock Text="Certificate Signing Requests" FontSize="18" FontWeight="SemiBold" />
             <Button Grid.Column="1" Content="Open Key" Command="{Binding OpenSelectedPrivateKeyCommand}" Margin="0,0,10,0" />
             <Button Grid.Column="2" Content="Refresh" Command="{Binding RefreshCommand}" />
           </Grid>
-          <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+          <Border Classes="empty-state" Padding="16" IsVisible="{Binding IsEmpty}">
             <StackPanel Spacing="6">
               <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding EmptyStateMessage}" Classes="secondary-text" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="360">
@@ -23,7 +23,7 @@
                   <Grid ColumnDefinitions="2*,Auto" ColumnSpacing="10">
                     <StackPanel>
                       <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Subject}" Foreground="#475569" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Subject}" Classes="secondary-text" TextWrapping="Wrap" />
                     </StackPanel>
                     <TextBlock Grid.Column="1" Text="{Binding KeyAlgorithm}" />
                   </Grid>
@@ -36,10 +36,12 @@
     </StackPanel>
 
     <StackPanel Grid.Column="1" Spacing="14">
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Sign Selected CSR" FontSize="18" FontWeight="SemiBold" />
-          <TextBlock Text="Choose a CA certificate and the matching issuer key to produce a managed or routed certificate according to the backend policy." Foreground="#475569" TextWrapping="Wrap" />
+          <Border Classes="info-panel" Padding="12">
+            <TextBlock Text="Choose a CA certificate and the matching issuer key to produce a managed or routed certificate according to the backend policy." Classes="secondary-text" TextWrapping="Wrap" />
+          </Border>
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <ComboBox ItemsSource="{Binding IssuanceTemplates}" SelectedItem="{Binding SelectedIssuanceTemplate}" />
             <Button Grid.Column="1" Content="Apply Template" Command="{Binding ApplyIssuanceTemplateCommand}" />
@@ -54,7 +56,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Export CSR" FontSize="18" FontWeight="SemiBold" />
           <ComboBox ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding SelectedExportFormat}" />
@@ -62,7 +64,7 @@
             <Button Content="Preview Export" Command="{Binding ExportSelectedCommand}" />
             <Button Content="Export to File" Command="{Binding ExportSelectedToFileCommand}" />
           </StackPanel>
-          <TextBox Text="{Binding ExportPreview}" AcceptsReturn="True" Height="180" TextWrapping="Wrap" />
+          <TextBox Classes="readonly-surface" Text="{Binding ExportPreview}" AcceptsReturn="True" Height="180" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
     </StackPanel>

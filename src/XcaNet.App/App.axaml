@@ -6,6 +6,7 @@
              RequestedThemeVariant="Default">
   <Application.Styles>
     <FluentTheme />
+    <StyleInclude Source="avares://XcaNet.App/Styles/ThemeResources.axaml" />
   </Application.Styles>
   <Application.DataTemplates>
     <DataTemplate DataType="pageViewModels:DashboardPageViewModel">

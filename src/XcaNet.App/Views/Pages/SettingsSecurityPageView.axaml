@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="XcaNet.App.Views.Pages.SettingsSecurityPageView">
   <Grid ColumnDefinitions="1.1*,1*" ColumnSpacing="16">
-    <Border Background="White" CornerRadius="12" Padding="16">
+    <Border Classes="surface-card" Padding="16">
       <StackPanel Spacing="12">
         <TextBlock Text="Database Lifecycle" FontSize="18" FontWeight="SemiBold" />
         <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
@@ -26,10 +26,12 @@
       </StackPanel>
     </Border>
 
-    <Border Grid.Column="1" Background="White" CornerRadius="12" Padding="16">
+    <Border Grid.Column="1" Classes="surface-card" Padding="16">
       <StackPanel Spacing="12">
         <TextBlock Text="Diagnostics" FontSize="18" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" />
+        <Border Classes="info-panel" Padding="12">
+          <TextBlock Text="{Binding StatusMessage}" Classes="secondary-text" TextWrapping="Wrap" />
+        </Border>
         <Grid ColumnDefinitions="190,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
           <TextBlock Text="Managed Backend" />
           <TextBlock Grid.Column="1" Text="{Binding ManagedBackendStatus}" />
@@ -46,8 +48,8 @@
           <TextBlock Grid.Row="6" Text="Schema Version" />
           <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SchemaVersion}" />
         </Grid>
-        <TextBlock Text="Private keys remain encrypted at rest. Unlock is required before key creation, signing, revocation, or export operations." TextWrapping="Wrap" />
-        <TextBlock Text="Diagnostics are informational only. Backend routing is unchanged and the managed backend remains the default." TextWrapping="Wrap" />
+        <TextBlock Text="Private keys remain encrypted at rest. Unlock is required before key creation, signing, revocation, or export operations." Classes="secondary-text" TextWrapping="Wrap" />
+        <TextBlock Text="Diagnostics are informational only. Backend routing is unchanged and the managed backend remains the default." Classes="secondary-text" TextWrapping="Wrap" />
       </StackPanel>
     </Border>
   </Grid>

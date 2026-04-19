@@ -14,4 +14,12 @@ public sealed class NotificationItemViewModel : ViewModelBase
     public string Message { get; }
 
     public DateTimeOffset Timestamp { get; }
+
+    public bool IsSuccess => string.Equals(Level, "Success", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsWarning => string.Equals(Level, "Warning", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsError => string.Equals(Level, "Error", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsInfo => !IsSuccess && !IsWarning && !IsError;
 }

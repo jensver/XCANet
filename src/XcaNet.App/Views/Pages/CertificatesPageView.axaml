@@ -3,7 +3,7 @@
              x:Class="XcaNet.App.Views.Pages.CertificatesPageView">
   <Grid ColumnDefinitions="1.3*,1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Search and Filter" FontSize="18" FontWeight="SemiBold" />
           <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,*,*" ColumnSpacing="10" RowSpacing="10">
@@ -21,17 +21,17 @@
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="12">
+      <Border Classes="surface-card" Padding="12">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto,Auto">
             <TextBlock Text="Certificates" FontSize="18" FontWeight="SemiBold" />
             <Button Grid.Column="1" Content="Import Files" Command="{Binding ImportFilesCommand}" Margin="0,0,10,0" />
             <Button Grid.Column="2" Content="Export to File" Command="{Binding ExportSelectedCommand}" />
           </Grid>
-          <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+          <Border Classes="empty-state" Padding="16" IsVisible="{Binding IsEmpty}">
             <StackPanel Spacing="6">
               <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding EmptyStateMessage}" Classes="secondary-text" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="320">
@@ -41,12 +41,12 @@
                   <Grid ColumnDefinitions="2.4*,1.4*,1.3*,Auto" ColumnSpacing="12">
                     <StackPanel>
                       <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                      <TextBlock Text="{Binding Subject}" Foreground="#475569" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Subject}" Classes="secondary-text" TextWrapping="Wrap" />
                     </StackPanel>
                     <TextBlock Grid.Column="1" Text="{Binding Issuer}" TextWrapping="Wrap" />
                     <StackPanel Grid.Column="2">
                       <TextBlock Text="{Binding RevocationStatus}" />
-                      <TextBlock Text="{Binding RevocationReason}" Foreground="#B45309" IsVisible="{Binding RevocationReason}" />
+                      <TextBlock Text="{Binding RevocationReason}" Classes="warning-text" IsVisible="{Binding RevocationReason}" />
                     </StackPanel>
                     <TextBlock Grid.Column="3" Text="{Binding KeyAlgorithm}" />
                   </Grid>
@@ -57,10 +57,12 @@
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Import Workflow" FontSize="18" FontWeight="SemiBold" />
-          <TextBlock Text="Use native file selection or drag supported files onto the window. Manual paste import remains available for advanced or test workflows." Foreground="#475569" TextWrapping="Wrap" />
+          <Border Classes="info-panel" Padding="12">
+            <TextBlock Text="Use native file selection or drag supported files onto the window. Manual paste import remains available for advanced or test workflows." Classes="secondary-text" TextWrapping="Wrap" />
+          </Border>
           <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
             <TextBox Text="{Binding ImportPassword}" PasswordChar="*" Watermark="Import password for PKCS#12 or encrypted key material" />
             <Button Grid.Column="1" Content="Choose Files" Command="{Binding ImportFilesCommand}" />
@@ -79,7 +81,7 @@
     </StackPanel>
 
     <StackPanel Grid.Column="1" Spacing="14">
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
             <TextBlock Text="Certificate Inspector" FontSize="18" FontWeight="SemiBold" />
@@ -87,7 +89,7 @@
             <Button Grid.Column="2" Content="Open Key" Command="{Binding OpenPrivateKeyCommand}" />
             <Button Grid.Column="3" Content="Open Child" Command="{Binding OpenChildCertificateCommand}" />
           </Grid>
-          <TextBlock Text="Select a certificate to inspect its parsed fields, relationship links, and revocation status." Foreground="#475569" TextWrapping="Wrap" />
+          <TextBlock Text="Select a certificate to inspect its parsed fields, relationship links, and revocation status." Classes="secondary-text" TextWrapping="Wrap" />
           <Grid ColumnDefinitions="170,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
             <TextBlock Text="Display Name" />
             <TextBlock Grid.Column="1" Text="{Binding Inspector.Display.DisplayName}" TextWrapping="Wrap" />
@@ -129,7 +131,7 @@
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Export Workflow" FontSize="18" FontWeight="SemiBold" />
           <Grid ColumnDefinitions="*,180" ColumnSpacing="10">
@@ -137,12 +139,14 @@
             <ComboBox Grid.Column="1" ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding SelectedExportFormat}" />
           </Grid>
           <TextBox Text="{Binding SelectedExportPassword}" PasswordChar="*" Watermark="Optional password for PEM bundle or PKCS#12" />
-          <TextBlock Text="Certificate-only, chain, PEM bundle, and PKCS#12 export stay behind the application export abstractions." Foreground="#475569" TextWrapping="Wrap" />
+          <Border Classes="info-panel" Padding="12">
+            <TextBlock Text="Certificate-only, chain, PEM bundle, and PKCS#12 export stay behind the application export abstractions." Classes="secondary-text" TextWrapping="Wrap" />
+          </Border>
           <Button Content="Export Selected Certificate" HorizontalAlignment="Left" Command="{Binding ExportSelectedCommand}" />
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Revoke Certificate" FontSize="18" FontWeight="SemiBold" />
           <Grid ColumnDefinitions="220,*" ColumnSpacing="10">
@@ -150,6 +154,9 @@
             <DatePicker Grid.Column="1" SelectedDate="{Binding SelectedRevocationDate}" />
           </Grid>
           <TextBox Text="{Binding RevocationConfirmationText}" Watermark="Type REVOKE to confirm" />
+          <Border Classes="validation-panel" Padding="12">
+            <TextBlock Text="Revocation is irreversible. Confirm the selected reason and timestamp before applying the change or generating the next CRL." Classes="secondary-text" TextWrapping="Wrap" />
+          </Border>
           <StackPanel Orientation="Horizontal" Spacing="10">
             <Button Content="Revoke Selected" Command="{Binding RevokeSelectedCommand}" />
             <Button Content="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />

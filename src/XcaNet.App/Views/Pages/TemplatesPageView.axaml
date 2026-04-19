@@ -3,7 +3,7 @@
              x:Class="XcaNet.App.Views.Pages.TemplatesPageView">
   <Grid ColumnDefinitions="1.05*,1.1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
             <TextBlock Text="Templates" FontSize="18" FontWeight="SemiBold" />
@@ -11,10 +11,10 @@
             <ComboBox Grid.Column="2" Width="140" ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding StatusFilter}" />
             <Button Grid.Column="3" Content="Refresh" Command="{Binding RefreshCommand}" />
           </Grid>
-          <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="10" Padding="16" IsVisible="{Binding IsEmpty}">
+          <Border Classes="empty-state" Padding="16" IsVisible="{Binding IsEmpty}">
             <StackPanel Spacing="6">
               <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
-              <TextBlock Text="{Binding EmptyStateMessage}" Foreground="#475569" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding EmptyStateMessage}" Classes="secondary-text" TextWrapping="Wrap" />
             </StackPanel>
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Height="520">
@@ -24,11 +24,11 @@
                   <StackPanel Spacing="4">
                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
                       <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                      <TextBlock Grid.Column="1" Text="{Binding IntendedUsage}" Foreground="#1D4ED8" />
-                      <TextBlock Grid.Column="2" Text="{Binding Summary}" Foreground="#475569" />
+                      <TextBlock Grid.Column="1" Text="{Binding IntendedUsage}" Classes="accent-text" />
+                      <TextBlock Grid.Column="2" Text="{Binding Summary}" Classes="secondary-text" />
                     </Grid>
-                    <TextBlock Text="{Binding Description}" Foreground="#475569" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding Summary}" Foreground="#64748B" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Description}" Classes="secondary-text" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Summary}" Classes="muted-text" TextWrapping="Wrap" />
                   </StackPanel>
                 </Border>
               </DataTemplate>
@@ -39,7 +39,7 @@
     </StackPanel>
 
     <StackPanel Grid.Column="1" Spacing="14">
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
             <TextBlock Text="Template Editor" FontSize="18" FontWeight="SemiBold" />
@@ -76,12 +76,12 @@
         </StackPanel>
       </Border>
 
-      <Border Background="White" CornerRadius="12" Padding="16">
+      <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <TextBlock Text="Template Summary" FontSize="18" FontWeight="SemiBold" />
-          <TextBox Text="{Binding PreviewSummary}" IsReadOnly="True" AcceptsReturn="True" Height="150" TextWrapping="Wrap" />
+          <TextBox Classes="readonly-surface" Text="{Binding PreviewSummary}" IsReadOnly="True" AcceptsReturn="True" Height="150" TextWrapping="Wrap" />
           <TextBlock Text="Validation" FontSize="16" FontWeight="SemiBold" />
-          <TextBox Text="{Binding ValidationSummary}" IsReadOnly="True" AcceptsReturn="True" Height="110" TextWrapping="Wrap" />
+          <TextBox Classes="readonly-surface" Text="{Binding ValidationSummary}" IsReadOnly="True" AcceptsReturn="True" Height="110" TextWrapping="Wrap" />
         </StackPanel>
       </Border>
     </StackPanel>

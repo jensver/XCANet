@@ -137,3 +137,27 @@ Desktop startup now also writes support logs under the local application-data lo
 - `startup-failure-<timestamp>.log`
 
 Those logs are intended for operator troubleshooting and packaging verification. They do not change backend routing or introduce backend selection UI.
+
+## Theme-Safe Desktop UI
+
+Milestone 11 hardens the desktop UI for both light and dark mode without changing backend behavior:
+
+- shared theme resources now live in `src/XcaNet.App/Styles/ThemeResources.axaml`
+- semantic surfaces such as notifications, empty states, validation panels, diagnostics panels, and navigation states use reusable theme-safe styles instead of per-view hard-coded brushes
+- the key operator pages and inspectors were updated to stay readable in both theme variants
+
+For extension guidance, see `docs/ui/theming.md`.
+
+## Optional MCP Developer Tooling
+
+This repo now includes optional developer guidance for:
+
+- Microsoft Learn MCP
+- Avalonia Build MCP
+
+These integrations are developer tooling only. They are not required for app runtime, `dotnet build`, `dotnet test`, or packaging.
+
+- docs: `docs/developer/mcp.md`
+- example workspace config: `tooling/mcp/workspace.mcp.example.json`
+
+Use Microsoft Learn MCP for trusted .NET and Microsoft platform reference work, and Avalonia Build MCP for Avalonia documentation and UI implementation guidance.

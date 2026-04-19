@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "microsoft-learn": {
+      "type": "http",
+      "url": "https://learn.microsoft.com/api/mcp"
+    },
+    "avalonia-docs": {
+      "type": "http",
+      "url": "https://docs-mcp.avaloniaui.net/mcp"
+    }
+  }
+}
