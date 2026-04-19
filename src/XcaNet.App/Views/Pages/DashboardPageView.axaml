@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="XcaNet.App.Views.Pages.DashboardPageView">
+  <ScrollViewer>
+    <StackPanel Spacing="18">
+      <Grid ColumnDefinitions="*,*,*,*,*" ColumnSpacing="14">
+        <Border Grid.Column="0" Classes="surface-card" Padding="16">
+          <StackPanel Spacing="6"><TextBlock Text="Certificates" FontWeight="SemiBold" /><TextBlock Text="{Binding CertificateCount}" FontSize="28" FontWeight="Bold" /></StackPanel>
+        </Border>
+        <Border Grid.Column="1" Classes="surface-card" Padding="16">
+          <StackPanel Spacing="6"><TextBlock Text="Private Keys" FontWeight="SemiBold" /><TextBlock Text="{Binding PrivateKeyCount}" FontSize="28" FontWeight="Bold" /></StackPanel>
+        </Border>
+        <Border Grid.Column="2" Classes="surface-card" Padding="16">
+          <StackPanel Spacing="6"><TextBlock Text="CSRs" FontWeight="SemiBold" /><TextBlock Text="{Binding CertificateRequestCount}" FontSize="28" FontWeight="Bold" /></StackPanel>
+        </Border>
+        <Border Grid.Column="3" Classes="surface-card" Padding="16">
+          <StackPanel Spacing="6"><TextBlock Text="CRLs" FontWeight="SemiBold" /><TextBlock Text="{Binding CertificateRevocationListCount}" FontSize="28" FontWeight="Bold" /></StackPanel>
+        </Border>
+        <Border Grid.Column="4" Classes="surface-card" Padding="16">
+          <StackPanel Spacing="6"><TextBlock Text="Templates" FontWeight="SemiBold" /><TextBlock Text="{Binding TemplateCount}" FontSize="28" FontWeight="Bold" /></StackPanel>
+        </Border>
+      </Grid>
+
+      <Border Classes="surface-card" Padding="18">
+        <StackPanel Spacing="10">
+          <TextBlock Text="Workspace Status" FontSize="18" FontWeight="SemiBold" />
+          <Grid ColumnDefinitions="180,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+            <TextBlock Text="Database" />
+            <TextBlock Grid.Column="1" Text="{Binding DatabaseDisplayName}" />
+            <TextBlock Grid.Row="1" Text="Path" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DatabasePath}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="2" Text="Session" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SessionState}" TextWrapping="Wrap" />
+          </Grid>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

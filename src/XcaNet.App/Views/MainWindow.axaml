@@ -1,33 +1,80 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:XcaNet.App.ViewModels"
         x:Class="XcaNet.App.Views.MainWindow"
-        x:DataType="vm:ShellViewModel"
-        Width="960"
-        Height="540"
-        MinWidth="720"
-        MinHeight="420"
-        Title="{Binding Title}">
-  <Grid RowDefinitions="Auto,*" Margin="32">
-    <StackPanel Spacing="8">
-      <TextBlock FontSize="32"
-                 FontWeight="SemiBold"
-                 Text="{Binding Title}" />
-      <TextBlock Classes="dim"
-                 FontSize="18"
-                 Text="{Binding Subtitle}" />
-    </StackPanel>
+        Width="1400"
+        Height="920"
+        MinWidth="1100"
+        MinHeight="760"
+        DragDrop.AllowDrop="True"
+        Title="XcaNet">
+  <Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,*">
+    <Border Grid.RowSpan="3" Background="{DynamicResource ShellSidebarBrush}" Padding="18">
+      <StackPanel Spacing="16">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource ShellSidebarTextBrush}" />
+          <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource ShellSidebarMutedTextBrush}" TextWrapping="Wrap" />
+        </StackPanel>
 
-    <Border Grid.Row="1"
-            Margin="0,24,0,0"
-            Padding="24"
-            Background="#112233"
-            CornerRadius="16">
-      <StackPanel Spacing="12">
-        <TextBlock FontSize="20" FontWeight="SemiBold" Text="Solution Skeleton Ready" />
-        <TextBlock TextWrapping="Wrap"
-                   Text="The application shell, layered projects, dependency injection, configuration, and logging are wired. Domain, storage, security, and crypto features remain intentionally unimplemented in this milestone." />
+        <ItemsControl ItemsSource="{Binding NavigationItems}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Command="{Binding Command}"
+                      Classes="nav-item"
+                      Classes.is-selected="{Binding IsSelected}"
+                      HorizontalContentAlignment="Left"
+                      Padding="14,10"
+                      Margin="0,0,0,8">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <TextBlock Text="{Binding Glyph}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Title}" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
       </StackPanel>
     </Border>
+
+    <Border Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Padding="20,16" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Text="{Binding CurrentPage.Title}" FontSize="26" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding SettingsSecurityPage.StatusMessage}" Classes="secondary-text" TextWrapping="Wrap" />
+        </StackPanel>
+        <Border Grid.Column="1"
+                Classes="status-pill"
+                Padding="12,8"
+                IsVisible="{Binding IsBusy}">
+          <TextBlock Text="{Binding BusyMessage}" FontWeight="SemiBold" />
+        </Border>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Grid.Column="1" Padding="20,10" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+      <ItemsControl ItemsSource="{Binding Notifications}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" Spacing="10" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Classes="notification-chip"
+                    Classes.success="{Binding IsSuccess}"
+                    Classes.warning="{Binding IsWarning}"
+                    Classes.error="{Binding IsError}"
+                    Classes.info="{Binding IsInfo}"
+                    Padding="12,8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Level}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Message}" MaxWidth="420" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+
+    <ContentControl Grid.Row="2" Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Content="{Binding CurrentPage}" Margin="20" />
   </Grid>
 </Window>

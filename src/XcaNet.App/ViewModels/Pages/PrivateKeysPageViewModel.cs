@@ -1,0 +1,163 @@
+using System.Collections.ObjectModel;
+using System.Windows.Input;
+using XcaNet.Contracts.Browser;
+
+namespace XcaNet.App.ViewModels.Pages;
+
+public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<PrivateKeyListItem, Guid>
+{
+    private string _newKeyDisplayName = "Managed Key";
+    private KeyAlgorithmView _selectedAlgorithm = KeyAlgorithmView.Rsa;
+    private EllipticCurveView _selectedCurve = EllipticCurveView.P256;
+    private string _selfSignedCaDisplayName = "Self-Signed CA";
+    private string _selfSignedCaSubjectName = "CN=XcaNet Root CA";
+    private int _selfSignedCaValidityDays = 3650;
+    private TemplateListItem? _selectedSelfSignedCaTemplate;
+    private string _certificateSigningRequestDisplayName = "Certificate Signing Request";
+    private string _certificateSigningRequestSubjectName = "CN=service.example.test";
+    private string _certificateSigningRequestSubjectAlternativeNames = "service.example.test";
+    private TemplateListItem? _selectedCertificateSigningRequestTemplate;
+    private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
+    private string _selectedExportPassword = string.Empty;
+    private string _exportPreview = string.Empty;
+
+    public PrivateKeysPageViewModel()
+        : base("Private Keys")
+    {
+        EmptyStateTitle = "No private keys stored";
+        EmptyStateMessage = "Generate a key or import existing key material to begin issuing certificates and CSRs.";
+    }
+
+    public IReadOnlyList<KeyAlgorithmView> Algorithms { get; } = [KeyAlgorithmView.Rsa, KeyAlgorithmView.Ecdsa];
+
+    public IReadOnlyList<EllipticCurveView> Curves { get; } = [EllipticCurveView.P256, EllipticCurveView.P384];
+
+    public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs8];
+
+    public ObservableCollection<TemplateListItem> SelfSignedCaTemplates { get; } = [];
+
+    public ObservableCollection<TemplateListItem> CertificateSigningRequestTemplates { get; } = [];
+
+    public string NewKeyDisplayName
+    {
+        get => _newKeyDisplayName;
+        set => SetProperty(ref _newKeyDisplayName, value);
+    }
+
+    public KeyAlgorithmView SelectedAlgorithm
+    {
+        get => _selectedAlgorithm;
+        set => SetProperty(ref _selectedAlgorithm, value);
+    }
+
+    public EllipticCurveView SelectedCurve
+    {
+        get => _selectedCurve;
+        set => SetProperty(ref _selectedCurve, value);
+    }
+
+    public string SelfSignedCaDisplayName
+    {
+        get => _selfSignedCaDisplayName;
+        set => SetProperty(ref _selfSignedCaDisplayName, value);
+    }
+
+    public string SelfSignedCaSubjectName
+    {
+        get => _selfSignedCaSubjectName;
+        set => SetProperty(ref _selfSignedCaSubjectName, value);
+    }
+
+    public int SelfSignedCaValidityDays
+    {
+        get => _selfSignedCaValidityDays;
+        set => SetProperty(ref _selfSignedCaValidityDays, value);
+    }
+
+    public TemplateListItem? SelectedSelfSignedCaTemplate
+    {
+        get => _selectedSelfSignedCaTemplate;
+        set => SetProperty(ref _selectedSelfSignedCaTemplate, value);
+    }
+
+    public string CertificateSigningRequestDisplayName
+    {
+        get => _certificateSigningRequestDisplayName;
+        set => SetProperty(ref _certificateSigningRequestDisplayName, value);
+    }
+
+    public string CertificateSigningRequestSubjectName
+    {
+        get => _certificateSigningRequestSubjectName;
+        set => SetProperty(ref _certificateSigningRequestSubjectName, value);
+    }
+
+    public string CertificateSigningRequestSubjectAlternativeNames
+    {
+        get => _certificateSigningRequestSubjectAlternativeNames;
+        set => SetProperty(ref _certificateSigningRequestSubjectAlternativeNames, value);
+    }
+
+    public TemplateListItem? SelectedCertificateSigningRequestTemplate
+    {
+        get => _selectedCertificateSigningRequestTemplate;
+        set => SetProperty(ref _selectedCertificateSigningRequestTemplate, value);
+    }
+
+    public CryptoFormatView SelectedExportFormat
+    {
+        get => _selectedExportFormat;
+        set => SetProperty(ref _selectedExportFormat, value);
+    }
+
+    public string SelectedExportPassword
+    {
+        get => _selectedExportPassword;
+        set => SetProperty(ref _selectedExportPassword, value);
+    }
+
+    public string ExportPreview
+    {
+        get => _exportPreview;
+        set => SetProperty(ref _exportPreview, value);
+    }
+
+    public ICommand? GenerateKeyCommand { get; set; }
+
+    public ICommand? CreateSelfSignedCaCommand { get; set; }
+
+    public ICommand? CreateCertificateSigningRequestCommand { get; set; }
+
+    public ICommand? ApplySelfSignedCaTemplateCommand { get; set; }
+
+    public ICommand? ApplyCertificateSigningRequestTemplateCommand { get; set; }
+
+    public ICommand? ExportSelectedCommand { get; set; }
+
+    public ICommand? ExportSelectedToFileCommand { get; set; }
+
+    public void SetTemplates(IEnumerable<TemplateListItem> templates)
+    {
+        ResetTemplateCollection(SelfSignedCaTemplates, templates.Where(x => x.IntendedUsage == TemplateIntendedUsage.SelfSignedCa && x.IsEnabled));
+        ResetTemplateCollection(
+            CertificateSigningRequestTemplates,
+            templates.Where(x => x.IsEnabled && (
+                x.IntendedUsage == TemplateIntendedUsage.IntermediateCa
+                || x.IntendedUsage == TemplateIntendedUsage.EndEntityCertificate
+                || x.IntendedUsage == TemplateIntendedUsage.CertificateSigningRequest)));
+
+        SelectedSelfSignedCaTemplate ??= SelfSignedCaTemplates.FirstOrDefault();
+        SelectedCertificateSigningRequestTemplate ??= CertificateSigningRequestTemplates.FirstOrDefault();
+    }
+
+    private static void ResetTemplateCollection(ObservableCollection<TemplateListItem> target, IEnumerable<TemplateListItem> templates)
+    {
+        target.Clear();
+        foreach (var template in templates)
+        {
+            target.Add(template);
+        }
+    }
+
+    protected override Guid GetItemId(PrivateKeyListItem item) => item.PrivateKeyId;
+}

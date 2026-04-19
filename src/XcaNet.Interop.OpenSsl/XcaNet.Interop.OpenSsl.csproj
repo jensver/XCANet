@@ -1,2 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\XcaNet.Contracts\XcaNet.Contracts.csproj" />
+  </ItemGroup>
 </Project>

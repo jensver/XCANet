@@ -20,6 +20,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\XcaNet.Crypto.OpenSsl\XcaNet.Crypto.OpenSsl.csproj" />
+    <ProjectReference Include="..\..\src\XcaNet.Crypto.DotNet\XcaNet.Crypto.DotNet.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\OpenSslBridgeTestHarness.cs" Link="Support\OpenSslBridgeTestHarness.cs" />
   </ItemGroup>
 
 </Project>

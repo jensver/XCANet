@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using XcaNet.App.Composition;
+using XcaNet.App.Services;
 using XcaNet.App.ViewModels;
 using XcaNet.App.Views;
 
@@ -22,6 +23,7 @@ public partial class App : Avalonia.Application
             var services = ServiceProviderAccessor.Services;
             var mainWindow = services.GetRequiredService<MainWindow>();
             mainWindow.DataContext = services.GetRequiredService<ShellViewModel>();
+            services.GetRequiredService<IDesktopFileDialogService>().SetOwner(mainWindow);
             desktop.MainWindow = mainWindow;
         }
 
