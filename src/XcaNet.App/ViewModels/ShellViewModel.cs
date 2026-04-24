@@ -28,6 +28,7 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _openDatabaseCommand;
     private readonly AsyncCommand _unlockDatabaseCommand;
     private readonly AsyncCommand _lockDatabaseCommand;
+    private readonly AsyncCommand _closeDatabaseCommand;
     private readonly AsyncCommand _refreshWorkspaceCommand;
     private readonly AsyncCommand _refreshCertificatesCommand;
     private readonly AsyncCommand _importFilesCommand;
@@ -102,6 +103,7 @@ public sealed class ShellViewModel : ViewModelBase
         _openDatabaseCommand = new AsyncCommand(OpenDatabaseAsync, () => !IsBusy);
         _unlockDatabaseCommand = new AsyncCommand(UnlockDatabaseAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Locked);
         _lockDatabaseCommand = new AsyncCommand(LockDatabaseAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
+        _closeDatabaseCommand = new AsyncCommand(CloseDatabaseAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _refreshWorkspaceCommand = new AsyncCommand(RefreshAllAsync, () => !IsBusy);
         _refreshCertificatesCommand = new AsyncCommand(LoadCertificatesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _importFilesCommand = new AsyncCommand(ImportFilesFromPickerAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
@@ -359,6 +361,8 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ICommand LockDatabaseCommand => _lockDatabaseCommand;
 
+    public ICommand CloseDatabaseCommand => _closeDatabaseCommand;
+
     public ICommand RefreshWorkspaceCommand => _refreshWorkspaceCommand;
 
     public ICommand DashboardCommand => UtilityNavigationItems[0].Command;
@@ -391,6 +395,11 @@ public sealed class ShellViewModel : ViewModelBase
     private async Task LockDatabaseAsync()
     {
         await RunDatabaseActionAsync("Locking database", () => _databaseSessionService.LockDatabaseAsync(CancellationToken.None));
+    }
+
+    private async Task CloseDatabaseAsync()
+    {
+        await RunDatabaseActionAsync("Closing database", () => _databaseSessionService.CloseDatabaseAsync(CancellationToken.None));
     }
 
     private async Task GenerateKeyAsync()
@@ -1615,6 +1624,7 @@ public sealed class ShellViewModel : ViewModelBase
         _openDatabaseCommand.RaiseCanExecuteChanged();
         _unlockDatabaseCommand.RaiseCanExecuteChanged();
         _lockDatabaseCommand.RaiseCanExecuteChanged();
+        _closeDatabaseCommand.RaiseCanExecuteChanged();
         _refreshWorkspaceCommand.RaiseCanExecuteChanged();
         _refreshCertificatesCommand.RaiseCanExecuteChanged();
         _importFilesCommand.RaiseCanExecuteChanged();

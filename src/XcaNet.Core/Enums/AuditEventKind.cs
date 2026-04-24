@@ -6,6 +6,7 @@ public static class AuditEventKind
     public const string DatabaseOpened = "database_opened";
     public const string DatabaseUnlocked = "database_unlocked";
     public const string DatabaseLocked = "database_locked";
+    public const string DatabaseClosed = "database_closed";
     public const string PrivateKeyGenerated = "private_key_generated";
     public const string PrivateKeyImported = "private_key_imported";
     public const string PrivateKeyStored = "private_key_stored";
