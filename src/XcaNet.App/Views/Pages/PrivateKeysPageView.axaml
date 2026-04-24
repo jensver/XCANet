@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:shared="using:XcaNet.App.Views.Shared"
              x:Class="XcaNet.App.Views.Pages.PrivateKeysPageView">
   <Grid ColumnDefinitions="1.2*,1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
@@ -51,13 +50,32 @@
     <StackPanel Grid.Column="1" Spacing="14">
       <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
-          <shared:CertificateAuthoringSurfaceView DataContext="{Binding SelfSignedCaAuthoring}" />
-        </StackPanel>
-      </Border>
-
-      <Border Classes="surface-card" Padding="16">
-        <StackPanel Spacing="10">
-          <shared:CertificateAuthoringSurfaceView DataContext="{Binding CertificateSigningRequestAuthoring}" />
+          <TextBlock Text="Certificate Input" FontSize="18" FontWeight="SemiBold" />
+          <Border Classes="info-panel" Padding="12">
+            <TextBlock Text="Launch a dedicated certificate input workbench from the selected key. The input surface uses the shared XCA-style authoring model instead of an always-visible side panel."
+                       Classes="secondary-text"
+                       TextWrapping="Wrap" />
+          </Border>
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+            <Border Classes="surface-subtle" Padding="14">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Self-Signed CA" FontWeight="SemiBold" />
+                <TextBlock Text="Open the certificate input workbench with CA defaults sourced from the selected private key."
+                           Classes="secondary-text"
+                           TextWrapping="Wrap" />
+                <Button Content="Open CA Input" HorizontalAlignment="Left" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
+              </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="surface-subtle" Padding="14">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Certificate Request" FontWeight="SemiBold" />
+                <TextBlock Text="Open the request input workbench for subject, key, extension, and template-driven CSR authoring."
+                           Classes="secondary-text"
+                           TextWrapping="Wrap" />
+                <Button Content="Open CSR Input" HorizontalAlignment="Left" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
+              </StackPanel>
+            </Border>
+          </Grid>
         </StackPanel>
       </Border>
 

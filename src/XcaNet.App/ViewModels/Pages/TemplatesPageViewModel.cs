@@ -159,6 +159,8 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
 
     public ICommand? CreateNewCommand { get; set; }
 
+    public ICommand? EditTemplateCommand { get; set; }
+
     public ICommand? SaveTemplateCommand { get; set; }
 
     public ICommand? CloneTemplateCommand { get; set; }

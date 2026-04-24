@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shared="using:XcaNet.App.Views.Shared"
         x:Class="XcaNet.App.Views.MainWindow"
         Width="1400"
         Height="920"
@@ -76,5 +77,36 @@
     </Border>
 
     <ContentControl Grid.Row="2" Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Content="{Binding CurrentPage}" Margin="20" />
+
+    <Border Grid.Column="1"
+            Grid.RowSpan="3"
+            Background="{DynamicResource DialogOverlayBrush}"
+            IsVisible="{Binding IsAuthoringDialogOpen}">
+      <Grid Margin="32">
+        <Border Classes="authoring-dialog-shell"
+                Width="1080"
+                MaxWidth="1080"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="22">
+          <Grid RowDefinitions="Auto,*" RowSpacing="16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{Binding AuthoringDialogTitle}" FontSize="26" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding AuthoringDialogSubtitle}" Classes="secondary-text" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="Close" Command="{Binding CloseAuthoringDialogCommand}" />
+            </Grid>
+
+            <Grid Grid.Row="1">
+              <shared:CertificateAuthoringSurfaceView DataContext="{Binding ActiveCertificateAuthoring}"
+                                                     IsVisible="{Binding IsCertificateAuthoringDialogOpen}" />
+              <shared:TemplateAuthoringDialogView DataContext="{Binding TemplatesPage}"
+                                                 IsVisible="{Binding IsTemplateAuthoringDialogOpen}" />
+            </Grid>
+          </Grid>
+        </Border>
+      </Grid>
+    </Border>
   </Grid>
 </Window>

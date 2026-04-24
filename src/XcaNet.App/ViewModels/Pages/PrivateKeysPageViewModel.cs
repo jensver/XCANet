@@ -102,6 +102,10 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
 
     public ICommand? CreateCertificateSigningRequestCommand { get; set; }
 
+    public ICommand? OpenSelfSignedCaAuthoringCommand { get; set; }
+
+    public ICommand? OpenCertificateSigningRequestAuthoringCommand { get; set; }
+
     public ICommand? ApplySelfSignedCaTemplateCommand { get; set; }
 
     public ICommand? ApplyCertificateSigningRequestTemplateCommand { get; set; }

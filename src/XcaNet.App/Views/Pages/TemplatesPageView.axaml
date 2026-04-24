@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:shared="using:XcaNet.App.Views.Shared"
              x:Class="XcaNet.App.Views.Pages.TemplatesPageView">
   <Grid ColumnDefinitions="1.05*,1.1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
@@ -43,22 +42,21 @@
       <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
           <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
-            <TextBlock Text="Template Editor" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Text="Template Actions" FontSize="18" FontWeight="SemiBold" />
             <Button Grid.Column="1" Content="New" Command="{Binding CreateNewCommand}" />
-            <Button Grid.Column="2" Content="Save" Command="{Binding SaveTemplateCommand}" />
+            <Button Grid.Column="2" Content="Edit" Command="{Binding EditTemplateCommand}" />
             <Button Grid.Column="3" Content="Clone" Command="{Binding CloneTemplateCommand}" />
             <Button Grid.Column="4" Content="Favorite" Command="{Binding ToggleFavoriteCommand}" />
             <Button Grid.Column="5" Content="Enable / Disable" Command="{Binding ToggleEnabledCommand}" />
           </Grid>
-          <TextBox Text="{Binding Name}" Watermark="Template name" />
-          <TextBox Text="{Binding Description}" Watermark="Description" AcceptsReturn="True" Height="70" TextWrapping="Wrap" />
-          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-            <ComboBox ItemsSource="{Binding IntendedUsages}" SelectedItem="{Binding IntendedUsage}" />
-            <CheckBox Content="Enabled" IsChecked="{Binding IsEnabled}" />
-            <CheckBox Grid.Column="1" Content="Favorite" IsChecked="{Binding IsFavorite}" />
-            <Button Grid.Column="2" Content="Delete" HorizontalAlignment="Left" Command="{Binding DeleteTemplateCommand}" />
-          </Grid>
-          <shared:CertificateAuthoringSurfaceView DataContext="{Binding Authoring}" />
+          <Border Classes="info-panel" Padding="12">
+            <TextBlock Text="Template editing now opens the same dedicated input workbench used by certificate and request authoring, while keeping template-specific metadata and validation intact."
+                       Classes="secondary-text"
+                       TextWrapping="Wrap" />
+          </Border>
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="Delete" Command="{Binding DeleteTemplateCommand}" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

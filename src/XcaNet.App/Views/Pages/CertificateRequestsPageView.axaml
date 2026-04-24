@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:shared="using:XcaNet.App.Views.Shared"
              x:Class="XcaNet.App.Views.Pages.CertificateRequestsPageView">
   <Grid ColumnDefinitions="1.1*,1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
@@ -39,12 +38,17 @@
     <StackPanel Grid.Column="1" Spacing="14">
       <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
-          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-            <TextBlock Text="Certificate Input" FontSize="18" FontWeight="SemiBold" />
-            <Button Grid.Column="1" Content="Similar Request" Command="{Binding CreateSimilarRequestCommand}" />
-            <Button Grid.Column="2" Content="CSR to Template" Command="{Binding CreateTemplateFromRequestCommand}" />
-          </Grid>
-          <shared:CertificateAuthoringSurfaceView DataContext="{Binding IssuanceAuthoring}" />
+          <TextBlock Text="Request Actions" FontSize="18" FontWeight="SemiBold" />
+          <Border Classes="info-panel" Padding="12">
+            <TextBlock Text="Selected requests now open a dedicated certificate input workbench for issuance instead of editing in a persistent workspace panel."
+                       Classes="secondary-text"
+                       TextWrapping="Wrap" />
+          </Border>
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <Button Content="Open Signing Input" Command="{Binding OpenIssuanceAuthoringCommand}" />
+            <Button Content="Similar Request" Command="{Binding CreateSimilarRequestCommand}" />
+            <Button Content="CSR to Template" Command="{Binding CreateTemplateFromRequestCommand}" />
+          </StackPanel>
         </StackPanel>
       </Border>
 

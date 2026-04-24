@@ -52,6 +52,8 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
 
     public ICommand? SignSelectedCommand { get; set; }
 
+    public ICommand? OpenIssuanceAuthoringCommand { get; set; }
+
     public ICommand? ExportSelectedCommand { get; set; }
 
     public ICommand? ExportSelectedToFileCommand { get; set; }

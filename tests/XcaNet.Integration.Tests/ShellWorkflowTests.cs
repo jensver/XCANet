@@ -87,16 +87,22 @@ public sealed class ShellWorkflowTests
         shell.PrivateKeysPage.NewKeyDisplayName = "Root Key";
         await shell.PrivateKeysPage.GenerateKeyCommand!.As<AsyncCommand>().ExecuteAsync();
         shell.PrivateKeysPage.SelectedItem = shell.PrivateKeysPage.Items.Single(x => x.DisplayName == "Root Key");
+        shell.PrivateKeysPage.OpenSelfSignedCaAuthoringCommand!.As<DelegateCommand>().Execute(null);
+        Assert.True(shell.IsAuthoringDialogOpen);
+        Assert.True(shell.IsCertificateAuthoringDialogOpen);
         shell.PrivateKeysPage.SelfSignedCaAuthoring.DisplayName = "Root CA";
         shell.PrivateKeysPage.SelfSignedCaAuthoring.SubjectName = "CN=Root CA";
         shell.PrivateKeysPage.SelfSignedCaAuthoring.ValidityDays = 3650;
         await shell.PrivateKeysPage.CreateSelfSignedCaCommand!.As<AsyncCommand>().ExecuteAsync();
+        Assert.False(shell.IsAuthoringDialogOpen);
 
         shell.PrivateKeysPage.NewKeyDisplayName = "Leaf Key";
         shell.PrivateKeysPage.SelectedAlgorithm = KeyAlgorithmView.Ecdsa;
         shell.PrivateKeysPage.SelectedCurve = EllipticCurveView.P256;
         await shell.PrivateKeysPage.GenerateKeyCommand!.As<AsyncCommand>().ExecuteAsync();
         shell.PrivateKeysPage.SelectedItem = shell.PrivateKeysPage.Items.Single(x => x.DisplayName == "Leaf Key");
+        shell.PrivateKeysPage.OpenCertificateSigningRequestAuthoringCommand!.As<DelegateCommand>().Execute(null);
+        Assert.True(shell.IsAuthoringDialogOpen);
         shell.PrivateKeysPage.CertificateSigningRequestAuthoring.DisplayName = "Leaf CSR";
         shell.PrivateKeysPage.CertificateSigningRequestAuthoring.SubjectName = "CN=leaf.example.test";
         shell.PrivateKeysPage.CertificateSigningRequestAuthoring.SubjectAlternativeNames = "leaf.example.test, api.example.test";
@@ -104,13 +110,17 @@ public sealed class ShellWorkflowTests
         shell.PrivateKeysPage.CertificateSigningRequestAuthoring.EnhancedKeyUsages = "Server Authentication";
 
         await shell.PrivateKeysPage.CreateCertificateSigningRequestCommand!.As<AsyncCommand>().ExecuteAsync();
+        Assert.False(shell.IsAuthoringDialogOpen);
         await shell.CertificateRequestsPage.RefreshCommand!.As<AsyncCommand>().ExecuteAsync();
 
         shell.CertificateRequestsPage.SelectedItem = shell.CertificateRequestsPage.Items.Single(x => x.DisplayName == "Leaf CSR");
+        shell.CertificateRequestsPage.OpenIssuanceAuthoringCommand!.As<DelegateCommand>().Execute(null);
+        Assert.True(shell.IsAuthoringDialogOpen);
         shell.CertificateRequestsPage.IssuanceAuthoring.DisplayName = "Issued Leaf";
         shell.CertificateRequestsPage.IssuanceAuthoring.SelectedIssuerCertificate = shell.CertificateRequestsPage.IssuanceAuthoring.IssuerCertificates.Single(x => x.DisplayName == "Root CA");
         shell.CertificateRequestsPage.IssuanceAuthoring.SelectedIssuerPrivateKey = shell.CertificateRequestsPage.IssuanceAuthoring.IssuerPrivateKeys.Single(x => x.DisplayName == "Root Key");
         await shell.CertificateRequestsPage.SignSelectedCommand!.As<AsyncCommand>().ExecuteAsync();
+        Assert.False(shell.IsAuthoringDialogOpen);
         await shell.CertificatesPage.RefreshCommand!.As<AsyncCommand>().ExecuteAsync();
 
         var issuedCertificate = shell.CertificatesPage.Items.Single(x => x.DisplayName == "Issued Leaf");
@@ -120,6 +130,8 @@ public sealed class ShellWorkflowTests
         await Task.Delay(50);
         shell.CertificatesPage.CreateTemplateFromCertificateCommand!.As<DelegateCommand>().Execute(null);
 
+        Assert.True(shell.IsAuthoringDialogOpen);
+        Assert.True(shell.IsTemplateAuthoringDialogOpen);
         Assert.Equal("Issued Leaf derived template", shell.TemplatesPage.Name);
         Assert.Equal(TemplateIntendedUsage.EndEntityCertificate, shell.TemplatesPage.IntendedUsage);
 
@@ -131,8 +143,13 @@ public sealed class ShellWorkflowTests
 
         shell.CertificateRequestsPage.CreateSimilarRequestCommand!.As<DelegateCommand>().Execute(null);
 
+        Assert.True(shell.IsAuthoringDialogOpen);
+        Assert.True(shell.IsCertificateAuthoringDialogOpen);
         Assert.Equal("Leaf CSR Copy", shell.PrivateKeysPage.CertificateSigningRequestAuthoring.DisplayName);
         Assert.Equal("CN=leaf.example.test", shell.PrivateKeysPage.CertificateSigningRequestAuthoring.SubjectName);
+
+        shell.CloseAuthoringDialogCommand.As<DelegateCommand>().Execute(null);
+        Assert.False(shell.IsAuthoringDialogOpen);
     }
 
     private static ServiceProvider BuildServiceProvider()
