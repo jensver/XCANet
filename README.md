@@ -2,6 +2,8 @@
 
 XcaNet is a clean-architecture rewrite of a cross-platform PKI manager in `.NET 10`, following the structure defined in `spec/SPEC.md`.
 
+The current app has a strong PKI foundation, but it is **not yet XCA parity**. XCA parity now means matching XCA's core functionality, workflow model, and screen layout for the primary operator surfaces, not just shipping equivalent backend capabilities. See `docs/parity/xca-parity-charter.md`.
+
 ## What It Does
 
 XcaNet is a desktop PKI workbench for operators who need to:
@@ -19,6 +21,8 @@ The managed `.NET` crypto backend is the default for all workflows. An optional 
 
 The current release-candidate target is `v0.1.0`.
 
+`v0.1.0` is a foundation release candidate, not an XCA parity milestone.
+
 Included:
 
 - secure local database workflow
@@ -35,6 +39,7 @@ Not included:
 - certificate issuance beyond the currently implemented managed/OpenSSL-routed paths
 
 Draft release notes are in `docs/release/v0.1.0.md`.
+The XCA parity contract and roadmap reset are in `docs/parity/xca-parity-charter.md`.
 
 ## Quick Start
 
@@ -64,6 +69,7 @@ Operator guides:
 - `docs/operator/quickstart.md`
 - `docs/operator/templates.md`
 - `docs/packaging/README.md`
+- `docs/parity/xca-parity-charter.md`
 
 ## Solution Structure
 
