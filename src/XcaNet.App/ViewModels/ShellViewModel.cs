@@ -411,7 +411,7 @@ public sealed class ShellViewModel : ViewModelBase
 
         using var scope = BeginBusy("Generating managed private key");
         var result = await _databaseSessionService.GenerateStoredKeyAsync(
-            new GenerateStoredKeyRequest(PrivateKeysPage.NewKeyDisplayName, algorithm, algorithm == KeyAlgorithmKind.Rsa ? 3072 : null, curve),
+            new GenerateStoredKeyRequest(PrivateKeysPage.NewKeyDisplayName, algorithm, algorithm == KeyAlgorithmKind.Rsa ? PrivateKeysPage.SelectedKeySize : null, curve),
             CancellationToken.None);
 
         if (!result.IsSuccess || result.Value is null)
@@ -420,6 +420,7 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
+        PrivateKeysPage.IsNewKeyDialogOpen = false;
         await RefreshAllAsync();
         NavigateTo(new NavigationTarget(BrowserEntityType.PrivateKey, result.Value.PrivateKeyId, NavigationFocusSection.Overview));
         NotifySuccess($"Generated {result.Value.Algorithm} key.");
