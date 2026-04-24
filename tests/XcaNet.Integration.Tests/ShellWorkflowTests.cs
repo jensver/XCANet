@@ -162,7 +162,7 @@ public sealed class ShellWorkflowTests
         Assert.Equal("Certificates", shell.CurrentPage.Title);
         Assert.Equal(5, shell.WorkspaceNavigationItems.Count);
         Assert.Equal("Private Keys", shell.WorkspaceNavigationItems[0].Title);
-        Assert.Equal("CRLs", shell.WorkspaceNavigationItems[^1].Title);
+        Assert.Equal("Revocation lists", shell.WorkspaceNavigationItems[^1].Title);
         Assert.Equal(2, shell.UtilityNavigationItems.Count);
     }
 

@@ -1,169 +1,130 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="XcaNet.App.Views.Shared.CertificateAuthoringSurfaceView">
-  <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14">
-    <Border Classes="info-panel" Padding="14">
-      <Grid ColumnDefinitions="1.1*,0.9*" ColumnSpacing="14">
-        <StackPanel Spacing="4">
-          <TextBlock Text="Source / Operation" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding OperationModeSummary}" Classes="secondary-text" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding SourceSummary}" Classes="secondary-text" TextWrapping="Wrap" />
-        </StackPanel>
-
-        <StackPanel Grid.Column="1" Spacing="8" IsVisible="{Binding ShowTemplateApplication}">
-          <TextBlock Text="Template Application" FontWeight="SemiBold" />
-          <Grid ColumnDefinitions="*,170,Auto" ColumnSpacing="8">
-            <ComboBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}">
+  <Grid RowDefinitions="*,Auto" RowSpacing="10">
+    <TabControl Classes="authoring-tabs">
+      <TabItem Header="Source">
+        <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+          <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Operation" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding OperationModeSummary}" TextWrapping="Wrap" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Source" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding SourceSummary}" TextWrapping="Wrap" />
+          </Grid>
+          <Grid Grid.Row="2" ColumnDefinitions="150,*,170,Auto" ColumnSpacing="10" IsVisible="{Binding ShowTemplateApplication}">
+            <TextBlock Text="Template" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}">
               <ComboBox.ItemTemplate>
                 <DataTemplate>
                   <TextBlock Text="{Binding Name}" />
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
-            <ComboBox Grid.Column="1" ItemsSource="{Binding TemplateApplicationModes}" SelectedItem="{Binding SelectedTemplateApplicationMode}" />
-            <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyTemplateCommand}" />
+            <ComboBox Grid.Column="2" ItemsSource="{Binding TemplateApplicationModes}" SelectedItem="{Binding SelectedTemplateApplicationMode}" />
+            <Button Grid.Column="3" Content="Apply" Command="{Binding ApplyTemplateCommand}" />
           </Grid>
-        </StackPanel>
-      </Grid>
-    </Border>
-
-    <TabControl Classes="authoring-tabs">
-      <TabItem Header="Subject">
-        <Border Classes="surface-card" Padding="16" Margin="0,10,0,0">
-          <StackPanel Spacing="12">
-            <TextBlock Text="Subject" FontSize="18" FontWeight="SemiBold" />
-            <TextBox Text="{Binding DisplayName}" Watermark="Display name" />
-            <TextBox Text="{Binding SubjectName}" Watermark="Distinguished name / subject" />
-            <TextBox Text="{Binding SubjectAlternativeNames}"
-                     AcceptsReturn="True"
-                     Height="96"
-                     TextWrapping="Wrap"
-                     Watermark="Subject Alternative Names, separated by comma or semicolon" />
-          </StackPanel>
-        </Border>
+          <Grid Grid.Row="3" ColumnDefinitions="150,220" ColumnSpacing="10" IsVisible="{Binding ShowValiditySection}">
+            <TextBlock Text="Validity days" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Column="1" Minimum="1" Maximum="36500" Value="{Binding ValidityDays}" />
+          </Grid>
+        </Grid>
       </TabItem>
 
-      <TabItem Header="Key" IsVisible="{Binding ShowKeySection}">
-        <Border Classes="surface-card" Padding="16" Margin="0,10,0,0">
-          <StackPanel Spacing="12">
-            <TextBlock Text="Key" FontSize="18" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,180,180" ColumnSpacing="10">
-              <ComboBox ItemsSource="{Binding KeyAlgorithms}" SelectedItem="{Binding KeyAlgorithm}" />
-              <NumericUpDown Grid.Column="1"
-                             Minimum="3072"
-                             Maximum="16384"
-                             Value="{Binding RsaKeySize}"
-                             IsVisible="{Binding IsRsa}" />
-              <ComboBox Grid.Column="2"
-                        ItemsSource="{Binding Curves}"
-                        SelectedItem="{Binding Curve}"
-                        IsVisible="{Binding IsEcdsa}" />
-            </Grid>
-            <Border Classes="surface-subtle" Padding="12">
-              <TextBlock Text="The key section stays explicit for request-oriented workflows so operators can see the requested algorithm before issuing or exporting artifacts."
-                         Classes="secondary-text"
-                         TextWrapping="Wrap" />
-            </Border>
-          </StackPanel>
-        </Border>
+      <TabItem Header="Subject">
+        <Grid Margin="10" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+          <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Name" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding DisplayName}" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Subject" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding SubjectName}" />
+          </Grid>
+          <Grid Grid.Row="2" ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Alternative names" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <TextBox Grid.Column="1" Text="{Binding SubjectAlternativeNames}" AcceptsReturn="True" Height="100" TextWrapping="Wrap" />
+          </Grid>
+        </Grid>
       </TabItem>
 
       <TabItem Header="Extensions">
-        <Border Classes="surface-card" Padding="16" Margin="0,10,0,0">
-          <StackPanel Spacing="12">
-            <TextBlock Text="Extensions" FontSize="18" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="Auto,Auto,120,*" ColumnSpacing="10">
-              <CheckBox Content="Certificate Authority" IsChecked="{Binding IsCertificateAuthority}" />
-              <CheckBox Grid.Column="1" Content="Path length constraint" IsChecked="{Binding HasPathLengthConstraint}" />
-              <NumericUpDown Grid.Column="2"
-                             Minimum="0"
-                             Maximum="16"
-                             Value="{Binding PathLengthConstraint}"
-                             IsEnabled="{Binding HasPathLengthConstraint}" />
-              <TextBox Grid.Column="3"
-                       Text="{Binding SignatureAlgorithm}"
-                       Watermark="Signature algorithm"
-                       IsVisible="{Binding ShowSignatureAlgorithm}" />
+        <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+          <CheckBox Content="Certificate authority" IsChecked="{Binding IsCertificateAuthority}" />
+          <Grid Grid.Row="1" ColumnDefinitions="150,Auto,120,*" ColumnSpacing="10">
+            <TextBlock Text="Path length" VerticalAlignment="Center" />
+            <CheckBox Grid.Column="1" Content="Constrained" IsChecked="{Binding HasPathLengthConstraint}" />
+            <NumericUpDown Grid.Column="2" Minimum="0" Maximum="16" Value="{Binding PathLengthConstraint}" IsEnabled="{Binding HasPathLengthConstraint}" />
+            <TextBox Grid.Column="3" Text="{Binding SignatureAlgorithm}" Watermark="Signature algorithm" IsVisible="{Binding ShowSignatureAlgorithm}" />
+          </Grid>
+          <Grid Grid.Row="2" ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Key algorithm" VerticalAlignment="Center" />
+            <Grid Grid.Column="1" ColumnDefinitions="180,180,180" ColumnSpacing="10">
+              <ComboBox ItemsSource="{Binding KeyAlgorithms}" SelectedItem="{Binding KeyAlgorithm}" IsVisible="{Binding ShowKeySection}" />
+              <NumericUpDown Grid.Column="1" Minimum="3072" Maximum="16384" Value="{Binding RsaKeySize}" IsVisible="{Binding IsRsa}" />
+              <ComboBox Grid.Column="2" ItemsSource="{Binding Curves}" SelectedItem="{Binding Curve}" IsVisible="{Binding IsEcdsa}" />
             </Grid>
-            <TextBox Text="{Binding KeyUsages}"
-                     AcceptsReturn="True"
-                     Height="86"
-                     TextWrapping="Wrap"
-                     Watermark="Key usages separated by comma or semicolon" />
-            <TextBox Text="{Binding EnhancedKeyUsages}"
-                     AcceptsReturn="True"
-                     Height="86"
-                     TextWrapping="Wrap"
-                     Watermark="Enhanced key usages separated by comma or semicolon" />
-          </StackPanel>
-        </Border>
+          </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Key usage">
+        <Grid Margin="10" RowDefinitions="Auto,Auto" RowSpacing="8">
+          <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Key usage" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <TextBox Grid.Column="1" Text="{Binding KeyUsages}" AcceptsReturn="True" Height="100" TextWrapping="Wrap" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Extended key usage" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <TextBox Grid.Column="1" Text="{Binding EnhancedKeyUsages}" AcceptsReturn="True" Height="100" TextWrapping="Wrap" />
+          </Grid>
+        </Grid>
       </TabItem>
 
       <TabItem Header="Advanced">
-        <Border Classes="surface-card" Padding="16" Margin="0,10,0,0">
-          <StackPanel Spacing="12">
-            <TextBlock Text="Advanced / Raw Extension Area" FontSize="18" FontWeight="SemiBold" />
-            <Border Classes="validation-panel" Padding="12">
-              <TextBlock Text="This surface keeps raw extension text editable for key usage and EKU values without introducing a separate backend path. It is still normalized through the existing application contracts."
-                         Classes="secondary-text"
-                         TextWrapping="Wrap" />
-            </Border>
-            <TextBox Text="{Binding KeyUsages}"
-                     AcceptsReturn="True"
-                     Height="110"
-                     TextWrapping="Wrap"
-                     Watermark="Raw key usage entries" />
-            <TextBox Text="{Binding EnhancedKeyUsages}"
-                     AcceptsReturn="True"
-                     Height="110"
-                     TextWrapping="Wrap"
-                     Watermark="Raw enhanced key usage entries" />
-          </StackPanel>
-        </Border>
+        <Grid Margin="10" RowDefinitions="Auto,Auto" RowSpacing="8">
+          <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Raw key usage" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <TextBox Grid.Column="1" Text="{Binding KeyUsages}" AcceptsReturn="True" Height="110" TextWrapping="Wrap" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Raw extended usage" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <TextBox Grid.Column="1" Text="{Binding EnhancedKeyUsages}" AcceptsReturn="True" Height="110" TextWrapping="Wrap" />
+          </Grid>
+        </Grid>
       </TabItem>
 
-      <TabItem Header="Signing" IsVisible="{Binding ShowSigningSection}">
-        <Border Classes="surface-card" Padding="16" Margin="0,10,0,0">
-          <StackPanel Spacing="12">
-            <TextBlock Text="Signing / Issuer" FontSize="18" FontWeight="SemiBold" />
-            <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-              <ComboBox ItemsSource="{Binding IssuerCertificates}" SelectedItem="{Binding SelectedIssuerCertificate}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding DisplayName}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-              <ComboBox Grid.Column="1" ItemsSource="{Binding IssuerPrivateKeys}" SelectedItem="{Binding SelectedIssuerPrivateKey}">
-                <ComboBox.ItemTemplate>
-                  <DataTemplate>
-                    <TextBlock Text="{Binding DisplayName}" />
-                  </DataTemplate>
-                </ComboBox.ItemTemplate>
-              </ComboBox>
-            </Grid>
-          </StackPanel>
-        </Border>
-      </TabItem>
-
-      <TabItem Header="Validity" IsVisible="{Binding ShowValiditySection}">
-        <Border Classes="surface-card" Padding="16" Margin="0,10,0,0">
-          <StackPanel Spacing="12">
-            <TextBlock Text="Validity" FontSize="18" FontWeight="SemiBold" />
-            <NumericUpDown Minimum="1" Maximum="36500" Value="{Binding ValidityDays}" Width="220" />
-          </StackPanel>
-        </Border>
+      <TabItem Header="Signing / Issuer" IsVisible="{Binding ShowSigningSection}">
+        <Grid Margin="10" RowDefinitions="Auto,Auto" RowSpacing="8">
+          <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Issuer certificate" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding IssuerCertificates}" SelectedItem="{Binding SelectedIssuerCertificate}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
+            <TextBlock Text="Issuer key" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding IssuerPrivateKeys}" SelectedItem="{Binding SelectedIssuerPrivateKey}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+        </Grid>
       </TabItem>
     </TabControl>
 
-    <Border Classes="surface-subtle" Padding="14">
-      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" />
-        <Button Grid.Column="1"
-                Content="{Binding PrimaryActionLabel}"
-                Command="{Binding PrimaryActionCommand}"
-                MinWidth="150" />
-      </Grid>
-    </Border>
+    <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+      <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+      <Button Grid.Column="1" Content="Cancel" />
+      <Button Grid.Column="2" Content="{Binding PrimaryActionLabel}" Command="{Binding PrimaryActionCommand}" MinWidth="100" />
+    </Grid>
   </Grid>
 </UserControl>

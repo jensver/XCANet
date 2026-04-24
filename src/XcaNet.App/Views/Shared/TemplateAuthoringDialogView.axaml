@@ -2,50 +2,41 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:shared="using:XcaNet.App.Views.Shared"
              x:Class="XcaNet.App.Views.Shared.TemplateAuthoringDialogView">
-  <Grid RowDefinitions="Auto,*" RowSpacing="12">
-    <StackPanel Spacing="10">
-      <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-        <TextBox Text="{Binding Name}" Watermark="Template name" />
-        <ComboBox Grid.Column="1" ItemsSource="{Binding IntendedUsages}" SelectedItem="{Binding IntendedUsage}" />
-      </Grid>
-      <TextBox Text="{Binding Description}" Watermark="Description" AcceptsReturn="True" Height="72" TextWrapping="Wrap" />
-      <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10">
-        <CheckBox Content="Enabled" IsChecked="{Binding IsEnabled}" />
-        <CheckBox Grid.Column="1" Content="Favorite" IsChecked="{Binding IsFavorite}" />
-        <Button Grid.Column="2" Content="Save Template" Command="{Binding SaveTemplateCommand}" />
-        <Button Grid.Column="3" Content="Clone" Command="{Binding CloneTemplateCommand}" />
-        <Button Grid.Column="4" Content="Delete" Command="{Binding DeleteTemplateCommand}" />
-      </Grid>
-    </StackPanel>
+  <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+    <Grid ColumnDefinitions="*,220,Auto,Auto" ColumnSpacing="8">
+      <TextBox Text="{Binding Name}" Watermark="Template name" />
+      <ComboBox Grid.Column="1" ItemsSource="{Binding IntendedUsages}" SelectedItem="{Binding IntendedUsage}" />
+      <CheckBox Grid.Column="2" Content="Enabled" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" />
+      <CheckBox Grid.Column="3" Content="Favorite" IsChecked="{Binding IsFavorite}" VerticalAlignment="Center" />
+    </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="1.4*,0.8*" ColumnSpacing="14">
+    <Grid Grid.Row="1" ColumnDefinitions="*,260" ColumnSpacing="10">
       <shared:CertificateAuthoringSurfaceView DataContext="{Binding Authoring}" />
+      <TabControl Grid.Column="1" Classes="workspace-inspector-tabs">
+        <TabItem Header="Summary">
+          <TextBox Margin="8" Classes="readonly-surface"
+                   Text="{Binding PreviewSummary}"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   Height="300"
+                   TextWrapping="Wrap" />
+        </TabItem>
+        <TabItem Header="Validation">
+          <TextBox Margin="8" Classes="readonly-surface"
+                   Text="{Binding ValidationSummary}"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   Height="300"
+                   TextWrapping="Wrap" />
+        </TabItem>
+      </TabControl>
+    </Grid>
 
-      <StackPanel Grid.Column="1" Spacing="14">
-        <Border Classes="surface-card" Padding="16">
-          <StackPanel Spacing="10">
-            <TextBlock Text="Template Summary" FontSize="18" FontWeight="SemiBold" />
-            <TextBox Classes="readonly-surface"
-                     Text="{Binding PreviewSummary}"
-                     IsReadOnly="True"
-                     AcceptsReturn="True"
-                     Height="220"
-                     TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-
-        <Border Classes="surface-card" Padding="16">
-          <StackPanel Spacing="10">
-            <TextBlock Text="Validation" FontSize="18" FontWeight="SemiBold" />
-            <TextBox Classes="readonly-surface"
-                     Text="{Binding ValidationSummary}"
-                     IsReadOnly="True"
-                     AcceptsReturn="True"
-                     Height="180"
-                     TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-      </StackPanel>
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+      <TextBox Text="{Binding Description}" Watermark="Description" />
+      <Button Grid.Column="1" Content="Clone" Command="{Binding CloneTemplateCommand}" />
+      <Button Grid.Column="2" Content="Delete" Command="{Binding DeleteTemplateCommand}" />
+      <Button Grid.Column="3" Content="Save Template" Command="{Binding SaveTemplateCommand}" />
     </Grid>
   </Grid>
 </UserControl>

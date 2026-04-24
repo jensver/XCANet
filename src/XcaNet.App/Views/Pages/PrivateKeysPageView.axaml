@@ -1,122 +1,85 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="XcaNet.App.Views.Pages.PrivateKeysPageView">
-  <Grid ColumnDefinitions="1.45*,1*" ColumnSpacing="16">
-    <Border Classes="workspace-pane">
-      <Grid RowDefinitions="Auto,Auto,*">
-        <Border Classes="workspace-toolbar" Padding="14">
-          <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-            <StackPanel Spacing="2">
-              <TextBlock Text="Private Keys" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="Object-first key workspace with direct CSR and self-signed certificate entry points." Classes="secondary-text" />
-            </StackPanel>
-            <Button Grid.Column="1" Classes="toolbar-action" Content="Generate Key" Command="{Binding GenerateKeyCommand}" />
-            <Button Grid.Column="2" Classes="toolbar-action" Content="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
-            <Button Grid.Column="3" Classes="toolbar-action" Content="Create Self-Signed" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
-            <Button Grid.Column="4" Classes="toolbar-action" Content="Export" Command="{Binding ExportSelectedToFileCommand}" />
-            <Button Grid.Column="5" Classes="toolbar-action" Content="Refresh" Command="{Binding RefreshCommand}" />
+  <Grid ColumnDefinitions="*,150" RowDefinitions="*,170" ColumnSpacing="8" RowSpacing="8">
+    <Border Grid.Row="0" Grid.Column="0" Classes="workspace-pane">
+      <Grid RowDefinitions="Auto,*">
+        <Border Classes="table-header" Padding="8,6">
+          <Grid ColumnDefinitions="2.0*,1.0*,1.0*,1.0*,0.9*" ColumnSpacing="10">
+            <TextBlock Text="Private Keys" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="1" Text="Algorithm" Classes="table-header-text" />
+            <TextBlock Grid.Column="2" Text="Size / Curve" Classes="table-header-text" />
+            <TextBlock Grid.Column="3" Text="Created" Classes="table-header-text" />
+            <TextBlock Grid.Column="4" Text="Related" Classes="table-header-text" />
           </Grid>
         </Border>
-
-        <Grid Grid.Row="1" Margin="14,12,14,0" ColumnDefinitions="*,180,180" ColumnSpacing="10">
-          <TextBox Text="{Binding NewKeyDisplayName}" Watermark="Key name" />
-          <ComboBox Grid.Column="1" ItemsSource="{Binding Algorithms}" SelectedItem="{Binding SelectedAlgorithm}" />
-          <ComboBox Grid.Column="2" ItemsSource="{Binding Curves}" SelectedItem="{Binding SelectedCurve}" />
-        </Grid>
-
-        <Grid Grid.Row="2" Margin="0,12,0,0" RowDefinitions="Auto,*">
-          <Border Classes="table-header" Padding="14,10">
-            <Grid ColumnDefinitions="2.1*,1.1*,1.1*,1.1*,0.9*" ColumnSpacing="12">
-              <TextBlock Text="Name" Classes="table-header-text" />
-              <TextBlock Grid.Column="1" Text="Algorithm" Classes="table-header-text" />
-              <TextBlock Grid.Column="2" Text="Size / Curve" Classes="table-header-text" />
-              <TextBlock Grid.Column="3" Text="Created" Classes="table-header-text" />
-              <TextBlock Grid.Column="4" Text="Related" Classes="table-header-text" />
-            </Grid>
+        <Grid Grid.Row="1">
+          <Border Classes="empty-state" Margin="8" Padding="12" IsVisible="{Binding IsEmpty}">
+            <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
-          <Grid Grid.Row="1">
-            <Border Classes="empty-state" Margin="14" Padding="16" IsVisible="{Binding IsEmpty}">
-              <StackPanel Spacing="6">
-                <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding EmptyStateMessage}" Classes="secondary-text" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
-              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <Border Padding="14,10" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-                    <Grid ColumnDefinitions="2.1*,1.1*,1.1*,1.1*,0.9*" ColumnSpacing="12">
-                      <StackPanel>
-                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding PublicKeyFingerprint}" Classes="muted-text" TextWrapping="Wrap" />
-                      </StackPanel>
-                      <TextBlock Grid.Column="1" Text="{Binding Algorithm}" />
-                      <TextBlock Grid.Column="2" Text="{Binding SizeOrCurve}" />
-                      <TextBlock Grid.Column="3" Text="{Binding CreatedUtc, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                      <TextBlock Grid.Column="4" Text="{Binding RelatedObjectSummary}" />
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </Grid>
+          <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+                  <Grid ColumnDefinitions="2.0*,1.0*,1.0*,1.0*,0.9*" ColumnSpacing="10">
+                    <TextBlock Text="{Binding DisplayName}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Algorithm}" />
+                    <TextBlock Grid.Column="2" Text="{Binding SizeOrCurve}" />
+                    <TextBlock Grid.Column="3" Text="{Binding CreatedUtc, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                    <TextBlock Grid.Column="4" Text="{Binding RelatedObjectSummary}" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
         </Grid>
       </Grid>
     </Border>
 
-    <Border Grid.Column="1" Classes="workspace-pane">
-      <Grid RowDefinitions="Auto,*">
-        <Border Classes="workspace-toolbar" Padding="14">
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Spacing="2">
-              <TextBlock Text="Key Properties" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="Selection-driven export, relationships, and XCA-style authoring actions." Classes="secondary-text" />
-            </StackPanel>
-            <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" VerticalAlignment="Center" FontWeight="SemiBold" />
-          </Grid>
-        </Border>
+    <Border Grid.Row="0" Grid.Column="1" Classes="classic-side-panel" Padding="8">
+      <StackPanel>
+        <Button Classes="side-action" Content="New Key" Command="{Binding GenerateKeyCommand}" />
+        <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedToFileCommand}" />
+        <Button Classes="side-action" Content="Import" IsEnabled="False" />
+        <Button Classes="side-action" Content="Show Details" IsEnabled="False" />
+        <Button Classes="side-action" Content="Delete" IsEnabled="False" />
+        <Button Classes="side-action" Content="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
+        <Button Classes="side-action" Content="Create Certificate" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
+        <Button Classes="side-action" Content="Preview Export" Command="{Binding ExportSelectedCommand}" />
+        <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
+      </StackPanel>
+    </Border>
 
-        <TabControl Grid.Row="1" Classes="workspace-inspector-tabs" Margin="14">
-          <TabItem Header="General">
-            <Grid ColumnDefinitions="150,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8" Margin="0,12,0,0">
-              <TextBlock Text="Name" />
-              <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" TextWrapping="Wrap" />
-              <TextBlock Grid.Row="1" Text="Algorithm" />
-              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.Algorithm}" />
-              <TextBlock Grid.Row="2" Text="Created" />
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.CreatedUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
-              <TextBlock Grid.Row="3" Text="Related certificates" />
-              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.LinkedCertificateCount}" />
-              <TextBlock Grid.Row="4" Text="Fingerprint" />
-              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedItem.PublicKeyFingerprint}" TextWrapping="Wrap" />
-            </Grid>
-          </TabItem>
-          <TabItem Header="Actions">
-            <StackPanel Spacing="10" Margin="0,12,0,0">
-              <Border Classes="surface-subtle" Padding="12">
-                <TextBlock Text="Creation now launches a dedicated certificate input workbench from the selected key, preserving the M13.1 authoring model while keeping the workspace table-first."
-                           Classes="secondary-text"
-                           TextWrapping="Wrap" />
-              </Border>
-              <StackPanel Orientation="Horizontal" Spacing="10">
-                <Button Classes="toolbar-action" Content="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
-                <Button Classes="toolbar-action" Content="Create Self-Signed CA" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
-                <Button Classes="toolbar-action" Content="Preview Export" Command="{Binding ExportSelectedCommand}" />
-                <Button Classes="toolbar-action" Content="Export to File" Command="{Binding ExportSelectedToFileCommand}" />
-              </StackPanel>
-            </StackPanel>
-          </TabItem>
-          <TabItem Header="Export">
-            <StackPanel Spacing="10" Margin="0,12,0,0">
-              <Grid ColumnDefinitions="180,*" ColumnSpacing="10">
-                <ComboBox ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding SelectedExportFormat}" />
-                <TextBox Grid.Column="1" Text="{Binding SelectedExportPassword}" PasswordChar="*" Watermark="Optional export password" />
-              </Grid>
-              <TextBox Classes="readonly-surface" Text="{Binding ExportPreview}" AcceptsReturn="True" Height="260" TextWrapping="Wrap" />
-            </StackPanel>
-          </TabItem>
-        </TabControl>
-      </Grid>
+    <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="workspace-pane" Padding="8">
+      <TabControl Classes="workspace-inspector-tabs">
+        <TabItem Header="Details">
+          <Grid Margin="6" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+            <TextBlock Text="Name" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" />
+            <TextBlock Grid.Row="1" Text="Algorithm" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.Algorithm}" />
+            <TextBlock Grid.Row="2" Text="Fingerprint" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.PublicKeyFingerprint}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="3" Text="Created" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.CreatedUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
+          </Grid>
+        </TabItem>
+        <TabItem Header="New Key">
+          <Grid Margin="6" ColumnDefinitions="220,180,180,Auto" ColumnSpacing="10">
+            <TextBox Text="{Binding NewKeyDisplayName}" Watermark="Key name" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding Algorithms}" SelectedItem="{Binding SelectedAlgorithm}" />
+            <ComboBox Grid.Column="2" ItemsSource="{Binding Curves}" SelectedItem="{Binding SelectedCurve}" />
+            <Button Grid.Column="3" Content="Generate" Command="{Binding GenerateKeyCommand}" />
+          </Grid>
+        </TabItem>
+        <TabItem Header="Export">
+          <Grid Margin="6" ColumnDefinitions="180,*" RowDefinitions="Auto,*" ColumnSpacing="10" RowSpacing="8">
+            <ComboBox ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding SelectedExportFormat}" />
+            <TextBox Grid.Column="1" Text="{Binding SelectedExportPassword}" PasswordChar="*" Watermark="Optional export password" />
+            <TextBox Grid.Row="1" Grid.ColumnSpan="2" Classes="readonly-surface" Text="{Binding ExportPreview}" AcceptsReturn="True" TextWrapping="Wrap" />
+          </Grid>
+        </TabItem>
+      </TabControl>
     </Border>
   </Grid>
 </UserControl>

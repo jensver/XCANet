@@ -9,7 +9,7 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     private string _exportPreview = string.Empty;
 
     public CertificateRequestsPageViewModel()
-        : base("CSRs")
+        : base("Certificate signing requests")
     {
         EmptyStateTitle = "No certificate signing requests";
         EmptyStateMessage = "Create a CSR from the Private Keys page or import request files to review and sign them.";

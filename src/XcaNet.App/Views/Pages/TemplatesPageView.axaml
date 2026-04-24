@@ -1,106 +1,84 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="XcaNet.App.Views.Pages.TemplatesPageView">
-  <Grid ColumnDefinitions="1.45*,1*" ColumnSpacing="16">
+  <Grid ColumnDefinitions="*,150" RowDefinitions="*,170" ColumnSpacing="8" RowSpacing="8">
     <Border Classes="workspace-pane">
-      <Grid RowDefinitions="Auto,*">
-        <Border Classes="workspace-toolbar" Padding="14">
-          <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-            <StackPanel Spacing="2">
-              <TextBlock Text="Templates" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="Table-first template library with XCA-style edit and clone actions." Classes="secondary-text" />
-            </StackPanel>
-            <ComboBox Grid.Column="1" Width="170" ItemsSource="{Binding UsageFilters}" SelectedItem="{Binding UsageFilter}" />
-            <ComboBox Grid.Column="2" Width="150" ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding StatusFilter}" />
-            <Button Grid.Column="3" Classes="toolbar-action" Content="New" Command="{Binding CreateNewCommand}" />
-            <Button Grid.Column="4" Classes="toolbar-action" Content="Edit" Command="{Binding EditTemplateCommand}" />
-            <Button Grid.Column="5" Classes="toolbar-action" Content="Clone" Command="{Binding CloneTemplateCommand}" />
-            <Button Grid.Column="6" Classes="toolbar-action" Content="Enable / Disable" Command="{Binding ToggleEnabledCommand}" />
-            <Button Grid.Column="7" Classes="toolbar-action" Content="Refresh" Command="{Binding RefreshCommand}" />
+      <Grid RowDefinitions="Auto,Auto,*">
+        <Grid Margin="8,6,8,0" ColumnDefinitions="180,160,*" ColumnSpacing="8">
+          <ComboBox ItemsSource="{Binding UsageFilters}" SelectedItem="{Binding UsageFilter}" />
+          <ComboBox Grid.Column="1" ItemsSource="{Binding StatusFilters}" SelectedItem="{Binding StatusFilter}" />
+          <Button Grid.Column="2" Content="Refresh" HorizontalAlignment="Right" Command="{Binding RefreshCommand}" />
+        </Grid>
+        <Border Grid.Row="1" Classes="table-header" Padding="8,6" Margin="0,6,0,0">
+          <Grid ColumnDefinitions="1.5*,1.0*,0.8*,0.8*,1.4*,1.4*" ColumnSpacing="8">
+            <TextBlock Text="Templates" FontWeight="SemiBold" />
+            <TextBlock Grid.Column="1" Text="Usage" Classes="table-header-text" />
+            <TextBlock Grid.Column="2" Text="Enabled" Classes="table-header-text" />
+            <TextBlock Grid.Column="3" Text="Favorite" Classes="table-header-text" />
+            <TextBlock Grid.Column="4" Text="Subject preset" Classes="table-header-text" />
+            <TextBlock Grid.Column="5" Text="Extension preset" Classes="table-header-text" />
           </Grid>
         </Border>
-
-        <Grid Grid.Row="1" Margin="0,12,0,0" RowDefinitions="Auto,*">
-          <Border Classes="table-header" Padding="14,10">
-            <Grid ColumnDefinitions="1.5*,1.1*,0.8*,0.8*,1.6*,1.6*" ColumnSpacing="12">
-              <TextBlock Text="Name" Classes="table-header-text" />
-              <TextBlock Grid.Column="1" Text="Usage" Classes="table-header-text" />
-              <TextBlock Grid.Column="2" Text="Enabled" Classes="table-header-text" />
-              <TextBlock Grid.Column="3" Text="Favorite" Classes="table-header-text" />
-              <TextBlock Grid.Column="4" Text="Subject Preset" Classes="table-header-text" />
-              <TextBlock Grid.Column="5" Text="Extension Preset" Classes="table-header-text" />
-            </Grid>
+        <Grid Grid.Row="2">
+          <Border Classes="empty-state" Margin="8" Padding="12" IsVisible="{Binding IsEmpty}">
+            <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
-          <Grid Grid.Row="1">
-            <Border Classes="empty-state" Margin="14" Padding="16" IsVisible="{Binding IsEmpty}">
-              <StackPanel Spacing="6">
-                <TextBlock Text="{Binding EmptyStateTitle}" FontSize="16" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding EmptyStateMessage}" Classes="secondary-text" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
-            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
-              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <Border Padding="14,10" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-                    <Grid ColumnDefinitions="1.5*,1.1*,0.8*,0.8*,1.6*,1.6*" ColumnSpacing="12">
-                      <StackPanel>
-                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Description}" Classes="muted-text" TextWrapping="Wrap" />
-                      </StackPanel>
-                      <TextBlock Grid.Column="1" Text="{Binding IntendedUsage}" />
-                      <TextBlock Grid.Column="2" Text="{Binding EnabledState}" />
-                      <TextBlock Grid.Column="3" Text="{Binding FavoriteState}" />
-                      <TextBlock Grid.Column="4" Text="{Binding Summary}" TextWrapping="Wrap" />
-                      <TextBlock Grid.Column="5" Text="{Binding Summary}" TextWrapping="Wrap" />
-                    </Grid>
-                  </Border>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </Grid>
+          <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+                  <Grid ColumnDefinitions="1.5*,1.0*,0.8*,0.8*,1.4*,1.4*" ColumnSpacing="8">
+                    <TextBlock Text="{Binding Name}" />
+                    <TextBlock Grid.Column="1" Text="{Binding IntendedUsage}" />
+                    <TextBlock Grid.Column="2" Text="{Binding EnabledState}" />
+                    <TextBlock Grid.Column="3" Text="{Binding FavoriteState}" />
+                    <TextBlock Grid.Column="4" Text="{Binding Summary}" TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="5" Text="{Binding Summary}" TextWrapping="Wrap" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
         </Grid>
       </Grid>
     </Border>
 
-    <Border Grid.Column="1" Classes="workspace-pane">
-      <Grid RowDefinitions="Auto,*">
-        <Border Classes="workspace-toolbar" Padding="14">
-          <Grid ColumnDefinitions="*,Auto,Auto,Auto">
-            <StackPanel Spacing="2">
-              <TextBlock Text="Template Properties" FontSize="20" FontWeight="SemiBold" />
-              <TextBlock Text="Selection-driven summary and edit commands using the shared M13 authoring surface." Classes="secondary-text" />
-            </StackPanel>
-            <Button Grid.Column="1" Classes="toolbar-action" Content="Favorite" Command="{Binding ToggleFavoriteCommand}" />
-            <Button Grid.Column="2" Classes="toolbar-action" Content="Delete" Command="{Binding DeleteTemplateCommand}" />
-            <TextBlock Grid.Column="3" Text="{Binding SelectedItem.Name}" VerticalAlignment="Center" FontWeight="SemiBold" />
-          </Grid>
-        </Border>
+    <Border Grid.Column="1" Classes="classic-side-panel" Padding="8">
+      <StackPanel>
+        <Button Classes="side-action" Content="New Template" Command="{Binding CreateNewCommand}" />
+        <Button Classes="side-action" Content="Edit" Command="{Binding EditTemplateCommand}" />
+        <Button Classes="side-action" Content="Clone" Command="{Binding CloneTemplateCommand}" />
+        <Button Classes="side-action" Content="Delete" Command="{Binding DeleteTemplateCommand}" />
+        <Button Classes="side-action" Content="Enable/Disable" Command="{Binding ToggleEnabledCommand}" />
+        <Button Classes="side-action" Content="Favorite" Command="{Binding ToggleFavoriteCommand}" />
+        <Button Classes="side-action" Content="Export/Import" IsEnabled="False" />
+      </StackPanel>
+    </Border>
 
-        <TabControl Grid.Row="1" Classes="workspace-inspector-tabs" Margin="14">
-          <TabItem Header="General">
-            <Grid ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8" Margin="0,12,0,0">
-              <TextBlock Text="Name" />
-              <TextBlock Grid.Column="1" Text="{Binding SelectedItem.Name}" />
-              <TextBlock Grid.Row="1" Text="Usage" />
-              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.IntendedUsage}" />
-              <TextBlock Grid.Row="2" Text="State" />
-              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PreviewStateSummary}" />
-              <TextBlock Grid.Row="3" Text="Summary" />
-              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.Summary}" TextWrapping="Wrap" />
-            </Grid>
-          </TabItem>
-          <TabItem Header="Details">
-            <StackPanel Spacing="10" Margin="0,12,0,0">
-              <TextBlock Text="{Binding PreviewSubjectSummary}" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding PreviewExtensionSummary}" TextWrapping="Wrap" />
-              <TextBox Classes="readonly-surface" Text="{Binding PreviewSummary}" IsReadOnly="True" AcceptsReturn="True" Height="180" TextWrapping="Wrap" />
-            </StackPanel>
-          </TabItem>
-          <TabItem Header="Validation">
-            <TextBox Margin="0,12,0,0" Classes="readonly-surface" Text="{Binding ValidationSummary}" IsReadOnly="True" AcceptsReturn="True" Height="240" TextWrapping="Wrap" />
-          </TabItem>
-        </TabControl>
-      </Grid>
+    <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="workspace-pane" Padding="8">
+      <TabControl Classes="workspace-inspector-tabs">
+        <TabItem Header="General">
+          <Grid Margin="6" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+            <TextBlock Text="Name" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedItem.Name}" />
+            <TextBlock Grid.Row="1" Text="Usage" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.IntendedUsage}" />
+            <TextBlock Grid.Row="2" Text="State" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PreviewStateSummary}" />
+            <TextBlock Grid.Row="3" Text="Summary" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.Summary}" TextWrapping="Wrap" />
+          </Grid>
+        </TabItem>
+        <TabItem Header="Details">
+          <Grid Margin="6" ColumnDefinitions="1*,1*">
+            <TextBox Classes="readonly-surface" Text="{Binding PreviewSubjectSummary}" IsReadOnly="True" />
+            <TextBox Grid.Column="1" Classes="readonly-surface" Text="{Binding PreviewExtensionSummary}" IsReadOnly="True" />
+          </Grid>
+        </TabItem>
+        <TabItem Header="Validation">
+          <TextBox Margin="6" Classes="readonly-surface" Text="{Binding ValidationSummary}" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" />
+        </TabItem>
+      </TabControl>
     </Border>
   </Grid>
 </UserControl>

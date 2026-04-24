@@ -76,6 +76,7 @@ public sealed class ShellViewModel : ViewModelBase
     private string _subtitle = "Core UI workflows";
     private bool _isBusy;
     private string _busyMessage = string.Empty;
+    private string _searchText = string.Empty;
     private AuthoringDialogKind _authoringDialogKind;
     private CertificateAuthoringViewModel? _activeCertificateAuthoring;
     private string _authoringDialogTitle = string.Empty;
@@ -204,10 +205,10 @@ public sealed class ShellViewModel : ViewModelBase
         WorkspaceNavigationItems =
         [
             new NavigationItemViewModel("Private Keys", "Keys", new DelegateCommand(() => SelectPage(PrivateKeysPage))),
-            new NavigationItemViewModel("CSRs", "Requests", new DelegateCommand(() => SelectPage(CertificateRequestsPage))),
+            new NavigationItemViewModel("Certificate signing requests", "Requests", new DelegateCommand(() => SelectPage(CertificateRequestsPage))),
             new NavigationItemViewModel("Certificates", "Certificates", new DelegateCommand(() => SelectPage(CertificatesPage))),
             new NavigationItemViewModel("Templates", "Templates", new DelegateCommand(() => SelectPage(TemplatesPage))),
-            new NavigationItemViewModel("CRLs", "Revocation", new DelegateCommand(() => SelectPage(CertificateRevocationListsPage)))
+            new NavigationItemViewModel("Revocation lists", "Revocation", new DelegateCommand(() => SelectPage(CertificateRevocationListsPage)))
         ];
         UtilityNavigationItems =
         [
@@ -257,6 +258,12 @@ public sealed class ShellViewModel : ViewModelBase
     {
         get => _busyMessage;
         private set => SetProperty(ref _busyMessage, value);
+    }
+
+    public string SearchText
+    {
+        get => _searchText;
+        set => SetProperty(ref _searchText, value);
     }
 
     public bool IsAuthoringDialogOpen => AuthoringDialogKind != AuthoringDialogKind.None;
@@ -330,6 +337,20 @@ public sealed class ShellViewModel : ViewModelBase
 
     public DatabaseSessionSnapshot Snapshot => _databaseSessionService.GetSnapshot();
 
+    public string WorkspaceStatus => Snapshot.DisplayName is null
+        ? Snapshot.StatusMessage
+        : $"{Snapshot.DisplayName} | {Snapshot.StatusMessage}";
+
+    public string CurrentSelectionSummary => CurrentPage switch
+    {
+        var _ when CurrentPage == PrivateKeysPage => PrivateKeysPage.SelectedItem is null ? "No private key selected" : $"Selected key: {PrivateKeysPage.SelectedItem.DisplayName}",
+        var _ when CurrentPage == CertificateRequestsPage => CertificateRequestsPage.SelectedItem is null ? "No request selected" : $"Selected request: {CertificateRequestsPage.SelectedItem.DisplayName}",
+        var _ when CurrentPage == CertificatesPage => CertificatesPage.SelectedItem is null ? "No certificate selected" : $"Selected certificate: {CertificatesPage.SelectedItem.DisplayName}",
+        var _ when CurrentPage == TemplatesPage => TemplatesPage.SelectedItem is null ? "No template selected" : $"Selected template: {TemplatesPage.SelectedItem.Name}",
+        var _ when CurrentPage == CertificateRevocationListsPage => CertificateRevocationListsPage.SelectedItem is null ? "No revocation list selected" : $"Selected CRL: {CertificateRevocationListsPage.SelectedItem.DisplayName}",
+        _ => Snapshot.DatabasePath ?? "No workspace selected"
+    };
+
     public ICommand CreateDatabaseCommand => _createDatabaseCommand;
 
     public ICommand OpenDatabaseCommand => _openDatabaseCommand;
@@ -339,6 +360,10 @@ public sealed class ShellViewModel : ViewModelBase
     public ICommand LockDatabaseCommand => _lockDatabaseCommand;
 
     public ICommand RefreshWorkspaceCommand => _refreshWorkspaceCommand;
+
+    public ICommand DashboardCommand => UtilityNavigationItems[0].Command;
+
+    public ICommand SettingsSecurityCommand => UtilityNavigationItems[1].Command;
 
     private async Task CreateDatabaseAsync()
     {
@@ -1404,6 +1429,8 @@ public sealed class ShellViewModel : ViewModelBase
         {
             item.IsSelected = item.Title == page.Title;
         }
+
+        OnPropertyChanged(nameof(CurrentSelectionSummary));
     }
 
     private void OnCertificatesPagePropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1418,6 +1445,7 @@ public sealed class ShellViewModel : ViewModelBase
                 _ = LoadSelectedCertificateInspectorAsync();
             }
 
+            OnPropertyChanged(nameof(CurrentSelectionSummary));
             RefreshCommandStates();
         }
     }
@@ -1452,6 +1480,7 @@ public sealed class ShellViewModel : ViewModelBase
                 _ = LoadSelectedTemplateAsync();
             }
 
+            OnPropertyChanged(nameof(CurrentSelectionSummary));
             RefreshCommandStates();
         }
     }
@@ -1498,6 +1527,8 @@ public sealed class ShellViewModel : ViewModelBase
         DashboardPage.DatabaseDisplayName = snapshot.DisplayName ?? "No database selected";
         DashboardPage.DatabasePath = snapshot.DatabasePath ?? "Open or create a database to begin.";
 
+        OnPropertyChanged(nameof(WorkspaceStatus));
+        OnPropertyChanged(nameof(CurrentSelectionSummary));
         RefreshCommandStates();
     }
 

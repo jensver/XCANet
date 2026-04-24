@@ -9,7 +9,7 @@ public sealed class CertificateRevocationListsPageViewModel : SelectableItemsPag
     private CertificateRevocationListInspectorData? _inspector;
 
     public CertificateRevocationListsPageViewModel()
-        : base("CRLs")
+        : base("Revocation lists")
     {
         EmptyStateTitle = "No CRLs available";
         EmptyStateMessage = "Generate a CRL from a CA certificate after revoking one or more issued certificates.";

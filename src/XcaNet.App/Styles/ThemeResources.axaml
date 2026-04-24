@@ -4,22 +4,22 @@
     <ResourceDictionary>
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Light">
-          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F7FB" />
-          <SolidColorBrush x:Key="ShellSidebarBrush" Color="#163047" />
-          <SolidColorBrush x:Key="ShellSidebarTextBrush" Color="#F8FAFC" />
-          <SolidColorBrush x:Key="ShellSidebarMutedTextBrush" Color="#C9D6E3" />
-          <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
-          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#F8FAFC" />
-          <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#EEF4FA" />
-          <SolidColorBrush x:Key="BorderSubtleBrush" Color="#D7E0EA" />
-          <SolidColorBrush x:Key="BorderStrongBrush" Color="#B7C5D6" />
-          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#102132" />
-          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#405769" />
-          <SolidColorBrush x:Key="TextMutedBrush" Color="#61788C" />
-          <SolidColorBrush x:Key="AccentBrush" Color="#0F6CBD" />
-          <SolidColorBrush x:Key="AccentMutedBrush" Color="#DCEBFA" />
-          <SolidColorBrush x:Key="SelectedSurfaceBrush" Color="#DCEBFA" />
-          <SolidColorBrush x:Key="SelectedBorderBrush" Color="#6EA9DE" />
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#E9E9E9" />
+          <SolidColorBrush x:Key="ShellSidebarBrush" Color="#E9E9E9" />
+          <SolidColorBrush x:Key="ShellSidebarTextBrush" Color="#1D1D1D" />
+          <SolidColorBrush x:Key="ShellSidebarMutedTextBrush" Color="#666666" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#F6F6F6" />
+          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#EFEFEF" />
+          <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#E2E2E2" />
+          <SolidColorBrush x:Key="BorderSubtleBrush" Color="#A8A8A8" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#7E7E7E" />
+          <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1E1E1E" />
+          <SolidColorBrush x:Key="TextSecondaryBrush" Color="#4F4F4F" />
+          <SolidColorBrush x:Key="TextMutedBrush" Color="#707070" />
+          <SolidColorBrush x:Key="AccentBrush" Color="#2B579A" />
+          <SolidColorBrush x:Key="AccentMutedBrush" Color="#D8E1F0" />
+          <SolidColorBrush x:Key="SelectedSurfaceBrush" Color="#D7DCE4" />
+          <SolidColorBrush x:Key="SelectedBorderBrush" Color="#6E7E96" />
           <SolidColorBrush x:Key="DisabledSurfaceBrush" Color="#EDF2F7" />
           <SolidColorBrush x:Key="DisabledTextBrush" Color="#7B8795" />
           <SolidColorBrush x:Key="SuccessBrush" Color="#1F7A4D" />
@@ -35,15 +35,15 @@
           <SolidColorBrush x:Key="DialogOverlayBrush" Color="#88081824" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
-          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#111827" />
-          <SolidColorBrush x:Key="ShellSidebarBrush" Color="#081624" />
+          <SolidColorBrush x:Key="AppBackgroundBrush" Color="#1E1E1E" />
+          <SolidColorBrush x:Key="ShellSidebarBrush" Color="#1E1E1E" />
           <SolidColorBrush x:Key="ShellSidebarTextBrush" Color="#F8FAFC" />
           <SolidColorBrush x:Key="ShellSidebarMutedTextBrush" Color="#A9BCD0" />
-          <SolidColorBrush x:Key="SurfaceBrush" Color="#162130" />
-          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#101A27" />
-          <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#1D2A39" />
-          <SolidColorBrush x:Key="BorderSubtleBrush" Color="#314355" />
-          <SolidColorBrush x:Key="BorderStrongBrush" Color="#486078" />
+          <SolidColorBrush x:Key="SurfaceBrush" Color="#2B2B2B" />
+          <SolidColorBrush x:Key="SurfaceAltBrush" Color="#242424" />
+          <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#333333" />
+          <SolidColorBrush x:Key="BorderSubtleBrush" Color="#666666" />
+          <SolidColorBrush x:Key="BorderStrongBrush" Color="#8D8D8D" />
           <SolidColorBrush x:Key="TextPrimaryBrush" Color="#E5EDF5" />
           <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B8C7D6" />
           <SolidColorBrush x:Key="TextMutedBrush" Color="#90A4B8" />
@@ -78,28 +78,28 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.surface-subtle">
     <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.status-pill">
     <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.workspace-shell">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="14" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.workspace-toolbar">
@@ -118,36 +118,35 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.authoring-dialog-shell">
     <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="16" />
-    <Setter Property="BoxShadow" Value="0 20 48 0 #40000000" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.empty-state">
     <Setter Property="Background" Value="{DynamicResource EmptyStateBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.info-panel">
     <Setter Property="Background" Value="{DynamicResource InfoMutedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.validation-panel">
     <Setter Property="Background" Value="{DynamicResource ValidationBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource WarningBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="Border.notification-chip">
@@ -181,7 +180,7 @@
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CornerRadius" Value="0" />
     <Setter Property="Foreground" Value="{DynamicResource ShellSidebarTextBrush}" />
   </Style>
 
@@ -225,12 +224,30 @@
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
   </Style>
 
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+  </Style>
+
+  <Style Selector="Menu">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+
+  <Style Selector="MenuItem">
+    <Setter Property="Padding" Value="10,4" />
+  </Style>
+
   <Style Selector="Button.workspace-tab">
-    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
-    <Setter Property="Padding" Value="16,10" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="10,5" />
   </Style>
 
   <Style Selector="Button.workspace-tab:pointerover">
@@ -247,13 +264,34 @@
     <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="10" />
-    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="Padding" Value="8,4" />
   </Style>
 
   <Style Selector="Button.toolbar-action">
-    <Setter Property="Padding" Value="12,8" />
-    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Padding" Value="8,4" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+
+  <Style Selector="Button.side-action">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Margin" Value="0,0,0,6" />
+    <Setter Property="MinWidth" Value="132" />
+  </Style>
+
+  <Style Selector="Border.classic-side-panel">
+    <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="0" />
+  </Style>
+
+  <Style Selector="Border.classic-status-bar">
+    <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource BorderSubtleBrush}" />
+    <Setter Property="BorderThickness" Value="1,1,1,0" />
+    <Setter Property="CornerRadius" Value="0" />
   </Style>
 
   <Style Selector="TextBlock.table-header-text">
@@ -271,7 +309,7 @@
   </Style>
 
   <Style Selector="TabControl.workspace-inspector-tabs TabItem">
-    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="Padding" Value="8,4" />
   </Style>
 
   <Style Selector="TabControl.authoring-tabs">
@@ -283,6 +321,6 @@
   </Style>
 
   <Style Selector="TabControl.authoring-tabs TabItem">
-    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="Padding" Value="8,4" />
   </Style>
 </Styles>
