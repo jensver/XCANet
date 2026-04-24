@@ -17,4 +17,9 @@ public sealed record CertificateListItem(
     DateTimeOffset? RevokedAt,
     Guid? IssuerCertificateId,
     Guid? PrivateKeyId,
-    int ChildCertificateCount);
+    int ChildCertificateCount)
+{
+    public string CertificateKind => IsCertificateAuthority ? "CA" : "Leaf";
+
+    public string PrivateKeyStatus => PrivateKeyId is null ? "No" : "Yes";
+}

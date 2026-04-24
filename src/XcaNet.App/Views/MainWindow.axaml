@@ -1,5 +1,6 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shared="using:XcaNet.App.Views.Shared"
         x:Class="XcaNet.App.Views.MainWindow"
         Width="1400"
         Height="920"
@@ -7,74 +8,89 @@
         MinHeight="760"
         DragDrop.AllowDrop="True"
         Title="XcaNet">
-  <Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,*">
-    <Border Grid.RowSpan="3" Background="{DynamicResource ShellSidebarBrush}" Padding="18">
-      <StackPanel Spacing="16">
-        <StackPanel Spacing="4">
-          <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource ShellSidebarTextBrush}" />
-          <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource ShellSidebarMutedTextBrush}" TextWrapping="Wrap" />
-        </StackPanel>
-
-        <ItemsControl ItemsSource="{Binding NavigationItems}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate>
-              <Button Command="{Binding Command}"
-                      Classes="nav-item"
-                      Classes.is-selected="{Binding IsSelected}"
-                      HorizontalContentAlignment="Left"
-                      Padding="14,10"
-                      Margin="0,0,0,8">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <TextBlock Text="{Binding Glyph}" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding Title}" />
-                </StackPanel>
-              </Button>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
+  <Grid RowDefinitions="Auto,Auto,*,Auto">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Background="{DynamicResource SurfaceBrush}">
+      <Menu>
+        <MenuItem Header="_File">
+          <MenuItem Header="Create Database" Command="{Binding CreateDatabaseCommand}" />
+          <MenuItem Header="Open Database" Command="{Binding OpenDatabaseCommand}" />
+          <Separator />
+          <MenuItem Header="Unlock" Command="{Binding UnlockDatabaseCommand}" />
+          <MenuItem Header="Lock" Command="{Binding LockDatabaseCommand}" />
+          <Separator />
+          <MenuItem Header="Refresh" Command="{Binding RefreshWorkspaceCommand}" />
+        </MenuItem>
+        <MenuItem Header="_Token">
+          <MenuItem Header="No token actions yet" IsEnabled="False" />
+        </MenuItem>
+        <MenuItem Header="_Help">
+          <MenuItem Header="Overview" Command="{Binding DashboardCommand}" />
+          <MenuItem Header="Settings / Security" Command="{Binding SettingsSecurityCommand}" />
+        </MenuItem>
+      </Menu>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0" Spacing="10">
+        <TextBlock Text="{Binding SettingsSecurityPage.DisplayName}" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding SettingsSecurityPage.SessionState}" Classes="secondary-text" VerticalAlignment="Center" />
       </StackPanel>
-    </Border>
+    </Grid>
 
-    <Border Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Padding="20,16" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="4">
-          <TextBlock Text="{Binding CurrentPage.Title}" FontSize="26" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding SettingsSecurityPage.StatusMessage}" Classes="secondary-text" TextWrapping="Wrap" />
-        </StackPanel>
-        <Border Grid.Column="1"
-                Classes="status-pill"
-                Padding="12,8"
-                IsVisible="{Binding IsBusy}">
-          <TextBlock Text="{Binding BusyMessage}" FontWeight="SemiBold" />
-        </Border>
-      </Grid>
-    </Border>
-
-    <Border Grid.Row="1" Grid.Column="1" Padding="20,10" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-      <ItemsControl ItemsSource="{Binding Notifications}">
+    <Border Grid.Row="1" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1" Background="{DynamicResource SurfaceAltBrush}" Padding="6,4">
+      <ItemsControl ItemsSource="{Binding WorkspaceNavigationItems}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <StackPanel Orientation="Horizontal" Spacing="10" />
+            <StackPanel Orientation="Horizontal" Spacing="4" />
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Border Classes="notification-chip"
-                    Classes.success="{Binding IsSuccess}"
-                    Classes.warning="{Binding IsWarning}"
-                    Classes.error="{Binding IsError}"
-                    Classes.info="{Binding IsInfo}"
-                    Padding="12,8">
-              <StackPanel Spacing="2">
-                <TextBlock Text="{Binding Level}" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding Message}" MaxWidth="420" TextWrapping="Wrap" />
-              </StackPanel>
-            </Border>
+            <Button Command="{Binding Command}" Classes="workspace-tab" Classes.is-selected="{Binding IsSelected}">
+              <TextBlock Text="{Binding Title}" />
+            </Button>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </Border>
 
-    <ContentControl Grid.Row="2" Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Content="{Binding CurrentPage}" Margin="20" />
+    <Grid Grid.Row="2" Margin="8,6,8,0">
+      <ContentControl Content="{Binding CurrentPage}" />
+    </Grid>
+
+    <Border Grid.Row="3" Classes="classic-status-bar" Padding="6,4">
+      <Grid ColumnDefinitions="2.2*,1.2*,1.3*">
+        <TextBlock Text="{Binding WorkspaceStatus}" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <TextBox Grid.Column="1" Margin="8,0" Text="{Binding SearchText}" Watermark="Search current workspace" />
+        <TextBlock Grid.Column="2" Text="{Binding CurrentSelectionSummary}" VerticalAlignment="Center" TextAlignment="Right" TextWrapping="Wrap" />
+      </Grid>
+    </Border>
+
+    <Border Grid.RowSpan="4"
+            Background="{DynamicResource DialogOverlayBrush}"
+            IsVisible="{Binding IsAuthoringDialogOpen}">
+      <Grid Margin="36">
+        <Border Classes="authoring-dialog-shell"
+                Width="980"
+                MaxWidth="980"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="12">
+          <Grid RowDefinitions="Auto,*" RowSpacing="10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="2">
+                <TextBlock Text="{Binding AuthoringDialogTitle}" FontSize="18" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding AuthoringDialogSubtitle}" Classes="secondary-text" />
+              </StackPanel>
+              <Button Grid.Column="1" Content="Close" Command="{Binding CloseAuthoringDialogCommand}" />
+            </Grid>
+
+            <Grid Grid.Row="1">
+              <shared:CertificateAuthoringSurfaceView DataContext="{Binding ActiveCertificateAuthoring}"
+                                                     IsVisible="{Binding IsCertificateAuthoringDialogOpen}" />
+              <shared:TemplateAuthoringDialogView DataContext="{Binding TemplatesPage}"
+                                                 IsVisible="{Binding IsTemplateAuthoringDialogOpen}" />
+            </Grid>
+          </Grid>
+        </Border>
+      </Grid>
+    </Border>
   </Grid>
 </Window>

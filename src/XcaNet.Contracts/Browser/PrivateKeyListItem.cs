@@ -6,4 +6,9 @@ public sealed record PrivateKeyListItem(
     string Algorithm,
     string PublicKeyFingerprint,
     DateTimeOffset CreatedUtc,
-    int LinkedCertificateCount);
+    int LinkedCertificateCount)
+{
+    public string SizeOrCurve => Algorithm;
+
+    public string RelatedObjectSummary => $"{LinkedCertificateCount} linked";
+}

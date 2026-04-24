@@ -1,0 +1,42 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:XcaNet.App.Views.Shared"
+             x:Class="XcaNet.App.Views.Shared.TemplateAuthoringDialogView">
+  <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+    <Grid ColumnDefinitions="*,220,Auto,Auto" ColumnSpacing="8">
+      <TextBox Text="{Binding Name}" Watermark="Template name" />
+      <ComboBox Grid.Column="1" ItemsSource="{Binding IntendedUsages}" SelectedItem="{Binding IntendedUsage}" />
+      <CheckBox Grid.Column="2" Content="Enabled" IsChecked="{Binding IsEnabled}" VerticalAlignment="Center" />
+      <CheckBox Grid.Column="3" Content="Favorite" IsChecked="{Binding IsFavorite}" VerticalAlignment="Center" />
+    </Grid>
+
+    <Grid Grid.Row="1" ColumnDefinitions="*,260" ColumnSpacing="10">
+      <shared:CertificateAuthoringSurfaceView DataContext="{Binding Authoring}" />
+      <TabControl Grid.Column="1" Classes="workspace-inspector-tabs">
+        <TabItem Header="Summary">
+          <TextBox Margin="8" Classes="readonly-surface"
+                   Text="{Binding PreviewSummary}"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   Height="300"
+                   TextWrapping="Wrap" />
+        </TabItem>
+        <TabItem Header="Validation">
+          <TextBox Margin="8" Classes="readonly-surface"
+                   Text="{Binding ValidationSummary}"
+                   IsReadOnly="True"
+                   AcceptsReturn="True"
+                   Height="300"
+                   TextWrapping="Wrap" />
+        </TabItem>
+      </TabControl>
+    </Grid>
+
+    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+      <TextBox Text="{Binding Description}" Watermark="Description" />
+      <Button Grid.Column="1" Content="Clone" Command="{Binding CloneTemplateCommand}" />
+      <Button Grid.Column="2" Content="Delete" Command="{Binding DeleteTemplateCommand}" />
+      <Button Grid.Column="3" Content="Save Template" Command="{Binding SaveTemplateCommand}" />
+    </Grid>
+  </Grid>
+</UserControl>

@@ -7,4 +7,9 @@ public sealed record TemplateListItem(
     TemplateIntendedUsage IntendedUsage,
     bool IsFavorite,
     bool IsEnabled,
-    string Summary);
+    string Summary)
+{
+    public string EnabledState => IsEnabled ? "Enabled" : "Disabled";
+
+    public string FavoriteState => IsFavorite ? "Favorite" : "Standard";
+}

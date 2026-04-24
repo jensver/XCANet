@@ -132,6 +132,140 @@ public sealed class PageViewModelTests
         Assert.Contains("Server Authentication", saveRequest.EnhancedKeyUsages);
     }
 
+    [Fact]
+    public void CertificateAuthoringViewModel_ApplyTemplateDefaults_ShouldRespectMode()
+    {
+        var page = new CertificateAuthoringViewModel(
+            "CSR Authoring",
+            "Operation: create request",
+            "Source: selected key",
+            "Original Display",
+            "CN=original.example.test",
+            180,
+            false,
+            "DigitalSignature",
+            "Server Authentication",
+            true,
+            true,
+            false,
+            true,
+            true,
+            "Create CSR");
+        var defaults = new AppliedTemplateDefaults(
+            Guid.NewGuid(),
+            "Template Display",
+            TemplateWorkflowKind.CertificateSigningRequest,
+            "CN=template.example.test",
+            ["template.example.test", "api.template.example.test"],
+            KeyAlgorithmKind.Ecdsa,
+            null,
+            EllipticCurveKind.P384,
+            "SHA-384",
+            397,
+            true,
+            2,
+            ["DigitalSignature", "KeyEncipherment"],
+            ["Client Authentication"],
+            new TemplatePreviewSummary("usage", "subject", "san", "key", "validity", "extensions", "state"),
+            new TemplateValidationSummary([], []));
+
+        page.SelectedTemplateApplicationMode = TemplateApplicationModeView.SubjectOnly;
+        page.ApplyTemplateDefaults(defaults);
+
+        Assert.Equal("Original Display", page.DisplayName);
+        Assert.Equal("CN=template.example.test", page.SubjectName);
+        Assert.Equal("template.example.test, api.template.example.test", page.SubjectAlternativeNames);
+        Assert.Equal(180, page.ValidityDays);
+        Assert.False(page.IsCertificateAuthority);
+
+        page.SelectedTemplateApplicationMode = TemplateApplicationModeView.ExtensionsOnly;
+        page.ApplyTemplateDefaults(defaults);
+
+        Assert.True(page.IsCertificateAuthority);
+        Assert.True(page.HasPathLengthConstraint);
+        Assert.Equal(2, page.PathLengthConstraint);
+        Assert.Equal("DigitalSignature, KeyEncipherment", page.KeyUsages);
+        Assert.Equal("Client Authentication", page.EnhancedKeyUsages);
+        Assert.Equal(KeyAlgorithmKind.Rsa, page.KeyAlgorithm);
+
+        page.SelectedTemplateApplicationMode = TemplateApplicationModeView.Full;
+        page.ApplyTemplateDefaults(defaults);
+
+        Assert.Equal("Template Display", page.DisplayName);
+        Assert.Equal(KeyAlgorithmKind.Ecdsa, page.KeyAlgorithm);
+        Assert.Equal(EllipticCurveKind.P384, page.Curve);
+        Assert.Equal("SHA-384", page.SignatureAlgorithm);
+        Assert.Equal(397, page.ValidityDays);
+    }
+
+    [Fact]
+    public void TemplatesPageViewModel_ShouldLoadCertificateAndRequestIntoCentralAuthoringSurface()
+    {
+        var page = new TemplatesPageViewModel();
+        var certificate = CreateCertificateListItem(Guid.NewGuid(), "Leaf");
+        var request = new CertificateRequestListItem(
+            Guid.NewGuid(),
+            "Leaf CSR",
+            "CN=leaf.example.test",
+            Guid.NewGuid(),
+            new NavigationTarget(BrowserEntityType.PrivateKey, Guid.NewGuid(), NavigationFocusSection.Overview),
+            "ECDSA",
+            "leaf.example.test, api.example.test",
+            DateTimeOffset.UtcNow);
+        var inspector = new CertificateInspectorData(
+            certificate.CertificateId,
+            new CertificateDisplayFields(certificate.DisplayName, "range", "Leaf", "Issuer", "Leaf Key"),
+            new CertificateRawFields(
+                certificate.Subject,
+                certificate.Issuer,
+                certificate.SerialNumber,
+                DateTimeOffset.UtcNow.AddDays(-1),
+                DateTimeOffset.UtcNow.AddDays(364),
+                certificate.Sha1Thumbprint,
+                certificate.Sha256Thumbprint,
+                certificate.KeyAlgorithm),
+            new CertificateExtensionFields(
+                false,
+                ["leaf.example.test"],
+                ["DigitalSignature", "KeyEncipherment"],
+                ["Server Authentication"]),
+            new CertificateRevocationInfo(false, "Active", null, null, null),
+            new CertificateNavigationInfo(null, null, []));
+
+        page.PrepareTemplateFromCertificate(certificate, inspector);
+
+        Assert.Equal("Leaf derived template", page.Name);
+        Assert.Equal(TemplateIntendedUsage.EndEntityCertificate, page.IntendedUsage);
+        Assert.Equal("CN=Leaf", page.Authoring.SubjectName);
+        Assert.Equal("leaf.example.test", page.Authoring.SubjectAlternativeNames);
+        Assert.Equal("DigitalSignature, KeyEncipherment", page.Authoring.KeyUsages);
+
+        page.PrepareTemplateFromCertificateRequest(request);
+
+        Assert.Equal("Leaf CSR derived template", page.Name);
+        Assert.Equal(TemplateIntendedUsage.CertificateSigningRequest, page.IntendedUsage);
+        Assert.Equal("CN=leaf.example.test", page.Authoring.SubjectName);
+        Assert.Equal("leaf.example.test, api.example.test", page.Authoring.SubjectAlternativeNames);
+        Assert.Equal(KeyAlgorithmKind.Ecdsa, page.Authoring.KeyAlgorithm);
+    }
+
+    [Fact]
+    public void BrowserListItems_ShouldExposeWorkspaceDisplaySummaries()
+    {
+        var privateKey = new PrivateKeyListItem(Guid.NewGuid(), "Issuer Key", "RSA 3072", "fp", DateTimeOffset.UtcNow, 2);
+        var request = new CertificateRequestListItem(Guid.NewGuid(), "Leaf CSR", "CN=leaf.example.test", Guid.NewGuid(), null, "ECDSA P-256", "leaf.example.test", DateTimeOffset.UtcNow);
+        var certificate = CreateCertificateListItem(Guid.NewGuid(), "Leaf");
+        var template = new TemplateListItem(Guid.NewGuid(), "Server", "desc", TemplateIntendedUsage.EndEntityCertificate, true, false, "summary");
+
+        Assert.Equal("RSA 3072", privateKey.SizeOrCurve);
+        Assert.Equal("2 linked", privateKey.RelatedObjectSummary);
+        Assert.Equal("Stored key", request.PrivateKeySummary);
+        Assert.Equal("Leaf", certificate.CertificateKind);
+        Assert.Equal("No", certificate.PrivateKeyStatus);
+        Assert.Equal("Disabled", template.EnabledState);
+        Assert.Equal("Favorite", template.FavoriteState);
+    }
+
     private static CertificateListItem CreateCertificateListItem(Guid id, string displayName, bool isCertificateAuthority = false)
     {
         return new CertificateListItem(

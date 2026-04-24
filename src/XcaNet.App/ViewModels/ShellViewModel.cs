@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Text;
+using System.Windows.Input;
 using Microsoft.Extensions.Logging;
 using XcaNet.App.Commands;
 using XcaNet.App.Services;
@@ -40,11 +41,14 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly DelegateCommand _navigateChildCertificateCommand;
     private readonly AsyncCommand _refreshPrivateKeysCommand;
     private readonly AsyncCommand _generateKeyCommand;
+    private readonly DelegateCommand _openSelfSignedCaAuthoringCommand;
+    private readonly DelegateCommand _openCertificateSigningRequestAuthoringCommand;
     private readonly AsyncCommand _createSelfSignedCaCommand;
     private readonly AsyncCommand _createCertificateSigningRequestCommand;
     private readonly AsyncCommand _exportPrivateKeyCommand;
     private readonly AsyncCommand _exportPrivateKeyToFileCommand;
     private readonly AsyncCommand _refreshCertificateRequestsCommand;
+    private readonly DelegateCommand _openIssuanceAuthoringCommand;
     private readonly AsyncCommand _signCertificateSigningRequestCommand;
     private readonly AsyncCommand _exportCertificateSigningRequestCommand;
     private readonly AsyncCommand _exportCertificateSigningRequestToFileCommand;
@@ -54,6 +58,7 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly DelegateCommand _navigateCrlIssuerCommand;
     private readonly AsyncCommand _refreshTemplatesCommand;
     private readonly AsyncCommand _createTemplateCommand;
+    private readonly DelegateCommand _editTemplateCommand;
     private readonly AsyncCommand _saveTemplateCommand;
     private readonly AsyncCommand _cloneTemplateCommand;
     private readonly AsyncCommand _toggleTemplateFavoriteCommand;
@@ -62,11 +67,20 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _applySelfSignedCaTemplateCommand;
     private readonly AsyncCommand _applyCertificateSigningRequestTemplateCommand;
     private readonly AsyncCommand _applyIssuanceTemplateCommand;
+    private readonly DelegateCommand _createTemplateFromCertificateCommand;
+    private readonly DelegateCommand _createTemplateFromRequestCommand;
+    private readonly DelegateCommand _createSimilarRequestCommand;
+    private readonly DelegateCommand _closeAuthoringDialogCommand;
 
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
     private bool _isBusy;
     private string _busyMessage = string.Empty;
+    private string _searchText = string.Empty;
+    private AuthoringDialogKind _authoringDialogKind;
+    private CertificateAuthoringViewModel? _activeCertificateAuthoring;
+    private string _authoringDialogTitle = string.Empty;
+    private string _authoringDialogSubtitle = string.Empty;
 
     public ShellViewModel(IDatabaseSessionService databaseSessionService, IDesktopFileDialogService fileDialogService, ILogger<ShellViewModel> logger)
     {
@@ -101,12 +115,15 @@ public sealed class ShellViewModel : ViewModelBase
         _navigateChildCertificateCommand = new DelegateCommand(() => NavigateTo(CertificatesPage.SelectedChildNavigationItem?.Target), () => CertificatesPage.SelectedChildNavigationItem is not null);
         _refreshPrivateKeysCommand = new AsyncCommand(LoadPrivateKeysAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _generateKeyCommand = new AsyncCommand(GenerateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
+        _openSelfSignedCaAuthoringCommand = new DelegateCommand(OpenSelfSignedCaAuthoring, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
+        _openCertificateSigningRequestAuthoringCommand = new DelegateCommand(OpenCertificateSigningRequestAuthoring, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _createSelfSignedCaCommand = new AsyncCommand(CreateSelfSignedCaAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _createCertificateSigningRequestCommand = new AsyncCommand(CreateCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _exportPrivateKeyCommand = new AsyncCommand(ExportSelectedPrivateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _exportPrivateKeyToFileCommand = new AsyncCommand(ExportSelectedPrivateKeyToFileAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _refreshCertificateRequestsCommand = new AsyncCommand(LoadCertificateRequestsAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
-        _signCertificateSigningRequestCommand = new AsyncCommand(SignCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection && CertificateRequestsPage.SelectedIssuerCertificate is not null && CertificateRequestsPage.SelectedIssuerPrivateKey is not null);
+        _openIssuanceAuthoringCommand = new DelegateCommand(OpenIssuanceAuthoring, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection);
+        _signCertificateSigningRequestCommand = new AsyncCommand(SignCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection && CertificateRequestsPage.IssuanceAuthoring.SelectedIssuerCertificate is not null && CertificateRequestsPage.IssuanceAuthoring.SelectedIssuerPrivateKey is not null);
         _exportCertificateSigningRequestCommand = new AsyncCommand(ExportSelectedCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection);
         _exportCertificateSigningRequestToFileCommand = new AsyncCommand(ExportSelectedCertificateSigningRequestToFileAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection);
         _navigateRequestPrivateKeyCommand = new DelegateCommand(() => NavigateTo(CertificateRequestsPage.SelectedItem?.PrivateKeyTarget), () => CertificateRequestsPage.SelectedItem?.PrivateKeyTarget is not null);
@@ -115,14 +132,19 @@ public sealed class ShellViewModel : ViewModelBase
         _navigateCrlIssuerCommand = new DelegateCommand(() => NavigateTo(CertificateRevocationListsPage.Inspector?.IssuerTarget), () => CertificateRevocationListsPage.Inspector?.IssuerTarget is not null);
         _refreshTemplatesCommand = new AsyncCommand(LoadTemplatesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _createTemplateCommand = new AsyncCommand(CreateNewTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
+        _editTemplateCommand = new DelegateCommand(OpenTemplateAuthoringFromSelection, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _saveTemplateCommand = new AsyncCommand(SaveTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _cloneTemplateCommand = new AsyncCommand(CloneTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _toggleTemplateFavoriteCommand = new AsyncCommand(ToggleTemplateFavoriteAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _toggleTemplateEnabledCommand = new AsyncCommand(ToggleTemplateEnabledAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _deleteTemplateCommand = new AsyncCommand(DeleteTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
-        _applySelfSignedCaTemplateCommand = new AsyncCommand(ApplySelfSignedCaTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && PrivateKeysPage.SelectedSelfSignedCaTemplate is not null);
-        _applyCertificateSigningRequestTemplateCommand = new AsyncCommand(ApplyCertificateSigningRequestTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && PrivateKeysPage.SelectedCertificateSigningRequestTemplate is not null);
-        _applyIssuanceTemplateCommand = new AsyncCommand(ApplyIssuanceTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && CertificateRequestsPage.SelectedIssuanceTemplate is not null);
+        _applySelfSignedCaTemplateCommand = new AsyncCommand(ApplySelfSignedCaTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && PrivateKeysPage.SelfSignedCaAuthoring.SelectedTemplate is not null);
+        _applyCertificateSigningRequestTemplateCommand = new AsyncCommand(ApplyCertificateSigningRequestTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedTemplate is not null);
+        _applyIssuanceTemplateCommand = new AsyncCommand(ApplyIssuanceTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && CertificateRequestsPage.IssuanceAuthoring.SelectedTemplate is not null);
+        _createTemplateFromCertificateCommand = new DelegateCommand(CreateTemplateFromCertificate, () => CertificatesPage.SelectedItem is not null);
+        _createTemplateFromRequestCommand = new DelegateCommand(CreateTemplateFromRequest, () => CertificateRequestsPage.SelectedItem is not null);
+        _createSimilarRequestCommand = new DelegateCommand(CreateSimilarRequest, () => CertificateRequestsPage.SelectedItem is not null);
+        _closeAuthoringDialogCommand = new DelegateCommand(CloseAuthoringDialog, () => IsAuthoringDialogOpen && !IsBusy);
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
         SettingsSecurityPage.OpenDatabaseCommand = _openDatabaseCommand;
@@ -138,54 +160,76 @@ public sealed class ShellViewModel : ViewModelBase
         CertificatesPage.OpenIssuerCommand = _navigateIssuerCommand;
         CertificatesPage.OpenPrivateKeyCommand = _navigatePrivateKeyCommand;
         CertificatesPage.OpenChildCertificateCommand = _navigateChildCertificateCommand;
+        CertificatesPage.CreateTemplateFromCertificateCommand = _createTemplateFromCertificateCommand;
 
         PrivateKeysPage.RefreshCommand = _refreshPrivateKeysCommand;
         PrivateKeysPage.GenerateKeyCommand = _generateKeyCommand;
+        PrivateKeysPage.OpenSelfSignedCaAuthoringCommand = _openSelfSignedCaAuthoringCommand;
+        PrivateKeysPage.OpenCertificateSigningRequestAuthoringCommand = _openCertificateSigningRequestAuthoringCommand;
         PrivateKeysPage.CreateSelfSignedCaCommand = _createSelfSignedCaCommand;
         PrivateKeysPage.CreateCertificateSigningRequestCommand = _createCertificateSigningRequestCommand;
         PrivateKeysPage.ApplySelfSignedCaTemplateCommand = _applySelfSignedCaTemplateCommand;
         PrivateKeysPage.ApplyCertificateSigningRequestTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
         PrivateKeysPage.ExportSelectedCommand = _exportPrivateKeyCommand;
         PrivateKeysPage.ExportSelectedToFileCommand = _exportPrivateKeyToFileCommand;
+        PrivateKeysPage.SelfSignedCaAuthoring.ApplyTemplateCommand = _applySelfSignedCaTemplateCommand;
+        PrivateKeysPage.SelfSignedCaAuthoring.PrimaryActionCommand = _createSelfSignedCaCommand;
+        PrivateKeysPage.CertificateSigningRequestAuthoring.ApplyTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
+        PrivateKeysPage.CertificateSigningRequestAuthoring.PrimaryActionCommand = _createCertificateSigningRequestCommand;
 
         CertificateRequestsPage.RefreshCommand = _refreshCertificateRequestsCommand;
+        CertificateRequestsPage.OpenIssuanceAuthoringCommand = _openIssuanceAuthoringCommand;
         CertificateRequestsPage.SignSelectedCommand = _signCertificateSigningRequestCommand;
         CertificateRequestsPage.ApplyIssuanceTemplateCommand = _applyIssuanceTemplateCommand;
         CertificateRequestsPage.ExportSelectedCommand = _exportCertificateSigningRequestCommand;
         CertificateRequestsPage.ExportSelectedToFileCommand = _exportCertificateSigningRequestToFileCommand;
         CertificateRequestsPage.OpenSelectedPrivateKeyCommand = _navigateRequestPrivateKeyCommand;
+        CertificateRequestsPage.CreateTemplateFromRequestCommand = _createTemplateFromRequestCommand;
+        CertificateRequestsPage.CreateSimilarRequestCommand = _createSimilarRequestCommand;
+        CertificateRequestsPage.IssuanceAuthoring.ApplyTemplateCommand = _applyIssuanceTemplateCommand;
+        CertificateRequestsPage.IssuanceAuthoring.PrimaryActionCommand = _signCertificateSigningRequestCommand;
 
         CertificateRevocationListsPage.RefreshCommand = _refreshCertificateRevocationListsCommand;
         CertificateRevocationListsPage.ExportSelectedCommand = _exportCertificateRevocationListToFileCommand;
         CertificateRevocationListsPage.OpenIssuerCommand = _navigateCrlIssuerCommand;
         TemplatesPage.RefreshCommand = _refreshTemplatesCommand;
         TemplatesPage.CreateNewCommand = _createTemplateCommand;
+        TemplatesPage.EditTemplateCommand = _editTemplateCommand;
         TemplatesPage.SaveTemplateCommand = _saveTemplateCommand;
         TemplatesPage.CloneTemplateCommand = _cloneTemplateCommand;
         TemplatesPage.ToggleFavoriteCommand = _toggleTemplateFavoriteCommand;
         TemplatesPage.ToggleEnabledCommand = _toggleTemplateEnabledCommand;
         TemplatesPage.DeleteTemplateCommand = _deleteTemplateCommand;
+        TemplatesPage.Authoring.PrimaryActionCommand = _saveTemplateCommand;
 
-        NavigationItems =
+        WorkspaceNavigationItems =
+        [
+            new NavigationItemViewModel("Private Keys", "Keys", new DelegateCommand(() => SelectPage(PrivateKeysPage))),
+            new NavigationItemViewModel("Certificate signing requests", "Requests", new DelegateCommand(() => SelectPage(CertificateRequestsPage))),
+            new NavigationItemViewModel("Certificates", "Certificates", new DelegateCommand(() => SelectPage(CertificatesPage))),
+            new NavigationItemViewModel("Templates", "Templates", new DelegateCommand(() => SelectPage(TemplatesPage))),
+            new NavigationItemViewModel("Revocation lists", "Revocation", new DelegateCommand(() => SelectPage(CertificateRevocationListsPage)))
+        ];
+        UtilityNavigationItems =
         [
             new NavigationItemViewModel("Dashboard", "Overview", new DelegateCommand(() => SelectPage(DashboardPage))),
-            new NavigationItemViewModel("Certificates", "Browse", new DelegateCommand(() => SelectPage(CertificatesPage))),
-            new NavigationItemViewModel("Private Keys", "Secure", new DelegateCommand(() => SelectPage(PrivateKeysPage))),
-            new NavigationItemViewModel("CSRs", "Requests", new DelegateCommand(() => SelectPage(CertificateRequestsPage))),
-            new NavigationItemViewModel("CRLs", "Revocation", new DelegateCommand(() => SelectPage(CertificateRevocationListsPage))),
-            new NavigationItemViewModel("Templates", "Presets", new DelegateCommand(() => SelectPage(TemplatesPage))),
             new NavigationItemViewModel("Settings / Security", "Database", new DelegateCommand(() => SelectPage(SettingsSecurityPage)))
         ];
+        NavigationItems = [.. WorkspaceNavigationItems, .. UtilityNavigationItems];
 
-        _currentPage = DashboardPage;
+        _currentPage = CertificatesPage;
 
         CertificatesPage.PropertyChanged += OnCertificatesPagePropertyChanged;
         PrivateKeysPage.PropertyChanged += OnPageSelectionChanged;
         CertificateRequestsPage.PropertyChanged += OnPageSelectionChanged;
         CertificateRevocationListsPage.PropertyChanged += OnPageSelectionChanged;
         TemplatesPage.PropertyChanged += OnPageSelectionChanged;
+        PrivateKeysPage.SelfSignedCaAuthoring.PropertyChanged += OnAuthoringPropertyChanged;
+        PrivateKeysPage.CertificateSigningRequestAuthoring.PropertyChanged += OnAuthoringPropertyChanged;
+        CertificateRequestsPage.IssuanceAuthoring.PropertyChanged += OnAuthoringPropertyChanged;
+        TemplatesPage.Authoring.PropertyChanged += OnAuthoringPropertyChanged;
 
-        SelectPage(DashboardPage);
+        SelectPage(CertificatesPage);
         ApplySnapshot(Snapshot);
         _ = RefreshAllAsync();
     }
@@ -216,6 +260,53 @@ public sealed class ShellViewModel : ViewModelBase
         private set => SetProperty(ref _busyMessage, value);
     }
 
+    public string SearchText
+    {
+        get => _searchText;
+        set => SetProperty(ref _searchText, value);
+    }
+
+    public bool IsAuthoringDialogOpen => AuthoringDialogKind != AuthoringDialogKind.None;
+
+    public AuthoringDialogKind AuthoringDialogKind
+    {
+        get => _authoringDialogKind;
+        private set
+        {
+            if (SetProperty(ref _authoringDialogKind, value))
+            {
+                OnPropertyChanged(nameof(IsAuthoringDialogOpen));
+                OnPropertyChanged(nameof(IsCertificateAuthoringDialogOpen));
+                OnPropertyChanged(nameof(IsTemplateAuthoringDialogOpen));
+                RefreshCommandStates();
+            }
+        }
+    }
+
+    public bool IsCertificateAuthoringDialogOpen => AuthoringDialogKind == AuthoringDialogKind.Certificate;
+
+    public bool IsTemplateAuthoringDialogOpen => AuthoringDialogKind == AuthoringDialogKind.Template;
+
+    public CertificateAuthoringViewModel? ActiveCertificateAuthoring
+    {
+        get => _activeCertificateAuthoring;
+        private set => SetProperty(ref _activeCertificateAuthoring, value);
+    }
+
+    public string AuthoringDialogTitle
+    {
+        get => _authoringDialogTitle;
+        private set => SetProperty(ref _authoringDialogTitle, value);
+    }
+
+    public string AuthoringDialogSubtitle
+    {
+        get => _authoringDialogSubtitle;
+        private set => SetProperty(ref _authoringDialogSubtitle, value);
+    }
+
+    public ICommand CloseAuthoringDialogCommand => _closeAuthoringDialogCommand;
+
     public DashboardPageViewModel DashboardPage { get; }
 
     public CertificatesPageViewModel CertificatesPage { get; }
@@ -232,6 +323,10 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
+    public ObservableCollection<NavigationItemViewModel> WorkspaceNavigationItems { get; }
+
+    public ObservableCollection<NavigationItemViewModel> UtilityNavigationItems { get; }
+
     public ObservableCollection<NotificationItemViewModel> Notifications { get; } = [];
 
     public PageViewModelBase CurrentPage
@@ -241,6 +336,34 @@ public sealed class ShellViewModel : ViewModelBase
     }
 
     public DatabaseSessionSnapshot Snapshot => _databaseSessionService.GetSnapshot();
+
+    public string WorkspaceStatus => Snapshot.DisplayName is null
+        ? Snapshot.StatusMessage
+        : $"{Snapshot.DisplayName} | {Snapshot.StatusMessage}";
+
+    public string CurrentSelectionSummary => CurrentPage switch
+    {
+        var _ when CurrentPage == PrivateKeysPage => PrivateKeysPage.SelectedItem is null ? "No private key selected" : $"Selected key: {PrivateKeysPage.SelectedItem.DisplayName}",
+        var _ when CurrentPage == CertificateRequestsPage => CertificateRequestsPage.SelectedItem is null ? "No request selected" : $"Selected request: {CertificateRequestsPage.SelectedItem.DisplayName}",
+        var _ when CurrentPage == CertificatesPage => CertificatesPage.SelectedItem is null ? "No certificate selected" : $"Selected certificate: {CertificatesPage.SelectedItem.DisplayName}",
+        var _ when CurrentPage == TemplatesPage => TemplatesPage.SelectedItem is null ? "No template selected" : $"Selected template: {TemplatesPage.SelectedItem.Name}",
+        var _ when CurrentPage == CertificateRevocationListsPage => CertificateRevocationListsPage.SelectedItem is null ? "No revocation list selected" : $"Selected CRL: {CertificateRevocationListsPage.SelectedItem.DisplayName}",
+        _ => Snapshot.DatabasePath ?? "No workspace selected"
+    };
+
+    public ICommand CreateDatabaseCommand => _createDatabaseCommand;
+
+    public ICommand OpenDatabaseCommand => _openDatabaseCommand;
+
+    public ICommand UnlockDatabaseCommand => _unlockDatabaseCommand;
+
+    public ICommand LockDatabaseCommand => _lockDatabaseCommand;
+
+    public ICommand RefreshWorkspaceCommand => _refreshWorkspaceCommand;
+
+    public ICommand DashboardCommand => UtilityNavigationItems[0].Command;
+
+    public ICommand SettingsSecurityCommand => UtilityNavigationItems[1].Command;
 
     private async Task CreateDatabaseAsync()
     {
@@ -293,6 +416,51 @@ public sealed class ShellViewModel : ViewModelBase
         NotifySuccess($"Generated {result.Value.Algorithm} key.");
     }
 
+    private void OpenSelfSignedCaAuthoring()
+    {
+        if (!PrivateKeysPage.HasSelection || PrivateKeysPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a private key first.");
+            return;
+        }
+
+        PrivateKeysPage.SelfSignedCaAuthoring.SourceSummary = $"Source: private key {PrivateKeysPage.SelectedItem.DisplayName}";
+        OpenCertificateAuthoringDialog(
+            PrivateKeysPage.SelfSignedCaAuthoring,
+            "Certificate Input",
+            "Self-signed CA authoring");
+    }
+
+    private void OpenCertificateSigningRequestAuthoring()
+    {
+        if (!PrivateKeysPage.HasSelection || PrivateKeysPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a private key first.");
+            return;
+        }
+
+        PrivateKeysPage.CertificateSigningRequestAuthoring.SourceSummary = $"Source: private key {PrivateKeysPage.SelectedItem.DisplayName}";
+        OpenCertificateAuthoringDialog(
+            PrivateKeysPage.CertificateSigningRequestAuthoring,
+            "Certificate Input",
+            "Certificate request authoring");
+    }
+
+    private void OpenIssuanceAuthoring()
+    {
+        if (!CertificateRequestsPage.HasSelection || CertificateRequestsPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a CSR first.");
+            return;
+        }
+
+        CertificateRequestsPage.IssuanceAuthoring.SourceSummary = $"Source: request {CertificateRequestsPage.SelectedItem.DisplayName}";
+        OpenCertificateAuthoringDialog(
+            CertificateRequestsPage.IssuanceAuthoring,
+            "Certificate Input",
+            "Issue certificate from selected request");
+    }
+
     private async Task CreateSelfSignedCaAsync()
     {
         if (PrivateKeysPage.SelectedItem is null)
@@ -305,10 +473,10 @@ public sealed class ShellViewModel : ViewModelBase
         var result = await _databaseSessionService.CreateSelfSignedCaAsync(
             new CreateSelfSignedCaWorkflowRequest(
                 PrivateKeysPage.SelectedItem.PrivateKeyId,
-                PrivateKeysPage.SelfSignedCaDisplayName,
-                PrivateKeysPage.SelfSignedCaSubjectName,
-                Math.Max(1, PrivateKeysPage.SelfSignedCaValidityDays),
-                PrivateKeysPage.SelectedSelfSignedCaTemplate?.TemplateId),
+                PrivateKeysPage.SelfSignedCaAuthoring.DisplayName,
+                PrivateKeysPage.SelfSignedCaAuthoring.SubjectName,
+                Math.Max(1, PrivateKeysPage.SelfSignedCaAuthoring.ValidityDays),
+                PrivateKeysPage.SelfSignedCaAuthoring.SelectedTemplate?.TemplateId),
             CancellationToken.None);
 
         if (!result.IsSuccess || result.Value is null)
@@ -317,6 +485,7 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
+        CloseAuthoringDialog();
         await RefreshAllAsync();
         NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, result.Value.CertificateId, NavigationFocusSection.Inspector));
         NotifySuccess("Self-signed CA certificate created.");
@@ -334,14 +503,14 @@ public sealed class ShellViewModel : ViewModelBase
         var result = await _databaseSessionService.CreateCertificateSigningRequestAsync(
             new CreateCertificateSigningRequestWorkflowRequest(
                 PrivateKeysPage.SelectedItem.PrivateKeyId,
-                PrivateKeysPage.CertificateSigningRequestDisplayName,
-                PrivateKeysPage.CertificateSigningRequestSubjectName,
-                ParseSubjectAlternativeNames(PrivateKeysPage.CertificateSigningRequestSubjectAlternativeNames),
-                PrivateKeysPage.SelectedCertificateSigningRequestTemplate?.IntendedUsage == TemplateIntendedUsage.IntermediateCa,
-                PrivateKeysPage.SelectedCertificateSigningRequestTemplate?.IntendedUsage == TemplateIntendedUsage.IntermediateCa ? 0 : null,
-                [],
-                [],
-                PrivateKeysPage.SelectedCertificateSigningRequestTemplate?.TemplateId),
+                PrivateKeysPage.CertificateSigningRequestAuthoring.DisplayName,
+                PrivateKeysPage.CertificateSigningRequestAuthoring.SubjectName,
+                ParseSubjectAlternativeNames(PrivateKeysPage.CertificateSigningRequestAuthoring.SubjectAlternativeNames),
+                PrivateKeysPage.CertificateSigningRequestAuthoring.IsCertificateAuthority,
+                PrivateKeysPage.CertificateSigningRequestAuthoring.HasPathLengthConstraint ? PrivateKeysPage.CertificateSigningRequestAuthoring.PathLengthConstraint : null,
+                SplitValues(PrivateKeysPage.CertificateSigningRequestAuthoring.KeyUsages),
+                SplitValues(PrivateKeysPage.CertificateSigningRequestAuthoring.EnhancedKeyUsages),
+                PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedTemplate?.TemplateId),
             CancellationToken.None);
 
         if (!result.IsSuccess || result.Value is null)
@@ -350,6 +519,7 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
+        CloseAuthoringDialog();
         await RefreshAllAsync();
         NavigateTo(new NavigationTarget(BrowserEntityType.CertificateSigningRequest, result.Value.CertificateSigningRequestId, NavigationFocusSection.Overview));
         NotifySuccess("Certificate signing request created.");
@@ -358,8 +528,8 @@ public sealed class ShellViewModel : ViewModelBase
     private async Task SignCertificateSigningRequestAsync()
     {
         if (CertificateRequestsPage.SelectedItem is null
-            || CertificateRequestsPage.SelectedIssuerCertificate is null
-            || CertificateRequestsPage.SelectedIssuerPrivateKey is null)
+            || CertificateRequestsPage.IssuanceAuthoring.SelectedIssuerCertificate is null
+            || CertificateRequestsPage.IssuanceAuthoring.SelectedIssuerPrivateKey is null)
         {
             NotifyFailure("Select a CSR, issuer certificate, and issuer private key.");
             return;
@@ -369,11 +539,11 @@ public sealed class ShellViewModel : ViewModelBase
         var result = await _databaseSessionService.SignCertificateSigningRequestAsync(
             new SignStoredCertificateSigningRequestRequest(
                 CertificateRequestsPage.SelectedItem.CertificateSigningRequestId,
-                CertificateRequestsPage.SelectedIssuerCertificate.CertificateId,
-                CertificateRequestsPage.SelectedIssuerPrivateKey.PrivateKeyId,
-                CertificateRequestsPage.IssuedCertificateDisplayName,
-                Math.Max(1, CertificateRequestsPage.ValidityDays),
-                CertificateRequestsPage.SelectedIssuanceTemplate?.TemplateId),
+                CertificateRequestsPage.IssuanceAuthoring.SelectedIssuerCertificate.CertificateId,
+                CertificateRequestsPage.IssuanceAuthoring.SelectedIssuerPrivateKey.PrivateKeyId,
+                CertificateRequestsPage.IssuanceAuthoring.DisplayName,
+                Math.Max(1, CertificateRequestsPage.IssuanceAuthoring.ValidityDays),
+                CertificateRequestsPage.IssuanceAuthoring.SelectedTemplate?.TemplateId),
             CancellationToken.None);
 
         if (!result.IsSuccess || result.Value is null)
@@ -382,6 +552,7 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
+        CloseAuthoringDialog();
         await RefreshAllAsync();
         NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, result.Value.CertificateId, NavigationFocusSection.Inspector));
         NotifySuccess("CSR signed into a certificate.");
@@ -895,7 +1066,19 @@ public sealed class ShellViewModel : ViewModelBase
     private async Task CreateNewTemplateAsync()
     {
         TemplatesPage.PrepareNewTemplate();
+        OpenTemplateAuthoringDialog("Template Input", "Create template defaults");
         await Task.CompletedTask;
+    }
+
+    private void OpenTemplateAuthoringFromSelection()
+    {
+        if (!TemplatesPage.HasSelection || TemplatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a template first.");
+            return;
+        }
+
+        OpenTemplateAuthoringDialog("Template Input", $"Edit template {TemplatesPage.SelectedItem.Name}");
     }
 
     private async Task SaveTemplateAsync()
@@ -912,6 +1095,8 @@ public sealed class ShellViewModel : ViewModelBase
         await LoadTemplatesAsync();
         TemplatesPage.SelectedItem = TemplatesPage.Items.FirstOrDefault(x => x.TemplateId == result.Value.TemplateId);
         TemplatesPage.LoadTemplate(result.Value);
+        CloseAuthoringDialog();
+        SelectPage(TemplatesPage);
         NotifySuccess(result.Message);
     }
 
@@ -934,6 +1119,7 @@ public sealed class ShellViewModel : ViewModelBase
         await LoadTemplatesAsync();
         TemplatesPage.SelectedItem = TemplatesPage.Items.FirstOrDefault(x => x.TemplateId == result.Value.TemplateId);
         TemplatesPage.LoadTemplate(result.Value);
+        OpenTemplateAuthoringDialog("Template Input", $"Edit cloned template {result.Value.Name}");
         NotifySuccess("Template cloned.");
     }
 
@@ -1003,12 +1189,13 @@ public sealed class ShellViewModel : ViewModelBase
 
         TemplatesPage.PrepareNewTemplate();
         await LoadTemplatesAsync();
+        CloseAuthoringDialog();
         NotifySuccess("Template deleted.");
     }
 
     private async Task ApplySelfSignedCaTemplateAsync()
     {
-        if (PrivateKeysPage.SelectedSelfSignedCaTemplate is null)
+        if (PrivateKeysPage.SelfSignedCaAuthoring.SelectedTemplate is null)
         {
             NotifyFailure("Select a template first.");
             return;
@@ -1016,7 +1203,7 @@ public sealed class ShellViewModel : ViewModelBase
 
         using var scope = BeginBusy("Applying template defaults");
         var result = await _databaseSessionService.ApplyTemplateAsync(
-            new ApplyTemplateRequest(PrivateKeysPage.SelectedSelfSignedCaTemplate.TemplateId, TemplateWorkflowKind.SelfSignedCa),
+            new ApplyTemplateRequest(PrivateKeysPage.SelfSignedCaAuthoring.SelectedTemplate.TemplateId, TemplateWorkflowKind.SelfSignedCa),
             CancellationToken.None);
         if (!result.IsSuccess || result.Value is null)
         {
@@ -1024,15 +1211,13 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
-        PrivateKeysPage.SelfSignedCaDisplayName = result.Value.DisplayNameDefault;
-        PrivateKeysPage.SelfSignedCaSubjectName = result.Value.SubjectDefault ?? PrivateKeysPage.SelfSignedCaSubjectName;
-        PrivateKeysPage.SelfSignedCaValidityDays = Math.Max(1, result.Value.ValidityDays);
+        PrivateKeysPage.SelfSignedCaAuthoring.ApplyTemplateDefaults(result.Value);
         NotifySuccess("Self-signed CA template applied.");
     }
 
     private async Task ApplyCertificateSigningRequestTemplateAsync()
     {
-        if (PrivateKeysPage.SelectedCertificateSigningRequestTemplate is null)
+        if (PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedTemplate is null)
         {
             NotifyFailure("Select a template first.");
             return;
@@ -1040,7 +1225,7 @@ public sealed class ShellViewModel : ViewModelBase
 
         using var scope = BeginBusy("Applying template defaults");
         var result = await _databaseSessionService.ApplyTemplateAsync(
-            new ApplyTemplateRequest(PrivateKeysPage.SelectedCertificateSigningRequestTemplate.TemplateId, TemplateWorkflowKind.CertificateSigningRequest),
+            new ApplyTemplateRequest(PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedTemplate.TemplateId, TemplateWorkflowKind.CertificateSigningRequest),
             CancellationToken.None);
         if (!result.IsSuccess || result.Value is null)
         {
@@ -1051,15 +1236,13 @@ public sealed class ShellViewModel : ViewModelBase
         PrivateKeysPage.NewKeyDisplayName = result.Value.DisplayNameDefault;
         PrivateKeysPage.SelectedAlgorithm = result.Value.KeyAlgorithm == KeyAlgorithmKind.Rsa ? KeyAlgorithmView.Rsa : KeyAlgorithmView.Ecdsa;
         PrivateKeysPage.SelectedCurve = result.Value.Curve == EllipticCurveKind.P384 ? EllipticCurveView.P384 : EllipticCurveView.P256;
-        PrivateKeysPage.CertificateSigningRequestDisplayName = result.Value.DisplayNameDefault;
-        PrivateKeysPage.CertificateSigningRequestSubjectName = result.Value.SubjectDefault ?? PrivateKeysPage.CertificateSigningRequestSubjectName;
-        PrivateKeysPage.CertificateSigningRequestSubjectAlternativeNames = string.Join(", ", result.Value.SubjectAlternativeNames);
+        PrivateKeysPage.CertificateSigningRequestAuthoring.ApplyTemplateDefaults(result.Value);
         NotifySuccess("CSR template applied.");
     }
 
     private async Task ApplyIssuanceTemplateAsync()
     {
-        if (CertificateRequestsPage.SelectedIssuanceTemplate is null)
+        if (CertificateRequestsPage.IssuanceAuthoring.SelectedTemplate is null)
         {
             NotifyFailure("Select a template first.");
             return;
@@ -1067,7 +1250,7 @@ public sealed class ShellViewModel : ViewModelBase
 
         using var scope = BeginBusy("Applying template defaults");
         var result = await _databaseSessionService.ApplyTemplateAsync(
-            new ApplyTemplateRequest(CertificateRequestsPage.SelectedIssuanceTemplate.TemplateId, TemplateWorkflowKind.SignCertificateSigningRequest),
+            new ApplyTemplateRequest(CertificateRequestsPage.IssuanceAuthoring.SelectedTemplate.TemplateId, TemplateWorkflowKind.SignCertificateSigningRequest),
             CancellationToken.None);
         if (!result.IsSuccess || result.Value is null)
         {
@@ -1075,9 +1258,80 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
-        CertificateRequestsPage.IssuedCertificateDisplayName = result.Value.DisplayNameDefault;
-        CertificateRequestsPage.ValidityDays = Math.Max(1, result.Value.ValidityDays);
+        CertificateRequestsPage.IssuanceAuthoring.ApplyTemplateDefaults(result.Value);
         NotifySuccess("Issuance template applied.");
+    }
+
+    private void CreateTemplateFromCertificate()
+    {
+        if (CertificatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a certificate first.");
+            return;
+        }
+
+        TemplatesPage.PrepareTemplateFromCertificate(CertificatesPage.SelectedItem, CertificatesPage.Inspector);
+        OpenTemplateAuthoringDialog("Template Input", $"Derived from certificate {CertificatesPage.SelectedItem.DisplayName}");
+        NotifySuccess("Selected certificate copied into the template editor.");
+    }
+
+    private void CreateTemplateFromRequest()
+    {
+        if (CertificateRequestsPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a CSR first.");
+            return;
+        }
+
+        TemplatesPage.PrepareTemplateFromCertificateRequest(CertificateRequestsPage.SelectedItem);
+        OpenTemplateAuthoringDialog("Template Input", $"Derived from request {CertificateRequestsPage.SelectedItem.DisplayName}");
+        NotifySuccess("Selected CSR copied into the template editor.");
+    }
+
+    private void CreateSimilarRequest()
+    {
+        if (CertificateRequestsPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a CSR first.");
+            return;
+        }
+
+        PrivateKeysPage.LoadCertificateSigningRequestAuthoringFromRequest(CertificateRequestsPage.SelectedItem);
+        if (CertificateRequestsPage.SelectedItem.PrivateKeyId is Guid privateKeyId)
+        {
+            PrivateKeysPage.SelectedItem = PrivateKeysPage.Items.FirstOrDefault(x => x.PrivateKeyId == privateKeyId) ?? PrivateKeysPage.SelectedItem;
+        }
+
+        SelectPage(PrivateKeysPage);
+        OpenCertificateAuthoringDialog(
+            PrivateKeysPage.CertificateSigningRequestAuthoring,
+            "Certificate Input",
+            "Create similar request");
+        NotifySuccess("CSR values copied into the request authoring surface.");
+    }
+
+    private void OpenCertificateAuthoringDialog(CertificateAuthoringViewModel authoring, string title, string subtitle)
+    {
+        ActiveCertificateAuthoring = authoring;
+        AuthoringDialogTitle = title;
+        AuthoringDialogSubtitle = subtitle;
+        AuthoringDialogKind = AuthoringDialogKind.Certificate;
+    }
+
+    private void OpenTemplateAuthoringDialog(string title, string subtitle)
+    {
+        AuthoringDialogTitle = title;
+        AuthoringDialogSubtitle = subtitle;
+        ActiveCertificateAuthoring = null;
+        AuthoringDialogKind = AuthoringDialogKind.Template;
+    }
+
+    private void CloseAuthoringDialog()
+    {
+        ActiveCertificateAuthoring = null;
+        AuthoringDialogTitle = string.Empty;
+        AuthoringDialogSubtitle = string.Empty;
+        AuthoringDialogKind = AuthoringDialogKind.None;
     }
 
     private async Task LoadDiagnosticsAsync()
@@ -1175,6 +1429,8 @@ public sealed class ShellViewModel : ViewModelBase
         {
             item.IsSelected = item.Title == page.Title;
         }
+
+        OnPropertyChanged(nameof(CurrentSelectionSummary));
     }
 
     private void OnCertificatesPagePropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -1189,6 +1445,7 @@ public sealed class ShellViewModel : ViewModelBase
                 _ = LoadSelectedCertificateInspectorAsync();
             }
 
+            OnPropertyChanged(nameof(CurrentSelectionSummary));
             RefreshCommandStates();
         }
     }
@@ -1196,15 +1453,23 @@ public sealed class ShellViewModel : ViewModelBase
     private void OnPageSelectionChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(PrivateKeysPageViewModel.SelectedItem)
-            or nameof(PrivateKeysPageViewModel.SelectedSelfSignedCaTemplate)
-            or nameof(PrivateKeysPageViewModel.SelectedCertificateSigningRequestTemplate)
             or nameof(CertificateRequestsPageViewModel.SelectedItem)
-            or nameof(CertificateRequestsPageViewModel.SelectedIssuerCertificate)
-            or nameof(CertificateRequestsPageViewModel.SelectedIssuerPrivateKey)
-            or nameof(CertificateRequestsPageViewModel.SelectedIssuanceTemplate)
             or nameof(TemplatesPageViewModel.SelectedItem)
             or nameof(CertificateRevocationListsPageViewModel.SelectedItem))
         {
+            if (sender == PrivateKeysPage && e.PropertyName == nameof(PrivateKeysPageViewModel.SelectedItem))
+            {
+                var keyLabel = PrivateKeysPage.SelectedItem is null ? "selected private key" : $"private key {PrivateKeysPage.SelectedItem.DisplayName}";
+                PrivateKeysPage.SelfSignedCaAuthoring.SourceSummary = $"Source: {keyLabel}";
+                PrivateKeysPage.CertificateSigningRequestAuthoring.SourceSummary = $"Source: {keyLabel}";
+            }
+
+            if (sender == CertificateRequestsPage && e.PropertyName == nameof(CertificateRequestsPageViewModel.SelectedItem))
+            {
+                var requestLabel = CertificateRequestsPage.SelectedItem is null ? "selected certificate request" : $"request {CertificateRequestsPage.SelectedItem.DisplayName}";
+                CertificateRequestsPage.IssuanceAuthoring.SourceSummary = $"Source: {requestLabel}";
+            }
+
             if (sender == CertificateRevocationListsPage && e.PropertyName == nameof(CertificateRevocationListsPageViewModel.SelectedItem))
             {
                 _ = LoadSelectedCertificateRevocationListInspectorAsync();
@@ -1215,6 +1480,17 @@ public sealed class ShellViewModel : ViewModelBase
                 _ = LoadSelectedTemplateAsync();
             }
 
+            OnPropertyChanged(nameof(CurrentSelectionSummary));
+            RefreshCommandStates();
+        }
+    }
+
+    private void OnAuthoringPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(CertificateAuthoringViewModel.SelectedTemplate)
+            or nameof(CertificateAuthoringViewModel.SelectedIssuerCertificate)
+            or nameof(CertificateAuthoringViewModel.SelectedIssuerPrivateKey))
+        {
             RefreshCommandStates();
         }
     }
@@ -1251,11 +1527,14 @@ public sealed class ShellViewModel : ViewModelBase
         DashboardPage.DatabaseDisplayName = snapshot.DisplayName ?? "No database selected";
         DashboardPage.DatabasePath = snapshot.DatabasePath ?? "Open or create a database to begin.";
 
+        OnPropertyChanged(nameof(WorkspaceStatus));
+        OnPropertyChanged(nameof(CurrentSelectionSummary));
         RefreshCommandStates();
     }
 
     private void ClearBrowseState()
     {
+        CloseAuthoringDialog();
         DashboardPage.CertificateCount = 0;
         DashboardPage.PrivateKeyCount = 0;
         DashboardPage.CertificateRequestCount = 0;
@@ -1349,20 +1628,27 @@ public sealed class ShellViewModel : ViewModelBase
         _navigateChildCertificateCommand.RaiseCanExecuteChanged();
         _refreshPrivateKeysCommand.RaiseCanExecuteChanged();
         _generateKeyCommand.RaiseCanExecuteChanged();
+        _openSelfSignedCaAuthoringCommand.RaiseCanExecuteChanged();
+        _openCertificateSigningRequestAuthoringCommand.RaiseCanExecuteChanged();
         _createSelfSignedCaCommand.RaiseCanExecuteChanged();
         _createCertificateSigningRequestCommand.RaiseCanExecuteChanged();
         _exportPrivateKeyCommand.RaiseCanExecuteChanged();
         _exportPrivateKeyToFileCommand.RaiseCanExecuteChanged();
         _refreshCertificateRequestsCommand.RaiseCanExecuteChanged();
+        _openIssuanceAuthoringCommand.RaiseCanExecuteChanged();
         _signCertificateSigningRequestCommand.RaiseCanExecuteChanged();
         _exportCertificateSigningRequestCommand.RaiseCanExecuteChanged();
         _exportCertificateSigningRequestToFileCommand.RaiseCanExecuteChanged();
         _navigateRequestPrivateKeyCommand.RaiseCanExecuteChanged();
+        _createTemplateFromCertificateCommand.RaiseCanExecuteChanged();
+        _createTemplateFromRequestCommand.RaiseCanExecuteChanged();
+        _createSimilarRequestCommand.RaiseCanExecuteChanged();
         _refreshCertificateRevocationListsCommand.RaiseCanExecuteChanged();
         _exportCertificateRevocationListToFileCommand.RaiseCanExecuteChanged();
         _navigateCrlIssuerCommand.RaiseCanExecuteChanged();
         _refreshTemplatesCommand.RaiseCanExecuteChanged();
         _createTemplateCommand.RaiseCanExecuteChanged();
+        _editTemplateCommand.RaiseCanExecuteChanged();
         _saveTemplateCommand.RaiseCanExecuteChanged();
         _cloneTemplateCommand.RaiseCanExecuteChanged();
         _toggleTemplateFavoriteCommand.RaiseCanExecuteChanged();
@@ -1371,6 +1657,7 @@ public sealed class ShellViewModel : ViewModelBase
         _applySelfSignedCaTemplateCommand.RaiseCanExecuteChanged();
         _applyCertificateSigningRequestTemplateCommand.RaiseCanExecuteChanged();
         _applyIssuanceTemplateCommand.RaiseCanExecuteChanged();
+        _closeAuthoringDialogCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)
@@ -1378,6 +1665,13 @@ public sealed class ShellViewModel : ViewModelBase
         return value
             .Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(x => new SanEntry(x))
+            .ToList();
+    }
+
+    private static IReadOnlyList<string> SplitValues(string value)
+    {
+        return value
+            .Split([',', ';', '\n', '\r'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .ToList();
     }
 

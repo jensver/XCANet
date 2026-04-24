@@ -165,5 +165,7 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
 
     public ICommand? OpenChildCertificateCommand { get; set; }
 
+    public ICommand? CreateTemplateFromCertificateCommand { get; set; }
+
     protected override Guid GetItemId(CertificateListItem item) => item.CertificateId;
 }

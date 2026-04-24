@@ -8,4 +8,7 @@ public sealed record CertificateRequestListItem(
     NavigationTarget? PrivateKeyTarget,
     string KeyAlgorithm,
     string SubjectAlternativeNames,
-    DateTimeOffset CreatedUtc);
+    DateTimeOffset CreatedUtc)
+{
+    public string PrivateKeySummary => PrivateKeyId is null ? "Imported" : "Stored key";
+}
