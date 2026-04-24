@@ -16,6 +16,8 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<DatabaseSessionSnapshot>> LockDatabaseAsync(CancellationToken cancellationToken);
 
+    Task<OperationResult<DatabaseSessionSnapshot>> CloseDatabaseAsync(CancellationToken cancellationToken);
+
     Task<OperationResult<StorePrivateKeyResult>> StorePrivateKeyAsync(StorePrivateKeyRequest request, CancellationToken cancellationToken);
 
     Task<OperationResult<StoredKeyResult>> GenerateStoredKeyAsync(GenerateStoredKeyRequest request, CancellationToken cancellationToken);

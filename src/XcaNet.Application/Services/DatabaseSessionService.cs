@@ -225,6 +225,31 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         }
     }
 
+    public async Task<OperationResult<DatabaseSessionSnapshot>> CloseDatabaseAsync(CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (string.IsNullOrWhiteSpace(_currentDatabasePath))
+            {
+                return OperationResult<DatabaseSessionSnapshot>.Failure(OperationErrorCode.DatabaseNotOpen, "No database is currently open.");
+            }
+
+            var databasePath = _currentDatabasePath;
+            ClearUnlockedKey();
+            _state = DatabaseSessionState.Closed;
+            _currentDatabasePath = null;
+            _currentDisplayName = null;
+            _lastOpenedUtc = null;
+            await _auditEventRepository.AddAsync(databasePath, CreateAuditEvent(AuditEventKind.DatabaseClosed, "Database closed."), cancellationToken);
+            return OperationResult<DatabaseSessionSnapshot>.Success(GetSnapshot(), "Database closed.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<OperationResult<StorePrivateKeyResult>> StorePrivateKeyAsync(StorePrivateKeyRequest request, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);
