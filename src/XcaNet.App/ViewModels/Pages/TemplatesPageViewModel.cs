@@ -15,18 +15,6 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
     private bool _isFavorite;
     private bool _isEnabled = true;
     private TemplateIntendedUsage _intendedUsage = TemplateIntendedUsage.EndEntityCertificate;
-    private string _subjectDefault = string.Empty;
-    private string _subjectAlternativeNames = string.Empty;
-    private KeyAlgorithmKind _keyAlgorithm = KeyAlgorithmKind.Rsa;
-    private int _rsaKeySize = 3072;
-    private EllipticCurveKind _curve = EllipticCurveKind.P256;
-    private string _signatureAlgorithm = "SHA-256";
-    private int _validityDays = 365;
-    private bool _isCertificateAuthority;
-    private int _pathLengthConstraint = 0;
-    private bool _hasPathLengthConstraint;
-    private string _keyUsages = "DigitalSignature";
-    private string _enhancedKeyUsages = "Server Authentication";
     private string _validationSummary = string.Empty;
     private string _previewSummary = "Template preview will appear here.";
 
@@ -35,9 +23,27 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
     {
         EmptyStateTitle = "No templates saved";
         EmptyStateMessage = "Create a template to speed up CA, CSR, and issuance workflows.";
+        Authoring.PropertyChanged += (_, _) => UpdatePreview();
         UpdateUsageDefaults();
         UpdatePreview();
     }
+
+    public CertificateAuthoringViewModel Authoring { get; } = new(
+        "Certificate Input",
+        "Operation: edit or derive template defaults",
+        "Source: template editor",
+        "Template",
+        string.Empty,
+        365,
+        false,
+        "DigitalSignature, KeyEncipherment",
+        "Server Authentication",
+        false,
+        true,
+        false,
+        true,
+        true,
+        "Save Template");
 
     public IReadOnlyList<TemplateIntendedUsage> IntendedUsages { get; } =
     [
@@ -46,10 +52,6 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
         TemplateIntendedUsage.EndEntityCertificate,
         TemplateIntendedUsage.CertificateSigningRequest
     ];
-
-    public IReadOnlyList<KeyAlgorithmKind> KeyAlgorithms { get; } = [KeyAlgorithmKind.Rsa, KeyAlgorithmKind.Ecdsa];
-
-    public IReadOnlyList<EllipticCurveKind> Curves { get; } = [EllipticCurveKind.P256, EllipticCurveKind.P384];
 
     public IReadOnlyList<TemplateStatusFilterView> StatusFilters { get; } = [TemplateStatusFilterView.EnabledOnly, TemplateStatusFilterView.DisabledOnly, TemplateStatusFilterView.All];
 
@@ -141,132 +143,6 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
         }
     }
 
-    public string SubjectDefault
-    {
-        get => _subjectDefault;
-        set
-        {
-            if (SetProperty(ref _subjectDefault, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
-    public string SubjectAlternativeNames
-    {
-        get => _subjectAlternativeNames;
-        set
-        {
-            if (SetProperty(ref _subjectAlternativeNames, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
-    public KeyAlgorithmKind KeyAlgorithm
-    {
-        get => _keyAlgorithm;
-        set
-        {
-            if (SetProperty(ref _keyAlgorithm, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
-    public int RsaKeySize
-    {
-        get => _rsaKeySize;
-        set
-        {
-            if (SetProperty(ref _rsaKeySize, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
-    public EllipticCurveKind Curve
-    {
-        get => _curve;
-        set
-        {
-            if (SetProperty(ref _curve, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
-    public string SignatureAlgorithm
-    {
-        get => _signatureAlgorithm;
-        set => SetProperty(ref _signatureAlgorithm, value);
-    }
-
-    public int ValidityDays
-    {
-        get => _validityDays;
-        set
-        {
-            if (SetProperty(ref _validityDays, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
-    public bool IsCertificateAuthority
-    {
-        get => _isCertificateAuthority;
-        set
-        {
-            if (SetProperty(ref _isCertificateAuthority, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
-    public int PathLengthConstraint
-    {
-        get => _pathLengthConstraint;
-        set => SetProperty(ref _pathLengthConstraint, value);
-    }
-
-    public bool HasPathLengthConstraint
-    {
-        get => _hasPathLengthConstraint;
-        set => SetProperty(ref _hasPathLengthConstraint, value);
-    }
-
-    public string KeyUsages
-    {
-        get => _keyUsages;
-        set
-        {
-            if (SetProperty(ref _keyUsages, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
-    public string EnhancedKeyUsages
-    {
-        get => _enhancedKeyUsages;
-        set
-        {
-            if (SetProperty(ref _enhancedKeyUsages, value))
-            {
-                UpdatePreview();
-            }
-        }
-    }
-
     public string ValidationSummary
     {
         get => _validationSummary;
@@ -309,18 +185,8 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
         IsFavorite = template.IsFavorite;
         IsEnabled = template.IsEnabled;
         IntendedUsage = template.IntendedUsage;
-        SubjectDefault = template.SubjectDefault ?? string.Empty;
-        SubjectAlternativeNames = string.Join(", ", template.SubjectAlternativeNames);
-        KeyAlgorithm = template.KeyAlgorithm;
-        RsaKeySize = template.RsaKeySize ?? 3072;
-        Curve = template.Curve ?? EllipticCurveKind.P256;
-        SignatureAlgorithm = template.SignatureAlgorithm;
-        ValidityDays = template.ValidityDays;
-        IsCertificateAuthority = template.IsCertificateAuthority;
-        HasPathLengthConstraint = template.PathLengthConstraint.HasValue;
-        PathLengthConstraint = template.PathLengthConstraint ?? 0;
-        KeyUsages = string.Join(", ", template.KeyUsages);
-        EnhancedKeyUsages = string.Join(", ", template.EnhancedKeyUsages);
+        Authoring.LoadFromTemplate(template);
+        Authoring.SourceSummary = $"Source: saved template {template.Name}";
         ValidationSummary = BuildValidationSummary(template.Validation);
         PreviewSummary = string.Join(Environment.NewLine,
         [
@@ -343,19 +209,31 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
         IsFavorite = false;
         IsEnabled = true;
         IntendedUsage = TemplateIntendedUsage.EndEntityCertificate;
-        SubjectDefault = string.Empty;
-        SubjectAlternativeNames = string.Empty;
-        KeyAlgorithm = KeyAlgorithmKind.Rsa;
-        RsaKeySize = 3072;
-        Curve = EllipticCurveKind.P256;
-        SignatureAlgorithm = "SHA-256";
-        ValidityDays = 365;
-        HasPathLengthConstraint = false;
-        PathLengthConstraint = 0;
         ValidationSummary = string.Empty;
+        Authoring.ResetForNewTemplateSource("Source: new template definition");
         UpdateUsageDefaults();
         UpdatePreview();
         OnPropertyChanged(nameof(IsEditingExisting));
+    }
+
+    public void PrepareTemplateFromCertificate(CertificateListItem certificate, CertificateInspectorData? inspector)
+    {
+        PrepareNewTemplate();
+        Name = $"{certificate.DisplayName} derived template";
+        IntendedUsage = DetermineTemplateUsage(certificate, inspector);
+        Authoring.LoadFromCertificate(certificate, inspector);
+        UpdateUsageDefaults();
+        UpdatePreview();
+    }
+
+    public void PrepareTemplateFromCertificateRequest(CertificateRequestListItem request)
+    {
+        PrepareNewTemplate();
+        Name = $"{request.DisplayName} derived template";
+        IntendedUsage = TemplateIntendedUsage.CertificateSigningRequest;
+        Authoring.LoadFromCertificateRequest(request);
+        UpdateUsageDefaults();
+        UpdatePreview();
     }
 
     public SaveTemplateRequest BuildSaveRequest()
@@ -367,17 +245,17 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
             IsFavorite,
             IsEnabled,
             IntendedUsage,
-            SubjectDefault,
-            SplitValues(SubjectAlternativeNames),
-            KeyAlgorithm,
-            KeyAlgorithm == KeyAlgorithmKind.Rsa ? RsaKeySize : null,
-            KeyAlgorithm == KeyAlgorithmKind.Ecdsa ? Curve : null,
-            SignatureAlgorithm,
-            ValidityDays,
-            IsCertificateAuthority,
-            HasPathLengthConstraint ? PathLengthConstraint : null,
-            SplitValues(KeyUsages),
-            SplitValues(EnhancedKeyUsages));
+            Authoring.SubjectName,
+            SplitValues(Authoring.SubjectAlternativeNames),
+            Authoring.KeyAlgorithm,
+            Authoring.KeyAlgorithm == KeyAlgorithmKind.Rsa ? Authoring.RsaKeySize : null,
+            Authoring.KeyAlgorithm == KeyAlgorithmKind.Ecdsa ? Authoring.Curve : null,
+            Authoring.SignatureAlgorithm,
+            Authoring.ValidityDays,
+            Authoring.IsCertificateAuthority,
+            Authoring.HasPathLengthConstraint ? Authoring.PathLengthConstraint : null,
+            SplitValues(Authoring.KeyUsages),
+            SplitValues(Authoring.EnhancedKeyUsages));
     }
 
     protected override void OnItemsChanged()
@@ -411,36 +289,48 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
     {
         if (IntendedUsage is TemplateIntendedUsage.SelfSignedCa or TemplateIntendedUsage.IntermediateCa)
         {
-            IsCertificateAuthority = true;
-            KeyUsages = "KeyCertSign, CrlSign, DigitalSignature";
-            EnhancedKeyUsages = string.Empty;
-            ValidityDays = Math.Max(ValidityDays, 3650);
+            Authoring.IsCertificateAuthority = true;
+            Authoring.KeyUsages = "KeyCertSign, CrlSign, DigitalSignature";
+            Authoring.EnhancedKeyUsages = string.Empty;
+            Authoring.ValidityDays = Math.Max(Authoring.ValidityDays, 3650);
         }
         else
         {
-            IsCertificateAuthority = false;
-            KeyUsages = string.IsNullOrWhiteSpace(KeyUsages) || KeyUsages.Contains("KeyCertSign", StringComparison.OrdinalIgnoreCase)
+            Authoring.IsCertificateAuthority = false;
+            Authoring.KeyUsages = string.IsNullOrWhiteSpace(Authoring.KeyUsages) || Authoring.KeyUsages.Contains("KeyCertSign", StringComparison.OrdinalIgnoreCase)
                 ? "DigitalSignature, KeyEncipherment"
-                : KeyUsages;
-            EnhancedKeyUsages = string.IsNullOrWhiteSpace(EnhancedKeyUsages) ? "Server Authentication" : EnhancedKeyUsages;
-            ValidityDays = Math.Max(ValidityDays, 365);
+                : Authoring.KeyUsages;
+            Authoring.EnhancedKeyUsages = string.IsNullOrWhiteSpace(Authoring.EnhancedKeyUsages) ? "Server Authentication" : Authoring.EnhancedKeyUsages;
+            Authoring.ValidityDays = Math.Max(Authoring.ValidityDays, 365);
         }
     }
 
     private void UpdatePreview()
     {
-        var keySummary = KeyAlgorithm == KeyAlgorithmKind.Rsa ? $"RSA {RsaKeySize}" : $"ECDSA {Curve}";
+        var keySummary = Authoring.KeyAlgorithm == KeyAlgorithmKind.Rsa ? $"RSA {Authoring.RsaKeySize}" : $"ECDSA {Authoring.Curve}";
         PreviewSummary = string.Join(
             Environment.NewLine,
             [
                 $"Usage: {IntendedUsage}",
-                $"Subject: {(string.IsNullOrWhiteSpace(SubjectDefault) ? "not preset" : SubjectDefault)}",
-                $"SAN: {(string.IsNullOrWhiteSpace(SubjectAlternativeNames) ? "none" : SubjectAlternativeNames)}",
+                $"Subject: {(string.IsNullOrWhiteSpace(Authoring.SubjectName) ? "not preset" : Authoring.SubjectName)}",
+                $"SAN: {(string.IsNullOrWhiteSpace(Authoring.SubjectAlternativeNames) ? "none" : Authoring.SubjectAlternativeNames)}",
                 $"Key: {keySummary}",
-                $"Validity: {ValidityDays} day(s)",
-                $"Extensions: {(IsCertificateAuthority ? "CA" : "Leaf")} | KU: {KeyUsages}",
+                $"Validity: {Authoring.ValidityDays} day(s)",
+                $"Extensions: {(Authoring.IsCertificateAuthority ? "CA" : "Leaf")} | KU: {Authoring.KeyUsages}",
                 $"State: {(IsEnabled ? "Enabled" : "Disabled")} | {(IsFavorite ? "Favorite" : "Standard")}"
             ]);
+    }
+
+    private static TemplateIntendedUsage DetermineTemplateUsage(CertificateListItem certificate, CertificateInspectorData? inspector)
+    {
+        if (certificate.IsCertificateAuthority)
+        {
+            return inspector is not null && string.Equals(inspector.Raw.Subject, inspector.Raw.Issuer, StringComparison.OrdinalIgnoreCase)
+                ? TemplateIntendedUsage.SelfSignedCa
+                : TemplateIntendedUsage.IntermediateCa;
+        }
+
+        return TemplateIntendedUsage.EndEntityCertificate;
     }
 
     private static string BuildValidationSummary(TemplateValidationSummary validation)

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:XcaNet.App.Views.Shared"
              x:Class="XcaNet.App.Views.Pages.PrivateKeysPageView">
   <Grid ColumnDefinitions="1.2*,1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
@@ -50,31 +51,13 @@
     <StackPanel Grid.Column="1" Spacing="14">
       <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
-          <TextBlock Text="Create Self-Signed CA" FontSize="18" FontWeight="SemiBold" />
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-            <ComboBox ItemsSource="{Binding SelfSignedCaTemplates}" SelectedItem="{Binding SelectedSelfSignedCaTemplate}" />
-            <Button Grid.Column="1" Content="Apply Template" Command="{Binding ApplySelfSignedCaTemplateCommand}" />
-          </Grid>
-          <TextBox Text="{Binding SelfSignedCaDisplayName}" Watermark="Certificate display name" />
-          <TextBox Text="{Binding SelfSignedCaSubjectName}" Watermark="Subject name" />
-          <Grid ColumnDefinitions="180,Auto" ColumnSpacing="10">
-            <NumericUpDown Minimum="1" Maximum="36500" Value="{Binding SelfSignedCaValidityDays}" />
-            <Button Grid.Column="1" Content="Create CA" Command="{Binding CreateSelfSignedCaCommand}" />
-          </Grid>
+          <shared:CertificateAuthoringSurfaceView DataContext="{Binding SelfSignedCaAuthoring}" />
         </StackPanel>
       </Border>
 
       <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
-          <TextBlock Text="Create CSR" FontSize="18" FontWeight="SemiBold" />
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-            <ComboBox ItemsSource="{Binding CertificateSigningRequestTemplates}" SelectedItem="{Binding SelectedCertificateSigningRequestTemplate}" />
-            <Button Grid.Column="1" Content="Apply Template" Command="{Binding ApplyCertificateSigningRequestTemplateCommand}" />
-          </Grid>
-          <TextBox Text="{Binding CertificateSigningRequestDisplayName}" Watermark="CSR display name" />
-          <TextBox Text="{Binding CertificateSigningRequestSubjectName}" Watermark="Subject name" />
-          <TextBox Text="{Binding CertificateSigningRequestSubjectAlternativeNames}" Watermark="SAN entries separated by comma or semicolon" />
-          <Button Content="Create CSR" HorizontalAlignment="Left" Command="{Binding CreateCertificateSigningRequestCommand}" />
+          <shared:CertificateAuthoringSurfaceView DataContext="{Binding CertificateSigningRequestAuthoring}" />
         </StackPanel>
       </Border>
 

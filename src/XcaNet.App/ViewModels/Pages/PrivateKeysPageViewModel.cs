@@ -9,14 +9,6 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     private string _newKeyDisplayName = "Managed Key";
     private KeyAlgorithmView _selectedAlgorithm = KeyAlgorithmView.Rsa;
     private EllipticCurveView _selectedCurve = EllipticCurveView.P256;
-    private string _selfSignedCaDisplayName = "Self-Signed CA";
-    private string _selfSignedCaSubjectName = "CN=XcaNet Root CA";
-    private int _selfSignedCaValidityDays = 3650;
-    private TemplateListItem? _selectedSelfSignedCaTemplate;
-    private string _certificateSigningRequestDisplayName = "Certificate Signing Request";
-    private string _certificateSigningRequestSubjectName = "CN=service.example.test";
-    private string _certificateSigningRequestSubjectAlternativeNames = "service.example.test";
-    private TemplateListItem? _selectedCertificateSigningRequestTemplate;
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
     private string _selectedExportPassword = string.Empty;
     private string _exportPreview = string.Empty;
@@ -34,9 +26,39 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
 
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs8];
 
-    public ObservableCollection<TemplateListItem> SelfSignedCaTemplates { get; } = [];
+    public CertificateAuthoringViewModel SelfSignedCaAuthoring { get; } = new(
+        "Certificate Input",
+        "Operation: create self-signed CA certificate",
+        "Source: selected private key",
+        "Self-Signed CA",
+        "CN=XcaNet Root CA",
+        3650,
+        true,
+        "KeyCertSign, CrlSign, DigitalSignature",
+        string.Empty,
+        true,
+        false,
+        false,
+        true,
+        true,
+        "Create CA");
 
-    public ObservableCollection<TemplateListItem> CertificateSigningRequestTemplates { get; } = [];
+    public CertificateAuthoringViewModel CertificateSigningRequestAuthoring { get; } = new(
+        "Certificate Input",
+        "Operation: create certificate signing request",
+        "Source: selected private key",
+        "Certificate Signing Request",
+        "CN=service.example.test",
+        365,
+        false,
+        "DigitalSignature, KeyEncipherment",
+        "Server Authentication",
+        true,
+        true,
+        false,
+        false,
+        true,
+        "Create CSR");
 
     public string NewKeyDisplayName
     {
@@ -54,54 +76,6 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     {
         get => _selectedCurve;
         set => SetProperty(ref _selectedCurve, value);
-    }
-
-    public string SelfSignedCaDisplayName
-    {
-        get => _selfSignedCaDisplayName;
-        set => SetProperty(ref _selfSignedCaDisplayName, value);
-    }
-
-    public string SelfSignedCaSubjectName
-    {
-        get => _selfSignedCaSubjectName;
-        set => SetProperty(ref _selfSignedCaSubjectName, value);
-    }
-
-    public int SelfSignedCaValidityDays
-    {
-        get => _selfSignedCaValidityDays;
-        set => SetProperty(ref _selfSignedCaValidityDays, value);
-    }
-
-    public TemplateListItem? SelectedSelfSignedCaTemplate
-    {
-        get => _selectedSelfSignedCaTemplate;
-        set => SetProperty(ref _selectedSelfSignedCaTemplate, value);
-    }
-
-    public string CertificateSigningRequestDisplayName
-    {
-        get => _certificateSigningRequestDisplayName;
-        set => SetProperty(ref _certificateSigningRequestDisplayName, value);
-    }
-
-    public string CertificateSigningRequestSubjectName
-    {
-        get => _certificateSigningRequestSubjectName;
-        set => SetProperty(ref _certificateSigningRequestSubjectName, value);
-    }
-
-    public string CertificateSigningRequestSubjectAlternativeNames
-    {
-        get => _certificateSigningRequestSubjectAlternativeNames;
-        set => SetProperty(ref _certificateSigningRequestSubjectAlternativeNames, value);
-    }
-
-    public TemplateListItem? SelectedCertificateSigningRequestTemplate
-    {
-        get => _selectedCertificateSigningRequestTemplate;
-        set => SetProperty(ref _selectedCertificateSigningRequestTemplate, value);
     }
 
     public CryptoFormatView SelectedExportFormat
@@ -138,16 +112,20 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
 
     public void SetTemplates(IEnumerable<TemplateListItem> templates)
     {
-        ResetTemplateCollection(SelfSignedCaTemplates, templates.Where(x => x.IntendedUsage == TemplateIntendedUsage.SelfSignedCa && x.IsEnabled));
+        ResetTemplateCollection(SelfSignedCaAuthoring.Templates, templates.Where(x => x.IntendedUsage == TemplateIntendedUsage.SelfSignedCa && x.IsEnabled));
         ResetTemplateCollection(
-            CertificateSigningRequestTemplates,
+            CertificateSigningRequestAuthoring.Templates,
             templates.Where(x => x.IsEnabled && (
                 x.IntendedUsage == TemplateIntendedUsage.IntermediateCa
                 || x.IntendedUsage == TemplateIntendedUsage.EndEntityCertificate
                 || x.IntendedUsage == TemplateIntendedUsage.CertificateSigningRequest)));
+    }
 
-        SelectedSelfSignedCaTemplate ??= SelfSignedCaTemplates.FirstOrDefault();
-        SelectedCertificateSigningRequestTemplate ??= CertificateSigningRequestTemplates.FirstOrDefault();
+    public void LoadCertificateSigningRequestAuthoringFromRequest(CertificateRequestListItem request)
+    {
+        CertificateSigningRequestAuthoring.LoadFromCertificateRequest(request);
+        CertificateSigningRequestAuthoring.DisplayName = $"{request.DisplayName} Copy";
+        CertificateSigningRequestAuthoring.SourceSummary = $"Source: similar request {request.DisplayName}";
     }
 
     private static void ResetTemplateCollection(ObservableCollection<TemplateListItem> target, IEnumerable<TemplateListItem> templates)

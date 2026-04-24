@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="XcaNet.App.Views.Shared.CertificateAuthoringSurfaceView">
+  <StackPanel Spacing="12">
+    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+      <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" />
+      <Button Grid.Column="1" Content="{Binding PrimaryActionLabel}" Command="{Binding PrimaryActionCommand}" />
+    </Grid>
+
+    <Border Classes="info-panel" Padding="12">
+      <StackPanel Spacing="4">
+        <TextBlock Text="Source / Operation Mode" FontWeight="SemiBold" />
+        <TextBlock Text="{Binding OperationModeSummary}" Classes="secondary-text" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding SourceSummary}" Classes="secondary-text" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+
+    <Border Classes="surface-card" Padding="12" IsVisible="{Binding ShowTemplateApplication}">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Template Application" FontWeight="SemiBold" />
+        <Grid ColumnDefinitions="*,180,Auto" ColumnSpacing="10">
+          <ComboBox ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <ComboBox Grid.Column="1" ItemsSource="{Binding TemplateApplicationModes}" SelectedItem="{Binding SelectedTemplateApplicationMode}" />
+          <Button Grid.Column="2" Content="Apply Template" Command="{Binding ApplyTemplateCommand}" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border Classes="surface-card" Padding="12">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Subject" FontWeight="SemiBold" />
+        <TextBox Text="{Binding DisplayName}" Watermark="Display name" />
+        <TextBox Text="{Binding SubjectName}" Watermark="Subject name" />
+        <TextBox Text="{Binding SubjectAlternativeNames}" Watermark="SAN entries separated by comma or semicolon" />
+      </StackPanel>
+    </Border>
+
+    <Border Classes="surface-card" Padding="12" IsVisible="{Binding ShowKeySection}">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Key" FontWeight="SemiBold" />
+        <Grid ColumnDefinitions="*,180,180" ColumnSpacing="10">
+          <ComboBox ItemsSource="{Binding KeyAlgorithms}" SelectedItem="{Binding KeyAlgorithm}" />
+          <NumericUpDown Grid.Column="1" Minimum="3072" Maximum="16384" Value="{Binding RsaKeySize}" IsVisible="{Binding IsRsa}" />
+          <ComboBox Grid.Column="2" ItemsSource="{Binding Curves}" SelectedItem="{Binding Curve}" IsVisible="{Binding IsEcdsa}" />
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border Classes="surface-card" Padding="12">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Extensions" FontWeight="SemiBold" />
+        <Grid ColumnDefinitions="Auto,Auto,120,*" ColumnSpacing="10">
+          <CheckBox Content="CA" IsChecked="{Binding IsCertificateAuthority}" />
+          <CheckBox Grid.Column="1" Content="Path length" IsChecked="{Binding HasPathLengthConstraint}" />
+          <NumericUpDown Grid.Column="2" Minimum="0" Maximum="16" Value="{Binding PathLengthConstraint}" IsEnabled="{Binding HasPathLengthConstraint}" />
+          <TextBox Grid.Column="3" Text="{Binding SignatureAlgorithm}" Watermark="Signature algorithm" IsVisible="{Binding ShowSignatureAlgorithm}" />
+        </Grid>
+        <TextBox Text="{Binding KeyUsages}" Watermark="Key usages separated by comma or semicolon" />
+        <TextBox Text="{Binding EnhancedKeyUsages}" Watermark="Enhanced key usages separated by comma or semicolon" />
+      </StackPanel>
+    </Border>
+
+    <Border Classes="surface-card" Padding="12" IsVisible="{Binding ShowSigningSection}">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Signing / Issuer Controls" FontWeight="SemiBold" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+          <ComboBox ItemsSource="{Binding IssuerCertificates}" SelectedItem="{Binding SelectedIssuerCertificate}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <ComboBox Grid.Column="1" ItemsSource="{Binding IssuerPrivateKeys}" SelectedItem="{Binding SelectedIssuerPrivateKey}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayName}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <Border Classes="surface-card" Padding="12" IsVisible="{Binding ShowValiditySection}">
+      <StackPanel Spacing="10">
+        <TextBlock Text="Validity" FontWeight="SemiBold" />
+        <NumericUpDown Minimum="1" Maximum="36500" Value="{Binding ValidityDays}" />
+      </StackPanel>
+    </Border>
+  </StackPanel>
+</UserControl>

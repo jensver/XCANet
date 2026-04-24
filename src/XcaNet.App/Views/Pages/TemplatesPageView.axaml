@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:XcaNet.App.Views.Shared"
              x:Class="XcaNet.App.Views.Pages.TemplatesPageView">
   <Grid ColumnDefinitions="1.05*,1.1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
@@ -51,28 +52,13 @@
           </Grid>
           <TextBox Text="{Binding Name}" Watermark="Template name" />
           <TextBox Text="{Binding Description}" Watermark="Description" AcceptsReturn="True" Height="70" TextWrapping="Wrap" />
-          <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
             <ComboBox ItemsSource="{Binding IntendedUsages}" SelectedItem="{Binding IntendedUsage}" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding KeyAlgorithms}" SelectedItem="{Binding KeyAlgorithm}" />
-          </Grid>
-          <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
-            <NumericUpDown Minimum="3072" Maximum="16384" Value="{Binding RsaKeySize}" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding Curves}" SelectedItem="{Binding Curve}" />
-            <NumericUpDown Grid.Column="2" Minimum="1" Maximum="36500" Value="{Binding ValidityDays}" />
-          </Grid>
-          <TextBox Text="{Binding SubjectDefault}" Watermark="Subject default" />
-          <TextBox Text="{Binding SubjectAlternativeNames}" Watermark="SAN defaults separated by comma or semicolon" />
-          <Grid ColumnDefinitions="Auto,120,Auto,120,*,*" ColumnSpacing="10">
             <CheckBox Content="Enabled" IsChecked="{Binding IsEnabled}" />
             <CheckBox Grid.Column="1" Content="Favorite" IsChecked="{Binding IsFavorite}" />
-            <CheckBox Grid.Column="2" Content="CA" IsChecked="{Binding IsCertificateAuthority}" />
-            <CheckBox Grid.Column="3" Content="Path length" IsChecked="{Binding HasPathLengthConstraint}" />
-            <NumericUpDown Grid.Column="4" Minimum="0" Maximum="16" Value="{Binding PathLengthConstraint}" />
-            <TextBox Grid.Column="5" Text="{Binding SignatureAlgorithm}" Watermark="Signature algorithm" />
+            <Button Grid.Column="2" Content="Delete" HorizontalAlignment="Left" Command="{Binding DeleteTemplateCommand}" />
           </Grid>
-          <TextBox Text="{Binding KeyUsages}" Watermark="Key usages separated by comma or semicolon" />
-          <TextBox Text="{Binding EnhancedKeyUsages}" Watermark="Enhanced key usages separated by comma or semicolon" />
-          <Button Content="Delete" HorizontalAlignment="Left" Command="{Binding DeleteTemplateCommand}" />
+          <shared:CertificateAuthoringSurfaceView DataContext="{Binding Authoring}" />
         </StackPanel>
       </Border>
 

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:shared="using:XcaNet.App.Views.Shared"
              x:Class="XcaNet.App.Views.Pages.CertificateRequestsPageView">
   <Grid ColumnDefinitions="1.1*,1*" ColumnSpacing="16">
     <StackPanel Spacing="14">
@@ -38,21 +39,12 @@
     <StackPanel Grid.Column="1" Spacing="14">
       <Border Classes="surface-card" Padding="16">
         <StackPanel Spacing="10">
-          <TextBlock Text="Sign Selected CSR" FontSize="18" FontWeight="SemiBold" />
-          <Border Classes="info-panel" Padding="12">
-            <TextBlock Text="Choose a CA certificate and the matching issuer key to produce a managed or routed certificate according to the backend policy." Classes="secondary-text" TextWrapping="Wrap" />
-          </Border>
-          <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-            <ComboBox ItemsSource="{Binding IssuanceTemplates}" SelectedItem="{Binding SelectedIssuanceTemplate}" />
-            <Button Grid.Column="1" Content="Apply Template" Command="{Binding ApplyIssuanceTemplateCommand}" />
+          <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+            <TextBlock Text="Certificate Input" FontSize="18" FontWeight="SemiBold" />
+            <Button Grid.Column="1" Content="Similar Request" Command="{Binding CreateSimilarRequestCommand}" />
+            <Button Grid.Column="2" Content="CSR to Template" Command="{Binding CreateTemplateFromRequestCommand}" />
           </Grid>
-          <TextBox Text="{Binding IssuedCertificateDisplayName}" Watermark="Issued certificate display name" />
-          <ComboBox ItemsSource="{Binding IssuerCertificates}" SelectedItem="{Binding SelectedIssuerCertificate}" />
-          <ComboBox ItemsSource="{Binding IssuerPrivateKeys}" SelectedItem="{Binding SelectedIssuerPrivateKey}" />
-          <Grid ColumnDefinitions="180,Auto" ColumnSpacing="10">
-            <NumericUpDown Minimum="1" Maximum="36500" Value="{Binding ValidityDays}" />
-            <Button Grid.Column="1" Content="Sign CSR" Command="{Binding SignSelectedCommand}" />
-          </Grid>
+          <shared:CertificateAuthoringSurfaceView DataContext="{Binding IssuanceAuthoring}" />
         </StackPanel>
       </Border>
 

@@ -1,4 +1,3 @@
-using System.Collections.ObjectModel;
 using System.Windows.Input;
 using XcaNet.Contracts.Browser;
 
@@ -6,11 +5,6 @@ namespace XcaNet.App.ViewModels.Pages;
 
 public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewModelBase<CertificateRequestListItem, Guid>
 {
-    private CertificateListItem? _selectedIssuerCertificate;
-    private PrivateKeyListItem? _selectedIssuerPrivateKey;
-    private string _issuedCertificateDisplayName = "Issued Certificate";
-    private int _validityDays = 365;
-    private TemplateListItem? _selectedIssuanceTemplate;
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
     private string _exportPreview = string.Empty;
 
@@ -21,43 +15,28 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
         EmptyStateMessage = "Create a CSR from the Private Keys page or import request files to review and sign them.";
     }
 
-    public ObservableCollection<CertificateListItem> IssuerCertificates { get; } = [];
+    public CertificateAuthoringViewModel IssuanceAuthoring { get; } = new(
+        "Certificate Input",
+        "Operation: sign selected request into a certificate",
+        "Source: selected certificate request",
+        "Issued Certificate",
+        "CN=issued.example.test",
+        365,
+        false,
+        "DigitalSignature, KeyEncipherment",
+        "Server Authentication",
+        true,
+        false,
+        true,
+        true,
+        true,
+        "Sign CSR");
 
-    public ObservableCollection<PrivateKeyListItem> IssuerPrivateKeys { get; } = [];
+    public IReadOnlyList<CertificateListItem> IssuerCertificates => IssuanceAuthoring.IssuerCertificates;
 
-    public ObservableCollection<TemplateListItem> IssuanceTemplates { get; } = [];
+    public IReadOnlyList<PrivateKeyListItem> IssuerPrivateKeys => IssuanceAuthoring.IssuerPrivateKeys;
 
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs10];
-
-    public CertificateListItem? SelectedIssuerCertificate
-    {
-        get => _selectedIssuerCertificate;
-        set => SetProperty(ref _selectedIssuerCertificate, value);
-    }
-
-    public PrivateKeyListItem? SelectedIssuerPrivateKey
-    {
-        get => _selectedIssuerPrivateKey;
-        set => SetProperty(ref _selectedIssuerPrivateKey, value);
-    }
-
-    public string IssuedCertificateDisplayName
-    {
-        get => _issuedCertificateDisplayName;
-        set => SetProperty(ref _issuedCertificateDisplayName, value);
-    }
-
-    public int ValidityDays
-    {
-        get => _validityDays;
-        set => SetProperty(ref _validityDays, value);
-    }
-
-    public TemplateListItem? SelectedIssuanceTemplate
-    {
-        get => _selectedIssuanceTemplate;
-        set => SetProperty(ref _selectedIssuanceTemplate, value);
-    }
 
     public CryptoFormatView SelectedExportFormat
     {
@@ -81,35 +60,20 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
 
     public ICommand? ApplyIssuanceTemplateCommand { get; set; }
 
+    public ICommand? CreateTemplateFromRequestCommand { get; set; }
+
+    public ICommand? CreateSimilarRequestCommand { get; set; }
+
     public void SetIssuers(IEnumerable<CertificateListItem> certificates, IEnumerable<PrivateKeyListItem> privateKeys)
     {
-        IssuerCertificates.Clear();
-        foreach (var certificate in certificates.Where(x => x.IsCertificateAuthority))
-        {
-            IssuerCertificates.Add(certificate);
-        }
-
-        IssuerPrivateKeys.Clear();
-        foreach (var privateKey in privateKeys)
-        {
-            IssuerPrivateKeys.Add(privateKey);
-        }
-
-        SelectedIssuerCertificate ??= IssuerCertificates.FirstOrDefault();
-        SelectedIssuerPrivateKey ??= IssuerPrivateKeys.FirstOrDefault();
+        IssuanceAuthoring.SetIssuers(certificates, privateKeys);
     }
 
     public void SetTemplates(IEnumerable<TemplateListItem> templates)
     {
-        IssuanceTemplates.Clear();
-        foreach (var template in templates.Where(x => x.IsEnabled && (
-                     x.IntendedUsage == TemplateIntendedUsage.IntermediateCa
-                     || x.IntendedUsage == TemplateIntendedUsage.EndEntityCertificate)))
-        {
-            IssuanceTemplates.Add(template);
-        }
-
-        SelectedIssuanceTemplate ??= IssuanceTemplates.FirstOrDefault();
+        IssuanceAuthoring.SetTemplates(templates.Where(x => x.IsEnabled && (
+            x.IntendedUsage == TemplateIntendedUsage.IntermediateCa
+            || x.IntendedUsage == TemplateIntendedUsage.EndEntityCertificate)));
     }
 
     protected override Guid GetItemId(CertificateRequestListItem item) => item.CertificateSigningRequestId;
