@@ -8,50 +8,78 @@
         MinHeight="760"
         DragDrop.AllowDrop="True"
         Title="XcaNet">
-  <Grid ColumnDefinitions="260,*" RowDefinitions="Auto,Auto,*">
-    <Border Grid.RowSpan="3" Background="{DynamicResource ShellSidebarBrush}" Padding="18">
-      <StackPanel Spacing="16">
+  <Grid RowDefinitions="Auto,Auto,Auto,*">
+    <Border Classes="workspace-shell" Margin="16,16,16,0" Padding="18">
+      <Grid ColumnDefinitions="2.2*,1.6*,Auto" ColumnSpacing="18">
         <StackPanel Spacing="4">
-          <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="Bold" Foreground="{DynamicResource ShellSidebarTextBrush}" />
-          <TextBlock Text="{Binding Subtitle}" Foreground="{DynamicResource ShellSidebarMutedTextBrush}" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="Bold" />
+          <TextBlock Text="XCA-style object workspace" Classes="secondary-text" />
         </StackPanel>
 
-        <ItemsControl ItemsSource="{Binding NavigationItems}">
+        <StackPanel Grid.Column="1" Spacing="4">
+          <TextBlock Text="{Binding SettingsSecurityPage.DisplayName}" FontSize="18" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding SettingsSecurityPage.StatusMessage}" Classes="secondary-text" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding SettingsSecurityPage.DatabasePath}" Classes="muted-text" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+          <Border Classes="status-pill" Padding="12,8">
+            <TextBlock Text="{Binding SettingsSecurityPage.SessionState}" FontWeight="SemiBold" />
+          </Border>
+          <Button Classes="toolbar-action" Content="Create" Command="{Binding CreateDatabaseCommand}" />
+          <Button Classes="toolbar-action" Content="Open" Command="{Binding OpenDatabaseCommand}" />
+          <Button Classes="toolbar-action" Content="Unlock" Command="{Binding UnlockDatabaseCommand}" />
+          <Button Classes="toolbar-action" Content="Lock" Command="{Binding LockDatabaseCommand}" />
+          <Button Classes="toolbar-action" Content="Refresh" Command="{Binding RefreshWorkspaceCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Border Grid.Row="1" Classes="workspace-shell" Margin="16,12,16,0" Padding="14">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+        <ItemsControl ItemsSource="{Binding WorkspaceNavigationItems}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="10" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Button Command="{Binding Command}"
-                      Classes="nav-item"
-                      Classes.is-selected="{Binding IsSelected}"
-                      HorizontalContentAlignment="Left"
-                      Padding="14,10"
-                      Margin="0,0,0,8">
-                <StackPanel Orientation="Horizontal" Spacing="10">
-                  <TextBlock Text="{Binding Glyph}" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding Title}" />
+                      Classes="workspace-tab"
+                      Classes.is-selected="{Binding IsSelected}">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Glyph}" Classes="muted-text" FontSize="11" />
                 </StackPanel>
               </Button>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </StackPanel>
-    </Border>
 
-    <Border Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Padding="20,16" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="4">
-          <TextBlock Text="{Binding CurrentPage.Title}" FontSize="26" FontWeight="SemiBold" />
-          <TextBlock Text="{Binding SettingsSecurityPage.StatusMessage}" Classes="secondary-text" TextWrapping="Wrap" />
-        </StackPanel>
-        <Border Grid.Column="1"
-                Classes="status-pill"
-                Padding="12,8"
-                IsVisible="{Binding IsBusy}">
-          <TextBlock Text="{Binding BusyMessage}" FontWeight="SemiBold" />
-        </Border>
+        <ItemsControl Grid.Column="1" ItemsSource="{Binding UtilityNavigationItems}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Command="{Binding Command}"
+                      Classes="utility-tab"
+                      Classes.is-selected="{Binding IsSelected}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding Glyph}" Classes="muted-text" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
       </Grid>
     </Border>
 
-    <Border Grid.Row="1" Grid.Column="1" Padding="20,10" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+    <Border Grid.Row="2" Margin="16,12,16,0">
       <ItemsControl ItemsSource="{Binding Notifications}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
@@ -76,10 +104,9 @@
       </ItemsControl>
     </Border>
 
-    <ContentControl Grid.Row="2" Grid.Column="1" Background="{DynamicResource AppBackgroundBrush}" Content="{Binding CurrentPage}" Margin="20" />
+    <ContentControl Grid.Row="3" Content="{Binding CurrentPage}" Margin="16" />
 
-    <Border Grid.Column="1"
-            Grid.RowSpan="3"
+    <Border Grid.RowSpan="4"
             Background="{DynamicResource DialogOverlayBrush}"
             IsVisible="{Binding IsAuthoringDialogOpen}">
       <Grid Margin="32">

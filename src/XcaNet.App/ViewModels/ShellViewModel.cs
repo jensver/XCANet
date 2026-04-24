@@ -201,18 +201,22 @@ public sealed class ShellViewModel : ViewModelBase
         TemplatesPage.DeleteTemplateCommand = _deleteTemplateCommand;
         TemplatesPage.Authoring.PrimaryActionCommand = _saveTemplateCommand;
 
-        NavigationItems =
+        WorkspaceNavigationItems =
+        [
+            new NavigationItemViewModel("Private Keys", "Keys", new DelegateCommand(() => SelectPage(PrivateKeysPage))),
+            new NavigationItemViewModel("CSRs", "Requests", new DelegateCommand(() => SelectPage(CertificateRequestsPage))),
+            new NavigationItemViewModel("Certificates", "Certificates", new DelegateCommand(() => SelectPage(CertificatesPage))),
+            new NavigationItemViewModel("Templates", "Templates", new DelegateCommand(() => SelectPage(TemplatesPage))),
+            new NavigationItemViewModel("CRLs", "Revocation", new DelegateCommand(() => SelectPage(CertificateRevocationListsPage)))
+        ];
+        UtilityNavigationItems =
         [
             new NavigationItemViewModel("Dashboard", "Overview", new DelegateCommand(() => SelectPage(DashboardPage))),
-            new NavigationItemViewModel("Certificates", "Browse", new DelegateCommand(() => SelectPage(CertificatesPage))),
-            new NavigationItemViewModel("Private Keys", "Secure", new DelegateCommand(() => SelectPage(PrivateKeysPage))),
-            new NavigationItemViewModel("CSRs", "Requests", new DelegateCommand(() => SelectPage(CertificateRequestsPage))),
-            new NavigationItemViewModel("CRLs", "Revocation", new DelegateCommand(() => SelectPage(CertificateRevocationListsPage))),
-            new NavigationItemViewModel("Templates", "Presets", new DelegateCommand(() => SelectPage(TemplatesPage))),
             new NavigationItemViewModel("Settings / Security", "Database", new DelegateCommand(() => SelectPage(SettingsSecurityPage)))
         ];
+        NavigationItems = [.. WorkspaceNavigationItems, .. UtilityNavigationItems];
 
-        _currentPage = DashboardPage;
+        _currentPage = CertificatesPage;
 
         CertificatesPage.PropertyChanged += OnCertificatesPagePropertyChanged;
         PrivateKeysPage.PropertyChanged += OnPageSelectionChanged;
@@ -224,7 +228,7 @@ public sealed class ShellViewModel : ViewModelBase
         CertificateRequestsPage.IssuanceAuthoring.PropertyChanged += OnAuthoringPropertyChanged;
         TemplatesPage.Authoring.PropertyChanged += OnAuthoringPropertyChanged;
 
-        SelectPage(DashboardPage);
+        SelectPage(CertificatesPage);
         ApplySnapshot(Snapshot);
         _ = RefreshAllAsync();
     }
@@ -312,6 +316,10 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
+    public ObservableCollection<NavigationItemViewModel> WorkspaceNavigationItems { get; }
+
+    public ObservableCollection<NavigationItemViewModel> UtilityNavigationItems { get; }
+
     public ObservableCollection<NotificationItemViewModel> Notifications { get; } = [];
 
     public PageViewModelBase CurrentPage
@@ -321,6 +329,16 @@ public sealed class ShellViewModel : ViewModelBase
     }
 
     public DatabaseSessionSnapshot Snapshot => _databaseSessionService.GetSnapshot();
+
+    public ICommand CreateDatabaseCommand => _createDatabaseCommand;
+
+    public ICommand OpenDatabaseCommand => _openDatabaseCommand;
+
+    public ICommand UnlockDatabaseCommand => _unlockDatabaseCommand;
+
+    public ICommand LockDatabaseCommand => _lockDatabaseCommand;
+
+    public ICommand RefreshWorkspaceCommand => _refreshWorkspaceCommand;
 
     private async Task CreateDatabaseAsync()
     {

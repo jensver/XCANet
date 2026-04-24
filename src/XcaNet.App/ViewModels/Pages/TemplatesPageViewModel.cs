@@ -155,6 +155,12 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
         private set => SetProperty(ref _previewSummary, value);
     }
 
+    public string PreviewSubjectSummary => GetPreviewLine(1, "Subject: not preset");
+
+    public string PreviewExtensionSummary => GetPreviewLine(5, "Extensions: not preset");
+
+    public string PreviewStateSummary => GetPreviewLine(6, "State: standard");
+
     public bool IsEditingExisting => SelectedItem is not null;
 
     public ICommand? CreateNewCommand { get; set; }
@@ -200,6 +206,7 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
             template.Preview.ExtensionSummary,
             template.Preview.StateSummary
         ]);
+        RaisePreviewPropertiesChanged();
         OnPropertyChanged(nameof(IsEditingExisting));
     }
 
@@ -321,6 +328,7 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
                 $"Extensions: {(Authoring.IsCertificateAuthority ? "CA" : "Leaf")} | KU: {Authoring.KeyUsages}",
                 $"State: {(IsEnabled ? "Enabled" : "Disabled")} | {(IsFavorite ? "Favorite" : "Standard")}"
             ]);
+        RaisePreviewPropertiesChanged();
     }
 
     private static TemplateIntendedUsage DetermineTemplateUsage(CertificateListItem certificate, CertificateInspectorData? inspector)
@@ -352,4 +360,17 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
         => string.IsNullOrWhiteSpace(value)
             ? []
             : value.Split([',', ';', '\n'], StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+    private string GetPreviewLine(int index, string fallback)
+    {
+        var lines = PreviewSummary.Split(Environment.NewLine, StringSplitOptions.None);
+        return index < lines.Length ? lines[index] : fallback;
+    }
+
+    private void RaisePreviewPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(PreviewSubjectSummary));
+        OnPropertyChanged(nameof(PreviewExtensionSummary));
+        OnPropertyChanged(nameof(PreviewStateSummary));
+    }
 }

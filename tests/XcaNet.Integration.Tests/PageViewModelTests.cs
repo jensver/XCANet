@@ -249,6 +249,23 @@ public sealed class PageViewModelTests
         Assert.Equal(KeyAlgorithmKind.Ecdsa, page.Authoring.KeyAlgorithm);
     }
 
+    [Fact]
+    public void BrowserListItems_ShouldExposeWorkspaceDisplaySummaries()
+    {
+        var privateKey = new PrivateKeyListItem(Guid.NewGuid(), "Issuer Key", "RSA 3072", "fp", DateTimeOffset.UtcNow, 2);
+        var request = new CertificateRequestListItem(Guid.NewGuid(), "Leaf CSR", "CN=leaf.example.test", Guid.NewGuid(), null, "ECDSA P-256", "leaf.example.test", DateTimeOffset.UtcNow);
+        var certificate = CreateCertificateListItem(Guid.NewGuid(), "Leaf");
+        var template = new TemplateListItem(Guid.NewGuid(), "Server", "desc", TemplateIntendedUsage.EndEntityCertificate, true, false, "summary");
+
+        Assert.Equal("RSA 3072", privateKey.SizeOrCurve);
+        Assert.Equal("2 linked", privateKey.RelatedObjectSummary);
+        Assert.Equal("Stored key", request.PrivateKeySummary);
+        Assert.Equal("Leaf", certificate.CertificateKind);
+        Assert.Equal("No", certificate.PrivateKeyStatus);
+        Assert.Equal("Disabled", template.EnabledState);
+        Assert.Equal("Favorite", template.FavoriteState);
+    }
+
     private static CertificateListItem CreateCertificateListItem(Guid id, string displayName, bool isCertificateAuthority = false)
     {
         return new CertificateListItem(
