@@ -1,49 +1,111 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:XcaNet.App.ViewModels.Pages"
              x:Class="XcaNet.App.Views.Pages.CertificatesPageView">
   <Grid ColumnDefinitions="*,160" RowDefinitions="*,210" ColumnSpacing="8" RowSpacing="8">
-    <Border Classes="workspace-pane">
+
+    <!-- Main pane: tree view (hierarchy) OR flat list (plain view) -->
+    <Border Grid.Row="0" Classes="workspace-pane">
       <Grid RowDefinitions="Auto,Auto,*">
-        <Grid Margin="8,6,8,0" ColumnDefinitions="*,*,*,*,Auto" ColumnSpacing="8">
+
+        <!-- Filter row -->
+        <Grid Margin="8,6,8,0" ColumnDefinitions="*,*,*,*,Auto,Auto" ColumnSpacing="8">
           <TextBox Watermark="Name" Text="{Binding Filter.DisplayName}" />
           <TextBox Grid.Column="1" Watermark="Subject" Text="{Binding Filter.Subject}" />
           <TextBox Grid.Column="2" Watermark="Issuer" Text="{Binding Filter.Issuer}" />
           <TextBox Grid.Column="3" Watermark="Serial" Text="{Binding Filter.SerialNumber}" />
           <Button Grid.Column="4" Content="Refresh" Command="{Binding RefreshCommand}" />
+          <ToggleButton Grid.Column="5" Content="Plain View"
+                        IsChecked="{Binding IsPlainView}"
+                        Command="{Binding TogglePlainViewCommand}" />
         </Grid>
 
+        <!-- Table column headers -->
         <Border Grid.Row="1" Classes="table-header" Padding="8,6" Margin="0,6,0,0">
-          <Grid ColumnDefinitions="1.2*,1.5*,1.3*,0.9*,0.9*,0.9*,0.6*,0.8*,0.7*" ColumnSpacing="8">
+          <Grid ColumnDefinitions="1.4*,1.0*,0.8*,0.85*,0.85*,0.9*,1.0*" ColumnSpacing="8">
             <TextBlock Text="Certificates" FontWeight="SemiBold" />
-            <TextBlock Grid.Column="1" Text="Subject" Classes="table-header-text" />
-            <TextBlock Grid.Column="2" Text="Issuer" Classes="table-header-text" />
-            <TextBlock Grid.Column="3" Text="Serial" Classes="table-header-text" />
-            <TextBlock Grid.Column="4" Text="Valid From" Classes="table-header-text" />
-            <TextBlock Grid.Column="5" Text="Valid To" Classes="table-header-text" />
-            <TextBlock Grid.Column="6" Text="CA" Classes="table-header-text" />
-            <TextBlock Grid.Column="7" Text="Revoked" Classes="table-header-text" />
-            <TextBlock Grid.Column="8" Text="Key" Classes="table-header-text" />
+            <TextBlock Grid.Column="1" Text="Common Name" Classes="table-header-text" />
+            <TextBlock Grid.Column="2" Text="Status" Classes="table-header-text" />
+            <TextBlock Grid.Column="3" Text="Not Before" Classes="table-header-text" />
+            <TextBlock Grid.Column="4" Text="Not After" Classes="table-header-text" />
+            <TextBlock Grid.Column="5" Text="Serial" Classes="table-header-text" />
+            <TextBlock Grid.Column="6" Text="SHA-1" Classes="table-header-text" />
           </Grid>
         </Border>
 
+        <!-- Content: hierarchy tree OR flat list -->
         <Grid Grid.Row="2">
           <Border Classes="empty-state" Margin="8" Padding="12" IsVisible="{Binding IsEmpty}">
             <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
-          <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+
+          <!-- Hierarchy tree view (default) -->
+          <TreeView ItemsSource="{Binding CertificateTreeRoots}"
+                    SelectedItem="{Binding SelectedTreeNode}"
+                    IsVisible="{Binding !IsPlainView}">
+            <TreeView.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />
+                <MenuItem Header="Export" Command="{Binding ExportSelectedCommand}" />
+                <Separator />
+                <MenuItem Header="Revoke" Command="{Binding OpenRevokeDialogCommand}" />
+                <MenuItem Header="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />
+                <Separator />
+                <MenuItem Header="To Template" Command="{Binding CreateTemplateFromCertificateCommand}" />
+                <MenuItem Header="Renew" IsEnabled="False" />
+                <Separator />
+                <MenuItem Header="Open Issuer" Command="{Binding OpenIssuerCommand}" />
+                <MenuItem Header="Delete" IsEnabled="False" />
+              </ContextMenu>
+            </TreeView.ContextMenu>
+            <TreeView.ItemTemplate>
+              <TreeDataTemplate DataType="{x:Type vm:CertificateTreeNodeViewModel}"
+                                ItemsSource="{Binding Children}">
+                <Border Padding="4,5" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+                  <Grid ColumnDefinitions="1.4*,1.0*,0.8*,0.85*,0.85*,0.9*,1.0*" ColumnSpacing="8">
+                    <TextBlock Text="{Binding DisplayName}" />
+                    <TextBlock Grid.Column="1" Text="{Binding CommonName}" />
+                    <TextBlock Grid.Column="2" Text="{Binding StatusDisplay}" />
+                    <TextBlock Grid.Column="3" Text="{Binding NotBeforeDisplay}" />
+                    <TextBlock Grid.Column="4" Text="{Binding NotAfterDisplay}" />
+                    <TextBlock Grid.Column="5" Text="{Binding SerialNumber}" />
+                    <TextBlock Grid.Column="6" Text="{Binding Sha1Thumbprint}" TextWrapping="NoWrap" />
+                  </Grid>
+                </Border>
+              </TreeDataTemplate>
+            </TreeView.ItemTemplate>
+          </TreeView>
+
+          <!-- Plain (flat) list view -->
+          <ListBox ItemsSource="{Binding Items}"
+                   SelectedItem="{Binding SelectedItem}"
+                   IsVisible="{Binding IsPlainView}">
+            <ListBox.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />
+                <MenuItem Header="Export" Command="{Binding ExportSelectedCommand}" />
+                <Separator />
+                <MenuItem Header="Revoke" Command="{Binding OpenRevokeDialogCommand}" />
+                <MenuItem Header="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />
+                <Separator />
+                <MenuItem Header="To Template" Command="{Binding CreateTemplateFromCertificateCommand}" />
+                <MenuItem Header="Renew" IsEnabled="False" />
+                <Separator />
+                <MenuItem Header="Open Issuer" Command="{Binding OpenIssuerCommand}" />
+                <MenuItem Header="Delete" IsEnabled="False" />
+              </ContextMenu>
+            </ListBox.ContextMenu>
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-                  <Grid ColumnDefinitions="1.2*,1.5*,1.3*,0.9*,0.9*,0.9*,0.6*,0.8*,0.7*" ColumnSpacing="8">
+                  <Grid ColumnDefinitions="1.4*,1.0*,0.8*,0.85*,0.85*,0.9*,1.0*" ColumnSpacing="8">
                     <TextBlock Text="{Binding DisplayName}" />
-                    <TextBlock Grid.Column="1" Text="{Binding Subject}" TextWrapping="Wrap" />
-                    <TextBlock Grid.Column="2" Text="{Binding Issuer}" TextWrapping="Wrap" />
-                    <TextBlock Grid.Column="3" Text="{Binding SerialNumber}" />
-                    <TextBlock Grid.Column="4" Text="{Binding NotBefore, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                    <TextBlock Grid.Column="5" Text="{Binding NotAfter, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                    <TextBlock Grid.Column="6" Text="{Binding CertificateKind}" />
-                    <TextBlock Grid.Column="7" Text="{Binding RevocationStatus}" />
-                    <TextBlock Grid.Column="8" Text="{Binding PrivateKeyStatus}" />
+                    <TextBlock Grid.Column="1" Text="{Binding CommonName}" />
+                    <TextBlock Grid.Column="2" Text="{Binding StatusDisplay}" />
+                    <TextBlock Grid.Column="3" Text="{Binding NotBefore, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                    <TextBlock Grid.Column="4" Text="{Binding NotAfter, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                    <TextBlock Grid.Column="5" Text="{Binding SerialNumber}" />
+                    <TextBlock Grid.Column="6" Text="{Binding Sha1Thumbprint}" TextWrapping="NoWrap" />
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -53,21 +115,24 @@
       </Grid>
     </Border>
 
+    <!-- Right-side action buttons -->
     <Border Grid.Column="1" Classes="classic-side-panel" Padding="8">
       <StackPanel>
         <Button Classes="side-action" Content="New Certificate" IsEnabled="False" />
         <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedCommand}" />
         <Button Classes="side-action" Content="Import" Command="{Binding ImportFilesCommand}" />
-        <Button Classes="side-action" Content="Show Details" IsEnabled="False" />
+        <Button Classes="side-action" Content="Show Details" Command="{Binding ShowDetailsCommand}" />
         <Button Classes="side-action" Content="Delete" IsEnabled="False" />
-        <Button Classes="side-action" Content="Revoke" Command="{Binding RevokeSelectedCommand}" />
+        <Button Classes="side-action" Content="Revoke" Command="{Binding OpenRevokeDialogCommand}" />
         <Button Classes="side-action" Content="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />
+        <Button Classes="side-action" Content="Renew" IsEnabled="False" />
         <Button Classes="side-action" Content="To Template" Command="{Binding CreateTemplateFromCertificateCommand}" />
-        <Button Classes="side-action" Content="Plain View" IsEnabled="False" />
         <Button Classes="side-action" Content="Open Issuer" Command="{Binding OpenIssuerCommand}" />
+        <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
       </StackPanel>
     </Border>
 
+    <!-- Inspector panel (bottom) -->
     <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="workspace-pane" Padding="8">
       <TabControl Classes="workspace-inspector-tabs">
         <TabItem Header="General">
@@ -85,7 +150,7 @@
           </Grid>
         </TabItem>
         <TabItem Header="Details">
-          <Grid Margin="6" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
+          <Grid Margin="6" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
             <TextBlock Text="Serial" />
             <TextBlock Grid.Column="1" Text="{Binding Inspector.Raw.SerialNumber}" />
             <TextBlock Grid.Row="1" Text="SHA-1" />
@@ -94,6 +159,8 @@
             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Inspector.Raw.Sha256Thumbprint}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="3" Text="Key algorithm" />
             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Inspector.Raw.KeyAlgorithm}" />
+            <TextBlock Grid.Row="4" Text="Type" />
+            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Inspector.Display.CertificateKind}" />
           </Grid>
         </TabItem>
         <TabItem Header="Extensions">
@@ -112,13 +179,13 @@
         </TabItem>
         <TabItem Header="Relationships">
           <Grid Margin="6" ColumnDefinitions="140,*,220" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="6">
-            <TextBlock Text="Type" />
-            <TextBlock Grid.Column="1" Text="{Binding Inspector.Display.CertificateKind}" />
-            <TextBlock Grid.Row="1" Text="Issuer" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inspector.Display.IssuerDisplayName}" TextWrapping="Wrap" />
-            <TextBlock Grid.Row="2" Text="Children" />
-            <ComboBox Grid.Row="2" Grid.Column="1" ItemsSource="{Binding Inspector.Navigation.Children}" SelectedItem="{Binding SelectedChildNavigationItem}" />
-            <Button Grid.Row="2" Grid.Column="2" Content="Open Child" HorizontalAlignment="Left" Command="{Binding OpenChildCertificateCommand}" />
+            <TextBlock Text="Issuer" />
+            <TextBlock Grid.Column="1" Text="{Binding Inspector.Display.IssuerDisplayName}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1" Text="Children" />
+            <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding Inspector.Navigation.Children}" SelectedItem="{Binding SelectedChildNavigationItem}" />
+            <Button Grid.Row="1" Grid.Column="2" Content="Open Child" HorizontalAlignment="Left" Command="{Binding OpenChildCertificateCommand}" />
+            <TextBlock Grid.Row="2" Text="Private key" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Inspector.Display.PrivateKeyDisplayName}" />
           </Grid>
         </TabItem>
         <TabItem Header="Raw / PEM">
@@ -126,10 +193,130 @@
             <ComboBox ItemsSource="{Binding ExportTargets}" SelectedItem="{Binding SelectedExportTarget}" />
             <ComboBox Grid.Column="1" ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding SelectedExportFormat}" />
             <TextBox Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding SelectedExportPassword}" PasswordChar="*" Watermark="Optional password for PEM bundle or PKCS#12" />
-            <TextBox Grid.Row="2" Grid.ColumnSpan="2" Text="{Binding ImportPayload}" AcceptsReturn="True" TextWrapping="Wrap" />
+            <TextBox Grid.Row="2" Grid.ColumnSpan="2" Classes="readonly-surface" Text="{Binding ExportPreview}" AcceptsReturn="True" TextWrapping="Wrap" />
           </Grid>
         </TabItem>
       </TabControl>
     </Border>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Certificate Detail dialog overlay                                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsDetailDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="700"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+
+          <!-- Dialog header -->
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding SelectedItem.DisplayName}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseDetailCommand}" />
+          </Grid>
+
+          <!-- Detail tabs -->
+          <TabControl Grid.Row="1">
+            <TabItem Header="Status">
+              <Grid Margin="6" ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                <TextBlock Text="Type" />
+                <TextBlock Grid.Column="1" Text="{Binding Inspector.Display.CertificateKind}" />
+                <TextBlock Grid.Row="1" Text="Status" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.StatusDisplay}" />
+                <TextBlock Grid.Row="2" Text="Serial" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Inspector.Raw.SerialNumber}" />
+                <TextBlock Grid.Row="3" Text="Validity" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Inspector.Display.ValidityRange}" />
+                <TextBlock Grid.Row="4" Text="SHA-1" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Inspector.Raw.Sha1Thumbprint}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="5" Text="SHA-256" />
+                <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Inspector.Raw.Sha256Thumbprint}" TextWrapping="Wrap" />
+              </Grid>
+            </TabItem>
+            <TabItem Header="Subject">
+              <Grid Margin="6" ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                <TextBlock Text="Subject DN" />
+                <TextBlock Grid.Column="1" Text="{Binding Inspector.Raw.Subject}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="1" Text="Common Name" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.CommonName}" />
+              </Grid>
+            </TabItem>
+            <TabItem Header="Issuer">
+              <Grid Margin="6" ColumnDefinitions="160,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                <TextBlock Text="Issuer DN" />
+                <TextBlock Grid.Column="1" Text="{Binding Inspector.Raw.Issuer}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="1" Text="Issuer name" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inspector.Display.IssuerDisplayName}" TextWrapping="Wrap" />
+              </Grid>
+            </TabItem>
+            <TabItem Header="Extensions">
+              <Grid Margin="6" ColumnDefinitions="1*,1*" RowDefinitions="Auto,*" RowSpacing="8">
+                <TextBlock Text="Key algorithm" />
+                <TextBlock Grid.Column="1" Text="{Binding Inspector.Raw.KeyAlgorithm}" />
+                <StackPanel Grid.Row="1">
+                  <TextBlock Text="Subject Alternative Names" FontWeight="SemiBold" />
+                  <ItemsControl ItemsSource="{Binding Inspector.Extensions.SubjectAlternativeNames}" />
+                  <TextBlock Text="Key Usage" FontWeight="SemiBold" Margin="0,8,0,0" />
+                  <ItemsControl ItemsSource="{Binding Inspector.Extensions.KeyUsages}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1">
+                  <TextBlock Text="Enhanced Key Usage" FontWeight="SemiBold" />
+                  <ItemsControl ItemsSource="{Binding Inspector.Extensions.EnhancedKeyUsages}" />
+                </StackPanel>
+              </Grid>
+            </TabItem>
+          </TabControl>
+
+          <!-- OK button -->
+          <Button Grid.Row="2" Content="OK" Command="{Binding CloseDetailCommand}" HorizontalAlignment="Right" MinWidth="80" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Revoke dialog overlay                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsRevokeDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="480"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+
+          <!-- Dialog header -->
+          <TextBlock Text="Certificate revocation" FontSize="16" FontWeight="SemiBold" />
+
+          <!-- Fields -->
+          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+            <TextBlock Text="Certificate" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1" Text="Serial number" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.SerialNumber}" />
+            <TextBlock Grid.Row="2" Text="Revocation reason" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="2" Grid.Column="1"
+                      ItemsSource="{Binding RevocationReasons}"
+                      SelectedItem="{Binding SelectedRevocationReason}"
+                      HorizontalAlignment="Stretch" />
+          </Grid>
+
+          <!-- Revocation date note -->
+          <TextBlock Grid.Row="2" Text="Revocation date will be recorded as the current UTC time." Classes="secondary-text" TextWrapping="Wrap" />
+
+          <!-- Action buttons -->
+          <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Text="This action cannot be undone." Classes="secondary-text" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Revoke" Command="{Binding RevokeSelectedCommand}" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseRevokeDialogCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
   </Grid>
 </UserControl>
