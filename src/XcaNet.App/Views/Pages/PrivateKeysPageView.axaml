@@ -1,16 +1,18 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="XcaNet.App.Views.Pages.PrivateKeysPageView">
-  <Grid ColumnDefinitions="*,150" RowDefinitions="*,170" ColumnSpacing="8" RowSpacing="8">
+  <Grid ColumnDefinitions="*,150" RowDefinitions="*,140" ColumnSpacing="8" RowSpacing="8">
+
+    <!-- Main table -->
     <Border Grid.Row="0" Grid.Column="0" Classes="workspace-pane">
       <Grid RowDefinitions="Auto,*">
         <Border Classes="table-header" Padding="8,6">
-          <Grid ColumnDefinitions="2.0*,1.0*,1.0*,1.0*,0.9*" ColumnSpacing="10">
+          <Grid ColumnDefinitions="1.8*,1.4*,0.7*,0.9*,0.6*" ColumnSpacing="8">
             <TextBlock Text="Private Keys" FontWeight="SemiBold" />
             <TextBlock Grid.Column="1" Text="Algorithm" Classes="table-header-text" />
-            <TextBlock Grid.Column="2" Text="Size / Curve" Classes="table-header-text" />
+            <TextBlock Grid.Column="2" Text="Use" Classes="table-header-text" />
             <TextBlock Grid.Column="3" Text="Created" Classes="table-header-text" />
-            <TextBlock Grid.Column="4" Text="Related" Classes="table-header-text" />
+            <TextBlock Grid.Column="4" Text="Source" Classes="table-header-text" />
           </Grid>
         </Border>
         <Grid Grid.Row="1">
@@ -18,15 +20,27 @@
             <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />
+                <MenuItem Header="Export" Command="{Binding ExportSelectedToFileCommand}" />
+                <Separator />
+                <MenuItem Header="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
+                <MenuItem Header="Create Certificate" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
+                <Separator />
+                <MenuItem Header="Import" IsEnabled="False" />
+                <MenuItem Header="Delete" IsEnabled="False" />
+              </ContextMenu>
+            </ListBox.ContextMenu>
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-                  <Grid ColumnDefinitions="2.0*,1.0*,1.0*,1.0*,0.9*" ColumnSpacing="10">
+                  <Grid ColumnDefinitions="1.8*,1.4*,0.7*,0.9*,0.6*" ColumnSpacing="8">
                     <TextBlock Text="{Binding DisplayName}" />
                     <TextBlock Grid.Column="1" Text="{Binding Algorithm}" />
-                    <TextBlock Grid.Column="2" Text="{Binding SizeOrCurve}" />
+                    <TextBlock Grid.Column="2" Text="{Binding LinkedCertificateCount}" />
                     <TextBlock Grid.Column="3" Text="{Binding CreatedUtc, StringFormat='{}{0:yyyy-MM-dd}'}" />
-                    <TextBlock Grid.Column="4" Text="{Binding RelatedObjectSummary}" />
+                    <TextBlock Grid.Column="4" Text="SW" />
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -36,20 +50,21 @@
       </Grid>
     </Border>
 
+    <!-- Side action panel -->
     <Border Grid.Row="0" Grid.Column="1" Classes="classic-side-panel" Padding="8">
       <StackPanel>
-        <Button Classes="side-action" Content="New Key" Command="{Binding GenerateKeyCommand}" />
+        <Button Classes="side-action" Content="New Key" Command="{Binding OpenNewKeyDialogCommand}" />
         <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedToFileCommand}" />
         <Button Classes="side-action" Content="Import" IsEnabled="False" />
-        <Button Classes="side-action" Content="Show Details" IsEnabled="False" />
+        <Button Classes="side-action" Content="Show Details" Command="{Binding ShowDetailsCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Classes="side-action" Content="Delete" IsEnabled="False" />
         <Button Classes="side-action" Content="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
         <Button Classes="side-action" Content="Create Certificate" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
-        <Button Classes="side-action" Content="Preview Export" Command="{Binding ExportSelectedCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
       </StackPanel>
     </Border>
 
+    <!-- Inspector panel -->
     <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="workspace-pane" Padding="8">
       <TabControl Classes="workspace-inspector-tabs">
         <TabItem Header="Details">
@@ -64,14 +79,6 @@
             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.CreatedUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
           </Grid>
         </TabItem>
-        <TabItem Header="New Key">
-          <Grid Margin="6" ColumnDefinitions="220,180,180,Auto" ColumnSpacing="10">
-            <TextBox Text="{Binding NewKeyDisplayName}" Watermark="Key name" />
-            <ComboBox Grid.Column="1" ItemsSource="{Binding Algorithms}" SelectedItem="{Binding SelectedAlgorithm}" />
-            <ComboBox Grid.Column="2" ItemsSource="{Binding Curves}" SelectedItem="{Binding SelectedCurve}" />
-            <Button Grid.Column="3" Content="Generate" Command="{Binding GenerateKeyCommand}" />
-          </Grid>
-        </TabItem>
         <TabItem Header="Export">
           <Grid Margin="6" ColumnDefinitions="180,*" RowDefinitions="Auto,*" ColumnSpacing="10" RowSpacing="8">
             <ComboBox ItemsSource="{Binding ExportFormats}" SelectedItem="{Binding SelectedExportFormat}" />
@@ -81,5 +88,86 @@
         </TabItem>
       </TabControl>
     </Border>
+
+    <!-- New Key dialog overlay -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsNewKeyDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="460"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="New Private Key" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseNewKeyDialogCommand}" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="120,*" ColumnSpacing="10">
+            <TextBlock Text="Key Name" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding NewKeyDisplayName}" Watermark="Key name" />
+          </Grid>
+          <Grid Grid.Row="2" ColumnDefinitions="120,*" ColumnSpacing="10">
+            <TextBlock Text="Algorithm" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding Algorithms}"
+                      SelectedItem="{Binding SelectedAlgorithm}"
+                      HorizontalAlignment="Stretch" />
+          </Grid>
+          <Grid Grid.Row="3" ColumnDefinitions="120,*" ColumnSpacing="10">
+            <TextBlock Text="Key Size / Curve" VerticalAlignment="Center" />
+            <Grid Grid.Column="1">
+              <ComboBox ItemsSource="{Binding KeySizes}"
+                        SelectedItem="{Binding SelectedKeySize}"
+                        IsVisible="{Binding IsRsaAlgorithmSelected}"
+                        HorizontalAlignment="Stretch" />
+              <ComboBox ItemsSource="{Binding Curves}"
+                        SelectedItem="{Binding SelectedCurve}"
+                        IsVisible="{Binding IsEcdsaAlgorithmSelected}"
+                        HorizontalAlignment="Stretch" />
+            </Grid>
+          </Grid>
+          <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock />
+            <Button Grid.Column="1" Content="Cancel" Command="{Binding CloseNewKeyDialogCommand}" MinWidth="80" />
+            <Button Grid.Column="2" Content="Generate" Command="{Binding GenerateKeyCommand}" MinWidth="80" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Key Detail dialog overlay -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsKeyDetailDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="560"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Key Details" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseKeyDetailCommand}" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+            <TextBlock Text="Internal name" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" />
+            <TextBlock Grid.Row="1" Text="Algorithm" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.Algorithm}" />
+            <TextBlock Grid.Row="2" Text="Linked certificates" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.LinkedCertificateCount}" />
+            <TextBlock Grid.Row="3" Text="Created" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.CreatedUtc, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" />
+            <TextBlock Grid.Row="4" Text="Source" />
+            <TextBlock Grid.Row="4" Grid.Column="1" Text="Software (managed)" />
+            <TextBlock Grid.Row="5" Text="Fingerprint" />
+            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedItem.PublicKeyFingerprint}" TextWrapping="Wrap" />
+          </Grid>
+          <Button Grid.Row="2" Content="OK" Command="{Binding CloseKeyDetailCommand}" HorizontalAlignment="Right" MinWidth="80" />
+        </Grid>
+      </Border>
+    </Grid>
+
   </Grid>
 </UserControl>

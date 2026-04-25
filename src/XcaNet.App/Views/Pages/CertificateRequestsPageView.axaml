@@ -1,11 +1,13 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="XcaNet.App.Views.Pages.CertificateRequestsPageView">
-  <Grid ColumnDefinitions="*,150" RowDefinitions="*,170" ColumnSpacing="8" RowSpacing="8">
+  <Grid ColumnDefinitions="*,150" RowDefinitions="*,140" ColumnSpacing="8" RowSpacing="8">
+
+    <!-- Main table -->
     <Border Grid.Row="0" Classes="workspace-pane">
       <Grid RowDefinitions="Auto,*">
         <Border Classes="table-header" Padding="8,6">
-          <Grid ColumnDefinitions="1.2*,2.2*,1.0*,0.9*,1.0*" ColumnSpacing="10">
+          <Grid ColumnDefinitions="1.2*,2.0*,0.9*,0.9*,1.0*" ColumnSpacing="8">
             <TextBlock Text="Certificate signing requests" FontWeight="SemiBold" />
             <TextBlock Grid.Column="1" Text="Subject" Classes="table-header-text" />
             <TextBlock Grid.Column="2" Text="Key" Classes="table-header-text" />
@@ -18,10 +20,24 @@
             <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />
+                <MenuItem Header="Sign" Command="{Binding OpenIssuanceAuthoringCommand}" />
+                <MenuItem Header="Export" Command="{Binding ExportSelectedToFileCommand}" />
+                <Separator />
+                <MenuItem Header="Similar Request" Command="{Binding CreateSimilarRequestCommand}" />
+                <MenuItem Header="To Template" Command="{Binding CreateTemplateFromRequestCommand}" />
+                <MenuItem Header="Open Key" Command="{Binding OpenSelectedPrivateKeyCommand}" />
+                <Separator />
+                <MenuItem Header="Import" IsEnabled="False" />
+                <MenuItem Header="Delete" IsEnabled="False" />
+              </ContextMenu>
+            </ListBox.ContextMenu>
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-                  <Grid ColumnDefinitions="1.2*,2.2*,1.0*,0.9*,1.0*" ColumnSpacing="10">
+                  <Grid ColumnDefinitions="1.2*,2.0*,0.9*,0.9*,1.0*" ColumnSpacing="8">
                     <TextBlock Text="{Binding DisplayName}" />
                     <TextBlock Grid.Column="1" Text="{Binding Subject}" TextWrapping="Wrap" />
                     <TextBlock Grid.Column="2" Text="{Binding PrivateKeySummary}" />
@@ -36,13 +52,14 @@
       </Grid>
     </Border>
 
+    <!-- Side action panel -->
     <Border Grid.Column="1" Classes="classic-side-panel" Padding="8">
       <StackPanel>
         <Button Classes="side-action" Content="New Request" IsEnabled="False" />
         <Button Classes="side-action" Content="Sign" Command="{Binding OpenIssuanceAuthoringCommand}" />
         <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedToFileCommand}" />
         <Button Classes="side-action" Content="Import" IsEnabled="False" />
-        <Button Classes="side-action" Content="Show Details" IsEnabled="False" />
+        <Button Classes="side-action" Content="Show Details" Command="{Binding ShowDetailsCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Classes="side-action" Content="Delete" IsEnabled="False" />
         <Button Classes="side-action" Content="Similar Request" Command="{Binding CreateSimilarRequestCommand}" />
         <Button Classes="side-action" Content="To Template" Command="{Binding CreateTemplateFromRequestCommand}" />
@@ -51,6 +68,7 @@
       </StackPanel>
     </Border>
 
+    <!-- Inspector panel -->
     <Border Grid.Row="1" Grid.ColumnSpan="2" Classes="workspace-pane" Padding="8">
       <TabControl Classes="workspace-inspector-tabs">
         <TabItem Header="Details">
@@ -74,5 +92,37 @@
         </TabItem>
       </TabControl>
     </Border>
+
+    <!-- CSR Detail dialog overlay -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsDetailDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="560"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Request Details" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseDetailCommand}" />
+          </Grid>
+          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+            <TextBlock Text="Internal name" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" />
+            <TextBlock Grid.Row="1" Text="Subject" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.Subject}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="2" Text="Alternative names" />
+            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedItem.SubjectAlternativeNames}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="3" Text="Algorithm" />
+            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.KeyAlgorithm}" />
+            <TextBlock Grid.Row="4" Text="Private key" />
+            <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedItem.PrivateKeySummary}" />
+          </Grid>
+          <Button Grid.Row="2" Content="OK" Command="{Binding CloseDetailCommand}" HorizontalAlignment="Right" MinWidth="80" />
+        </Grid>
+      </Border>
+    </Grid>
+
   </Grid>
 </UserControl>

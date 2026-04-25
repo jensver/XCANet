@@ -1,30 +1,49 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using XcaNet.App.Commands;
 using XcaNet.Contracts.Browser;
 
 namespace XcaNet.App.ViewModels.Pages;
 
 public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<PrivateKeyListItem, Guid>
 {
-    private string _newKeyDisplayName = "Managed Key";
+    private string _newKeyDisplayName = "New Key";
     private KeyAlgorithmView _selectedAlgorithm = KeyAlgorithmView.Rsa;
     private EllipticCurveView _selectedCurve = EllipticCurveView.P256;
+    private int _selectedKeySize = 3072;
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
     private string _selectedExportPassword = string.Empty;
     private string _exportPreview = string.Empty;
+    private bool _isNewKeyDialogOpen;
+    private bool _isKeyDetailDialogOpen;
 
     public PrivateKeysPageViewModel()
         : base("Private Keys")
     {
         EmptyStateTitle = "No private keys stored";
         EmptyStateMessage = "Generate a key or import existing key material to begin issuing certificates and CSRs.";
+
+        OpenNewKeyDialogCommand = new DelegateCommand(() => IsNewKeyDialogOpen = true);
+        CloseNewKeyDialogCommand = new DelegateCommand(() => IsNewKeyDialogOpen = false);
+        ShowDetailsCommand = new DelegateCommand(() => { if (SelectedItem is not null) IsKeyDetailDialogOpen = true; });
+        CloseKeyDetailCommand = new DelegateCommand(() => IsKeyDetailDialogOpen = false);
     }
 
     public IReadOnlyList<KeyAlgorithmView> Algorithms { get; } = [KeyAlgorithmView.Rsa, KeyAlgorithmView.Ecdsa];
 
     public IReadOnlyList<EllipticCurveView> Curves { get; } = [EllipticCurveView.P256, EllipticCurveView.P384];
 
+    public IReadOnlyList<int> KeySizes { get; } = [2048, 3072, 4096];
+
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs8];
+
+    public DelegateCommand OpenNewKeyDialogCommand { get; }
+
+    public DelegateCommand CloseNewKeyDialogCommand { get; }
+
+    public DelegateCommand ShowDetailsCommand { get; }
+
+    public DelegateCommand CloseKeyDetailCommand { get; }
 
     public CertificateAuthoringViewModel SelfSignedCaAuthoring { get; } = new(
         "Certificate Input",
@@ -60,6 +79,18 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
         true,
         "Create CSR");
 
+    public bool IsNewKeyDialogOpen
+    {
+        get => _isNewKeyDialogOpen;
+        set => SetProperty(ref _isNewKeyDialogOpen, value);
+    }
+
+    public bool IsKeyDetailDialogOpen
+    {
+        get => _isKeyDetailDialogOpen;
+        set => SetProperty(ref _isKeyDetailDialogOpen, value);
+    }
+
     public string NewKeyDisplayName
     {
         get => _newKeyDisplayName;
@@ -69,7 +100,24 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     public KeyAlgorithmView SelectedAlgorithm
     {
         get => _selectedAlgorithm;
-        set => SetProperty(ref _selectedAlgorithm, value);
+        set
+        {
+            if (SetProperty(ref _selectedAlgorithm, value))
+            {
+                OnPropertyChanged(nameof(IsRsaAlgorithmSelected));
+                OnPropertyChanged(nameof(IsEcdsaAlgorithmSelected));
+            }
+        }
+    }
+
+    public bool IsRsaAlgorithmSelected => _selectedAlgorithm == KeyAlgorithmView.Rsa;
+
+    public bool IsEcdsaAlgorithmSelected => _selectedAlgorithm == KeyAlgorithmView.Ecdsa;
+
+    public int SelectedKeySize
+    {
+        get => _selectedKeySize;
+        set => SetProperty(ref _selectedKeySize, value);
     }
 
     public EllipticCurveView SelectedCurve
@@ -113,6 +161,10 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     public ICommand? ExportSelectedCommand { get; set; }
 
     public ICommand? ExportSelectedToFileCommand { get; set; }
+
+    public ICommand? ImportCommand { get; set; }
+
+    public ICommand? DeleteSelectedCommand { get; set; }
 
     public void SetTemplates(IEnumerable<TemplateListItem> templates)
     {

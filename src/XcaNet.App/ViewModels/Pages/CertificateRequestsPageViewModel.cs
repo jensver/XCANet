@@ -1,4 +1,5 @@
 using System.Windows.Input;
+using XcaNet.App.Commands;
 using XcaNet.Contracts.Browser;
 
 namespace XcaNet.App.ViewModels.Pages;
@@ -7,12 +8,16 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
 {
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
     private string _exportPreview = string.Empty;
+    private bool _isDetailDialogOpen;
 
     public CertificateRequestsPageViewModel()
         : base("Certificate signing requests")
     {
         EmptyStateTitle = "No certificate signing requests";
         EmptyStateMessage = "Create a CSR from the Private Keys page or import request files to review and sign them.";
+
+        ShowDetailsCommand = new DelegateCommand(() => { if (SelectedItem is not null) IsDetailDialogOpen = true; });
+        CloseDetailCommand = new DelegateCommand(() => IsDetailDialogOpen = false);
     }
 
     public CertificateAuthoringViewModel IssuanceAuthoring { get; } = new(
@@ -37,6 +42,16 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     public IReadOnlyList<PrivateKeyListItem> IssuerPrivateKeys => IssuanceAuthoring.IssuerPrivateKeys;
 
     public IReadOnlyList<CryptoFormatView> ExportFormats { get; } = [CryptoFormatView.Pem, CryptoFormatView.Der, CryptoFormatView.Pkcs10];
+
+    public DelegateCommand ShowDetailsCommand { get; }
+
+    public DelegateCommand CloseDetailCommand { get; }
+
+    public bool IsDetailDialogOpen
+    {
+        get => _isDetailDialogOpen;
+        set => SetProperty(ref _isDetailDialogOpen, value);
+    }
 
     public CryptoFormatView SelectedExportFormat
     {
@@ -65,6 +80,10 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     public ICommand? CreateTemplateFromRequestCommand { get; set; }
 
     public ICommand? CreateSimilarRequestCommand { get; set; }
+
+    public ICommand? ImportCommand { get; set; }
+
+    public ICommand? DeleteSelectedCommand { get; set; }
 
     public void SetIssuers(IEnumerable<CertificateListItem> certificates, IEnumerable<PrivateKeyListItem> privateKeys)
     {
