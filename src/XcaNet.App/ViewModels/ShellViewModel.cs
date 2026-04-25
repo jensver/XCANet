@@ -65,6 +65,7 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _cloneTemplateCommand;
     private readonly AsyncCommand _toggleTemplateFavoriteCommand;
     private readonly AsyncCommand _toggleTemplateEnabledCommand;
+    private readonly AsyncCommand _deleteCertificateCommand;
     private readonly AsyncCommand _deletePrivateKeyCommand;
     private readonly AsyncCommand _deleteCsrCommand;
     private readonly AsyncCommand _deleteTemplateCommand;
@@ -148,6 +149,7 @@ public sealed class ShellViewModel : ViewModelBase
         _cloneTemplateCommand = new AsyncCommand(CloneTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _toggleTemplateFavoriteCommand = new AsyncCommand(ToggleTemplateFavoriteAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _toggleTemplateEnabledCommand = new AsyncCommand(ToggleTemplateEnabledAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
+        _deleteCertificateCommand = new AsyncCommand(DeleteCertificateAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.HasSelection);
         _deletePrivateKeyCommand = new AsyncCommand(DeletePrivateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _deleteCsrCommand = new AsyncCommand(DeleteCsrAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection);
         _deleteTemplateCommand = new AsyncCommand(DeleteTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
@@ -184,6 +186,7 @@ public sealed class ShellViewModel : ViewModelBase
         CertificatesPage.OpenRevokeDialogCommand = _openRevokeDialogCommand;
         CertificatesPage.CloseRevokeDialogCommand = _closeRevokeDialogCommand;
         CertificatesPage.TogglePlainViewCommand = _togglePlainViewCommand;
+        CertificatesPage.DeleteSelectedCommand = _deleteCertificateCommand;
 
         PrivateKeysPage.RefreshCommand = _refreshPrivateKeysCommand;
         PrivateKeysPage.GenerateKeyCommand = _generateKeyCommand;
@@ -1213,6 +1216,24 @@ public sealed class ShellViewModel : ViewModelBase
         NotifySuccess("Template enabled state updated.");
     }
 
+    private async Task DeleteCertificateAsync()
+    {
+        if (CertificatesPage.SelectedItem is null)
+            return;
+
+        CertificatesPage.IsDeleteConfirmDialogOpen = false;
+        using var scope = BeginBusy("Deleting certificate");
+        var result = await _databaseSessionService.DeleteCertificateAsync(CertificatesPage.SelectedItem.CertificateId, CancellationToken.None);
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await LoadCertificatesAsync();
+        NotifySuccess("Certificate deleted.");
+    }
+
     private async Task DeletePrivateKeyAsync()
     {
         if (PrivateKeysPage.SelectedItem is null)
@@ -1756,6 +1777,7 @@ public sealed class ShellViewModel : ViewModelBase
         _cloneTemplateCommand.RaiseCanExecuteChanged();
         _toggleTemplateFavoriteCommand.RaiseCanExecuteChanged();
         _toggleTemplateEnabledCommand.RaiseCanExecuteChanged();
+        _deleteCertificateCommand.RaiseCanExecuteChanged();
         _deletePrivateKeyCommand.RaiseCanExecuteChanged();
         _deleteCsrCommand.RaiseCanExecuteChanged();
         _deleteTemplateCommand.RaiseCanExecuteChanged();

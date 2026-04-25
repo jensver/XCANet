@@ -20,4 +20,6 @@ public interface ICertificateRepository
         int? revocationReason,
         DateTime? revokedAtUtc,
         CancellationToken cancellationToken);
+
+    Task<bool> DeleteAsync(string databasePath, Guid certificateId, CancellationToken cancellationToken);
 }

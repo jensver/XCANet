@@ -1419,6 +1419,24 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         }
     }
 
+    public async Task<OperationResult> DeleteCertificateAsync(Guid certificateId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<object>(out var databasePath, out var failure))
+                return OperationResult.Failure(failure!.ErrorCode, failure.Message);
+
+            return await _certificateRepository.DeleteAsync(databasePath, certificateId, cancellationToken)
+                ? OperationResult.Success("Certificate deleted.")
+                : OperationResult.Failure(OperationErrorCode.DatabaseNotFound, "Certificate not found.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<OperationResult> DeletePrivateKeyAsync(Guid privateKeyId, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);

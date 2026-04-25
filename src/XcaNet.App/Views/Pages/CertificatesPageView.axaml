@@ -55,7 +55,7 @@
                 <MenuItem Header="Renew" IsEnabled="False" />
                 <Separator />
                 <MenuItem Header="Open Issuer" Command="{Binding OpenIssuerCommand}" />
-                <MenuItem Header="Delete" IsEnabled="False" />
+                <MenuItem Header="Delete" Command="{Binding OpenDeleteConfirmCommand}" />
               </ContextMenu>
             </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
@@ -92,7 +92,7 @@
                 <MenuItem Header="Renew" IsEnabled="False" />
                 <Separator />
                 <MenuItem Header="Open Issuer" Command="{Binding OpenIssuerCommand}" />
-                <MenuItem Header="Delete" IsEnabled="False" />
+                <MenuItem Header="Delete" Command="{Binding OpenDeleteConfirmCommand}" />
               </ContextMenu>
             </ListBox.ContextMenu>
             <ListBox.ItemTemplate>
@@ -122,7 +122,7 @@
         <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedCommand}" />
         <Button Classes="side-action" Content="Import" Command="{Binding ImportFilesCommand}" />
         <Button Classes="side-action" Content="Show Details" Command="{Binding ShowDetailsCommand}" />
-        <Button Classes="side-action" Content="Delete" IsEnabled="False" />
+        <Button Classes="side-action" Content="Delete" Command="{Binding OpenDeleteConfirmCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Classes="side-action" Content="Revoke" Command="{Binding OpenRevokeDialogCommand}" />
         <Button Classes="side-action" Content="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />
         <Button Classes="side-action" Content="Renew" IsEnabled="False" />
@@ -314,6 +314,26 @@
             <Button Grid.Column="1" Content="Revoke" Command="{Binding RevokeSelectedCommand}" />
             <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseRevokeDialogCommand}" />
           </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Delete confirmation dialog overlay -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsDeleteConfirmDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="420"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+          <TextBlock Text="Delete Certificate" FontSize="16" FontWeight="SemiBold" />
+          <TextBlock Grid.Row="1" Text="{Binding SelectedItem.DisplayName, StringFormat='Delete &quot;{0}&quot;? This action cannot be undone.'}" TextWrapping="Wrap" />
+          <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CloseDeleteConfirmCommand}" />
+            <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="danger" />
+          </StackPanel>
         </Grid>
       </Border>
     </Grid>

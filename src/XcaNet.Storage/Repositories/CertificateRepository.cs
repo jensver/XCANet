@@ -100,6 +100,18 @@ public sealed class CertificateRepository : ICertificateRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<bool> DeleteAsync(string databasePath, Guid certificateId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var existing = await dbContext.Certificates.SingleOrDefaultAsync(x => x.Id == certificateId, cancellationToken);
+        if (existing is null)
+            return false;
+
+        dbContext.Certificates.Remove(existing);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
     public async Task UpdateRevocationAsync(
         string databasePath,
         Guid certificateId,
