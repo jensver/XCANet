@@ -46,7 +46,9 @@ public sealed class ShellWorkflowTests
         Assert.False(shell.CertificatesPage.GenerateCertificateRevocationListCommand!.CanExecute(null));
         Assert.False(shell.CertificatesPage.RevokeSelectedCommand!.CanExecute(null));
 
-        shell.CertificatesPage.RevocationConfirmationText = "REVOKE";
+        // Open the revoke dialog — this is now the confirmation gate.
+        shell.CertificatesPage.OpenRevokeDialogCommand!.Execute(null);
+        Assert.True(shell.CertificatesPage.IsRevokeDialogOpen);
         Assert.True(shell.CertificatesPage.RevokeSelectedCommand.CanExecute(null));
 
         await shell.CertificatesPage.RevokeSelectedCommand.As<AsyncCommand>().ExecuteAsync();

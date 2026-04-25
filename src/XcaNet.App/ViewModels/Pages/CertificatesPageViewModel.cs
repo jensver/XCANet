@@ -20,8 +20,11 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     private string _exportPreview = string.Empty;
     private CertificateRevocationReason _selectedRevocationReason = CertificateRevocationReason.Unspecified;
     private DateTimeOffset _selectedRevocationDate = DateTimeOffset.UtcNow;
-    private string _revocationConfirmationText = string.Empty;
     private RelatedNavigationItem? _selectedChildNavigationItem;
+    private CertificateTreeNodeViewModel? _selectedTreeNode;
+    private bool _isPlainView;
+    private bool _isDetailDialogOpen;
+    private bool _isRevokeDialogOpen;
 
     public CertificatesPageViewModel()
         : base("Certificates")
@@ -50,6 +53,46 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
 
     public IReadOnlyList<CertificateRevocationReason> RevocationReasons { get; } =
         Enum.GetValues<CertificateRevocationReason>();
+
+    // --- Tree ---
+
+    public ObservableCollection<CertificateTreeNodeViewModel> CertificateTreeRoots { get; } = [];
+
+    public CertificateTreeNodeViewModel? SelectedTreeNode
+    {
+        get => _selectedTreeNode;
+        set
+        {
+            if (SetProperty(ref _selectedTreeNode, value))
+            {
+                // Sync to the flat SelectedItem so all commands remain source-of-truth agnostic.
+                if (value is not null && !ReferenceEquals(SelectedItem, value.Item))
+                    SelectedItem = value.Item;
+            }
+        }
+    }
+
+    public bool IsPlainView
+    {
+        get => _isPlainView;
+        set => SetProperty(ref _isPlainView, value);
+    }
+
+    // --- Dialogs ---
+
+    public bool IsDetailDialogOpen
+    {
+        get => _isDetailDialogOpen;
+        set => SetProperty(ref _isDetailDialogOpen, value);
+    }
+
+    public bool IsRevokeDialogOpen
+    {
+        get => _isRevokeDialogOpen;
+        set => SetProperty(ref _isRevokeDialogOpen, value);
+    }
+
+    // --- Existing data properties ---
 
     public CertificateFilterState Filter
     {
@@ -129,25 +172,13 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
         set => SetProperty(ref _selectedRevocationDate, value);
     }
 
-    public string RevocationConfirmationText
-    {
-        get => _revocationConfirmationText;
-        set
-        {
-            if (SetProperty(ref _revocationConfirmationText, value))
-            {
-                OnPropertyChanged(nameof(IsRevocationConfirmed));
-            }
-        }
-    }
-
-    public bool IsRevocationConfirmed => string.Equals(RevocationConfirmationText, "REVOKE", StringComparison.Ordinal);
-
     public RelatedNavigationItem? SelectedChildNavigationItem
     {
         get => _selectedChildNavigationItem;
         set => SetProperty(ref _selectedChildNavigationItem, value);
     }
+
+    // --- Commands ---
 
     public ICommand? ImportMaterialCommand { get; set; }
 
@@ -156,6 +187,10 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     public ICommand? ExportSelectedCommand { get; set; }
 
     public ICommand? RevokeSelectedCommand { get; set; }
+
+    public ICommand? OpenRevokeDialogCommand { get; set; }
+
+    public ICommand? CloseRevokeDialogCommand { get; set; }
 
     public ICommand? GenerateCertificateRevocationListCommand { get; set; }
 
@@ -166,6 +201,43 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     public ICommand? OpenChildCertificateCommand { get; set; }
 
     public ICommand? CreateTemplateFromCertificateCommand { get; set; }
+
+    public ICommand? ShowDetailsCommand { get; set; }
+
+    public ICommand? CloseDetailCommand { get; set; }
+
+    public ICommand? TogglePlainViewCommand { get; set; }
+
+    // --- Tree building ---
+
+    public void RebuildTree(IReadOnlyList<CertificateListItem> items)
+    {
+        CertificateTreeRoots.Clear();
+
+        // Index all items by their CertificateId.
+        var nodeById = new Dictionary<Guid, CertificateTreeNodeViewModel>(items.Count);
+        foreach (var item in items)
+            nodeById[item.CertificateId] = new CertificateTreeNodeViewModel(item);
+
+        // Place each node under its parent, or at root if the issuer is not in the set.
+        foreach (var item in items)
+        {
+            var node = nodeById[item.CertificateId];
+            var isSelfSigned = item.IssuerCertificateId is null
+                || item.IssuerCertificateId == item.CertificateId;
+
+            if (!isSelfSigned
+                && item.IssuerCertificateId is Guid parentId
+                && nodeById.TryGetValue(parentId, out var parent))
+            {
+                parent.Children.Add(node);
+            }
+            else
+            {
+                CertificateTreeRoots.Add(node);
+            }
+        }
+    }
 
     protected override Guid GetItemId(CertificateListItem item) => item.CertificateId;
 }

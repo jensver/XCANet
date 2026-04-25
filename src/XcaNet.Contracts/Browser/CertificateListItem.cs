@@ -22,4 +22,31 @@ public sealed record CertificateListItem(
     public string CertificateKind => IsCertificateAuthority ? "CA" : "Leaf";
 
     public string PrivateKeyStatus => PrivateKeyId is null ? "No" : "Yes";
+
+    public string CommonName => ExtractCommonName(Subject);
+
+    public string StatusDisplay
+    {
+        get
+        {
+            if (string.Equals(RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase))
+                return "Revoked";
+            var now = DateTimeOffset.UtcNow;
+            if (NotBefore is { } nb && nb > now)
+                return "Not yet valid";
+            if (NotAfter is { } na && na < now)
+                return "Expired";
+            return "Valid";
+        }
+    }
+
+    private static string ExtractCommonName(string subject)
+    {
+        foreach (var part in subject.Split(',', StringSplitOptions.TrimEntries))
+        {
+            if (part.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                return part[3..];
+        }
+        return subject;
+    }
 }

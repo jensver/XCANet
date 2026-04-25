@@ -73,6 +73,11 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly DelegateCommand _createTemplateFromRequestCommand;
     private readonly DelegateCommand _createSimilarRequestCommand;
     private readonly DelegateCommand _closeAuthoringDialogCommand;
+    private readonly DelegateCommand _showCertificateDetailsCommand;
+    private readonly DelegateCommand _closeCertificateDetailCommand;
+    private readonly DelegateCommand _openRevokeDialogCommand;
+    private readonly DelegateCommand _closeRevokeDialogCommand;
+    private readonly DelegateCommand _togglePlainViewCommand;
 
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
@@ -149,6 +154,11 @@ public sealed class ShellViewModel : ViewModelBase
         _createTemplateFromRequestCommand = new DelegateCommand(CreateTemplateFromRequest, () => CertificateRequestsPage.SelectedItem is not null);
         _createSimilarRequestCommand = new DelegateCommand(CreateSimilarRequest, () => CertificateRequestsPage.SelectedItem is not null);
         _closeAuthoringDialogCommand = new DelegateCommand(CloseAuthoringDialog, () => IsAuthoringDialogOpen && !IsBusy);
+        _showCertificateDetailsCommand = new DelegateCommand(ShowCertificateDetails, () => CertificatesPage.HasSelection && CertificatesPage.Inspector is not null);
+        _closeCertificateDetailCommand = new DelegateCommand(() => CertificatesPage.IsDetailDialogOpen = false);
+        _openRevokeDialogCommand = new DelegateCommand(OpenRevokeDialog, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.SelectedItem is { } cert && !string.Equals(cert.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase));
+        _closeRevokeDialogCommand = new DelegateCommand(() => CertificatesPage.IsRevokeDialogOpen = false);
+        _togglePlainViewCommand = new DelegateCommand(() => CertificatesPage.IsPlainView = !CertificatesPage.IsPlainView);
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
         SettingsSecurityPage.OpenDatabaseCommand = _openDatabaseCommand;
@@ -165,6 +175,11 @@ public sealed class ShellViewModel : ViewModelBase
         CertificatesPage.OpenPrivateKeyCommand = _navigatePrivateKeyCommand;
         CertificatesPage.OpenChildCertificateCommand = _navigateChildCertificateCommand;
         CertificatesPage.CreateTemplateFromCertificateCommand = _createTemplateFromCertificateCommand;
+        CertificatesPage.ShowDetailsCommand = _showCertificateDetailsCommand;
+        CertificatesPage.CloseDetailCommand = _closeCertificateDetailCommand;
+        CertificatesPage.OpenRevokeDialogCommand = _openRevokeDialogCommand;
+        CertificatesPage.CloseRevokeDialogCommand = _closeRevokeDialogCommand;
+        CertificatesPage.TogglePlainViewCommand = _togglePlainViewCommand;
 
         PrivateKeysPage.RefreshCommand = _refreshPrivateKeysCommand;
         PrivateKeysPage.GenerateKeyCommand = _generateKeyCommand;
@@ -596,7 +611,7 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
-        CertificatesPage.RevocationConfirmationText = string.Empty;
+        CertificatesPage.IsRevokeDialogOpen = false;
         await RefreshAllAsync();
         NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, result.Value.CertificateId, NavigationFocusSection.Revocation));
         NotifySuccess("Certificate revoked.");
@@ -1000,7 +1015,9 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         var result = await _databaseSessionService.ListCertificatesAsync(CertificatesPage.Filter, CancellationToken.None);
-        CertificatesPage.SetItems(result.IsSuccess && result.Value is not null ? result.Value : []);
+        var certItems = result.IsSuccess && result.Value is not null ? result.Value : [];
+        CertificatesPage.SetItems(certItems);
+        CertificatesPage.RebuildTree(certItems);
         await LoadSelectedCertificateInspectorAsync();
         CertificateRequestsPage.SetIssuers(CertificatesPage.Items, PrivateKeysPage.Items);
     }
@@ -1278,6 +1295,27 @@ public sealed class ShellViewModel : ViewModelBase
         NotifySuccess("Issuance template applied.");
     }
 
+    private void ShowCertificateDetails()
+    {
+        if (CertificatesPage.SelectedItem is null || CertificatesPage.Inspector is null)
+        {
+            return;
+        }
+
+        CertificatesPage.IsDetailDialogOpen = true;
+    }
+
+    private void OpenRevokeDialog()
+    {
+        if (CertificatesPage.SelectedItem is null)
+        {
+            return;
+        }
+
+        CertificatesPage.SelectedRevocationDate = DateTimeOffset.UtcNow;
+        CertificatesPage.IsRevokeDialogOpen = true;
+    }
+
     private void CreateTemplateFromCertificate()
     {
         if (CertificatesPage.SelectedItem is null)
@@ -1453,7 +1491,7 @@ public sealed class ShellViewModel : ViewModelBase
     {
         if (e.PropertyName is nameof(CertificatesPageViewModel.SelectedItem)
             or nameof(CertificatesPageViewModel.Filter)
-            or nameof(CertificatesPageViewModel.RevocationConfirmationText)
+            or nameof(CertificatesPageViewModel.IsRevokeDialogOpen)
             or nameof(CertificatesPageViewModel.SelectedChildNavigationItem))
         {
             if (e.PropertyName == nameof(CertificatesPageViewModel.SelectedItem))
@@ -1557,8 +1595,11 @@ public sealed class ShellViewModel : ViewModelBase
         DashboardPage.CertificateRevocationListCount = 0;
         DashboardPage.TemplateCount = 0;
         CertificatesPage.SetItems([]);
+        CertificatesPage.RebuildTree([]);
         CertificatesPage.Inspector = null;
         CertificatesPage.SelectedChildNavigationItem = null;
+        CertificatesPage.IsDetailDialogOpen = false;
+        CertificatesPage.IsRevokeDialogOpen = false;
         PrivateKeysPage.SetItems([]);
         CertificateRequestsPage.SetItems([]);
         CertificateRequestsPage.SetIssuers([], []);
@@ -1600,7 +1641,7 @@ public sealed class ShellViewModel : ViewModelBase
             && Snapshot.State == DatabaseSessionState.Unlocked
             && CertificatesPage.SelectedItem is { } certificate
             && !string.Equals(certificate.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase)
-            && CertificatesPage.IsRevocationConfirmed;
+            && CertificatesPage.IsRevokeDialogOpen;
     }
 
     private bool CanGenerateCertificateRevocationList()
@@ -1675,6 +1716,11 @@ public sealed class ShellViewModel : ViewModelBase
         _applyCertificateSigningRequestTemplateCommand.RaiseCanExecuteChanged();
         _applyIssuanceTemplateCommand.RaiseCanExecuteChanged();
         _closeAuthoringDialogCommand.RaiseCanExecuteChanged();
+        _showCertificateDetailsCommand.RaiseCanExecuteChanged();
+        _closeCertificateDetailCommand.RaiseCanExecuteChanged();
+        _openRevokeDialogCommand.RaiseCanExecuteChanged();
+        _closeRevokeDialogCommand.RaiseCanExecuteChanged();
+        _togglePlainViewCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)
