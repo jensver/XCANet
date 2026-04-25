@@ -28,11 +28,13 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
     private bool _showSigningSection;
     private bool _showValiditySection;
     private bool _showSignatureAlgorithm;
+    private bool _showSourceKeyPicker;
     private string _primaryActionLabel;
     private TemplateListItem? _selectedTemplate;
     private TemplateApplicationModeView _selectedTemplateApplicationMode;
     private CertificateListItem? _selectedIssuerCertificate;
     private PrivateKeyListItem? _selectedIssuerPrivateKey;
+    private PrivateKeyListItem? _selectedSourceKey;
     private ICommand? _applyTemplateCommand;
     private ICommand? _primaryActionCommand;
 
@@ -51,7 +53,8 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         bool showSigningSection,
         bool showValiditySection,
         bool showSignatureAlgorithm,
-        string primaryActionLabel)
+        string primaryActionLabel,
+        bool showSourceKeyPicker = false)
     {
         _title = title;
         _operationModeSummary = operationModeSummary;
@@ -67,6 +70,7 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         _showSigningSection = showSigningSection;
         _showValiditySection = showValiditySection;
         _showSignatureAlgorithm = showSignatureAlgorithm;
+        _showSourceKeyPicker = showSourceKeyPicker;
         _primaryActionLabel = primaryActionLabel;
         _subjectAlternativeNames = string.Empty;
         _keyAlgorithm = KeyAlgorithmKind.Rsa;
@@ -88,6 +92,8 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
     public ObservableCollection<CertificateListItem> IssuerCertificates { get; } = [];
 
     public ObservableCollection<PrivateKeyListItem> IssuerPrivateKeys { get; } = [];
+
+    public ObservableCollection<PrivateKeyListItem> AvailableSourceKeys { get; } = [];
 
     public string Title
     {
@@ -226,6 +232,12 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         set => SetProperty(ref _showSignatureAlgorithm, value);
     }
 
+    public bool ShowSourceKeyPicker
+    {
+        get => _showSourceKeyPicker;
+        set => SetProperty(ref _showSourceKeyPicker, value);
+    }
+
     public string PrimaryActionLabel
     {
         get => _primaryActionLabel;
@@ -256,6 +268,12 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         set => SetProperty(ref _selectedIssuerPrivateKey, value);
     }
 
+    public PrivateKeyListItem? SelectedSourceKey
+    {
+        get => _selectedSourceKey;
+        set => SetProperty(ref _selectedSourceKey, value);
+    }
+
     public ICommand? ApplyTemplateCommand
     {
         get => _applyTemplateCommand;
@@ -278,6 +296,18 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
 
         SelectedTemplate = Templates.FirstOrDefault(x => SelectedTemplate is not null && x.TemplateId == SelectedTemplate.TemplateId)
             ?? Templates.FirstOrDefault();
+    }
+
+    public void SetSourceKeys(IEnumerable<PrivateKeyListItem> keys)
+    {
+        AvailableSourceKeys.Clear();
+        foreach (var key in keys)
+        {
+            AvailableSourceKeys.Add(key);
+        }
+
+        SelectedSourceKey = AvailableSourceKeys.FirstOrDefault(x => SelectedSourceKey is not null && x.PrivateKeyId == SelectedSourceKey.PrivateKeyId)
+            ?? SelectedSourceKey;
     }
 
     public void SetIssuers(IEnumerable<CertificateListItem> certificates, IEnumerable<PrivateKeyListItem> privateKeys)

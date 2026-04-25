@@ -44,6 +44,7 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _generateKeyCommand;
     private readonly DelegateCommand _openSelfSignedCaAuthoringCommand;
     private readonly DelegateCommand _openCertificateSigningRequestAuthoringCommand;
+    private readonly DelegateCommand _openNewCertificateSigningRequestAuthoringCommand;
     private readonly AsyncCommand _createSelfSignedCaCommand;
     private readonly AsyncCommand _createCertificateSigningRequestCommand;
     private readonly AsyncCommand _exportPrivateKeyCommand;
@@ -119,8 +120,9 @@ public sealed class ShellViewModel : ViewModelBase
         _generateKeyCommand = new AsyncCommand(GenerateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
         _openSelfSignedCaAuthoringCommand = new DelegateCommand(OpenSelfSignedCaAuthoring, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _openCertificateSigningRequestAuthoringCommand = new DelegateCommand(OpenCertificateSigningRequestAuthoring, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
+        _openNewCertificateSigningRequestAuthoringCommand = new DelegateCommand(OpenNewCertificateSigningRequestAuthoring, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
         _createSelfSignedCaCommand = new AsyncCommand(CreateSelfSignedCaAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
-        _createCertificateSigningRequestCommand = new AsyncCommand(CreateCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
+        _createCertificateSigningRequestCommand = new AsyncCommand(CreateCertificateSigningRequestAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedSourceKey is not null);
         _exportPrivateKeyCommand = new AsyncCommand(ExportSelectedPrivateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _exportPrivateKeyToFileCommand = new AsyncCommand(ExportSelectedPrivateKeyToFileAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
         _refreshCertificateRequestsCommand = new AsyncCommand(LoadCertificateRequestsAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
@@ -180,6 +182,7 @@ public sealed class ShellViewModel : ViewModelBase
         PrivateKeysPage.CertificateSigningRequestAuthoring.PrimaryActionCommand = _createCertificateSigningRequestCommand;
 
         CertificateRequestsPage.RefreshCommand = _refreshCertificateRequestsCommand;
+        CertificateRequestsPage.OpenNewRequestAuthoringCommand = _openNewCertificateSigningRequestAuthoringCommand;
         CertificateRequestsPage.OpenIssuanceAuthoringCommand = _openIssuanceAuthoringCommand;
         CertificateRequestsPage.SignSelectedCommand = _signCertificateSigningRequestCommand;
         CertificateRequestsPage.ApplyIssuanceTemplateCommand = _applyIssuanceTemplateCommand;
@@ -449,7 +452,19 @@ public sealed class ShellViewModel : ViewModelBase
             return;
         }
 
+        PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedSourceKey = PrivateKeysPage.SelectedItem;
         PrivateKeysPage.CertificateSigningRequestAuthoring.SourceSummary = $"Source: private key {PrivateKeysPage.SelectedItem.DisplayName}";
+        OpenCertificateAuthoringDialog(
+            PrivateKeysPage.CertificateSigningRequestAuthoring,
+            "Certificate Input",
+            "Certificate request authoring");
+    }
+
+    private void OpenNewCertificateSigningRequestAuthoring()
+    {
+        PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedSourceKey = null;
+        PrivateKeysPage.CertificateSigningRequestAuthoring.SourceSummary = "Source: no private key selected";
+        SelectPage(PrivateKeysPage);
         OpenCertificateAuthoringDialog(
             PrivateKeysPage.CertificateSigningRequestAuthoring,
             "Certificate Input",
@@ -503,7 +518,7 @@ public sealed class ShellViewModel : ViewModelBase
 
     private async Task CreateCertificateSigningRequestAsync()
     {
-        if (PrivateKeysPage.SelectedItem is null)
+        if (PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedSourceKey is null)
         {
             NotifyFailure("Select a private key first.");
             return;
@@ -512,7 +527,7 @@ public sealed class ShellViewModel : ViewModelBase
         using var scope = BeginBusy("Creating certificate signing request");
         var result = await _databaseSessionService.CreateCertificateSigningRequestAsync(
             new CreateCertificateSigningRequestWorkflowRequest(
-                PrivateKeysPage.SelectedItem.PrivateKeyId,
+                PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedSourceKey.PrivateKeyId,
                 PrivateKeysPage.CertificateSigningRequestAuthoring.DisplayName,
                 PrivateKeysPage.CertificateSigningRequestAuthoring.SubjectName,
                 ParseSubjectAlternativeNames(PrivateKeysPage.CertificateSigningRequestAuthoring.SubjectAlternativeNames),
@@ -1009,6 +1024,7 @@ public sealed class ShellViewModel : ViewModelBase
 
         var result = await _databaseSessionService.ListPrivateKeysAsync(CancellationToken.None);
         PrivateKeysPage.SetItems(result.IsSuccess && result.Value is not null ? result.Value : []);
+        PrivateKeysPage.CertificateSigningRequestAuthoring.SetSourceKeys(PrivateKeysPage.Items);
         CertificateRequestsPage.SetIssuers(CertificatesPage.Items, PrivateKeysPage.Items);
     }
 
@@ -1312,6 +1328,7 @@ public sealed class ShellViewModel : ViewModelBase
             PrivateKeysPage.SelectedItem = PrivateKeysPage.Items.FirstOrDefault(x => x.PrivateKeyId == privateKeyId) ?? PrivateKeysPage.SelectedItem;
         }
 
+        PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedSourceKey = PrivateKeysPage.SelectedItem;
         SelectPage(PrivateKeysPage);
         OpenCertificateAuthoringDialog(
             PrivateKeysPage.CertificateSigningRequestAuthoring,
@@ -1499,7 +1516,8 @@ public sealed class ShellViewModel : ViewModelBase
     {
         if (e.PropertyName is nameof(CertificateAuthoringViewModel.SelectedTemplate)
             or nameof(CertificateAuthoringViewModel.SelectedIssuerCertificate)
-            or nameof(CertificateAuthoringViewModel.SelectedIssuerPrivateKey))
+            or nameof(CertificateAuthoringViewModel.SelectedIssuerPrivateKey)
+            or nameof(CertificateAuthoringViewModel.SelectedSourceKey))
         {
             RefreshCommandStates();
         }
@@ -1554,6 +1572,7 @@ public sealed class ShellViewModel : ViewModelBase
         CertificatesPage.Inspector = null;
         CertificatesPage.SelectedChildNavigationItem = null;
         PrivateKeysPage.SetItems([]);
+        PrivateKeysPage.CertificateSigningRequestAuthoring.SetSourceKeys([]);
         CertificateRequestsPage.SetItems([]);
         CertificateRequestsPage.SetIssuers([], []);
         CertificateRevocationListsPage.SetItems([]);
@@ -1641,6 +1660,7 @@ public sealed class ShellViewModel : ViewModelBase
         _generateKeyCommand.RaiseCanExecuteChanged();
         _openSelfSignedCaAuthoringCommand.RaiseCanExecuteChanged();
         _openCertificateSigningRequestAuthoringCommand.RaiseCanExecuteChanged();
+        _openNewCertificateSigningRequestAuthoringCommand.RaiseCanExecuteChanged();
         _createSelfSignedCaCommand.RaiseCanExecuteChanged();
         _createCertificateSigningRequestCommand.RaiseCanExecuteChanged();
         _exportPrivateKeyCommand.RaiseCanExecuteChanged();

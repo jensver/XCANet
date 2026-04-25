@@ -22,6 +22,7 @@
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
             <ListBox.ContextMenu>
               <ContextMenu>
+                <MenuItem Header="New Request" Command="{Binding OpenNewRequestAuthoringCommand}" />
                 <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />
                 <MenuItem Header="Sign" Command="{Binding OpenIssuanceAuthoringCommand}" />
                 <MenuItem Header="Export" Command="{Binding ExportSelectedToFileCommand}" />
@@ -55,7 +56,7 @@
     <!-- Side action panel -->
     <Border Grid.Column="1" Classes="classic-side-panel" Padding="8">
       <StackPanel>
-        <Button Classes="side-action" Content="New Request" IsEnabled="False" />
+        <Button Classes="side-action" Content="New Request" Command="{Binding OpenNewRequestAuthoringCommand}" />
         <Button Classes="side-action" Content="Sign" Command="{Binding OpenIssuanceAuthoringCommand}" />
         <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedToFileCommand}" />
         <Button Classes="side-action" Content="Import" IsEnabled="False" />
