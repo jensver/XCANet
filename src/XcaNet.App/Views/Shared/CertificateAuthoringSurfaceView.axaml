@@ -4,7 +4,7 @@
   <Grid RowDefinitions="*,Auto" RowSpacing="10">
     <TabControl Classes="authoring-tabs">
       <TabItem Header="Source">
-        <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+        <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
           <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
             <TextBlock Text="Operation" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="{Binding OperationModeSummary}" TextWrapping="Wrap" />
@@ -13,7 +13,20 @@
             <TextBlock Text="Source" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="{Binding SourceSummary}" TextWrapping="Wrap" />
           </Grid>
-          <Grid Grid.Row="2" ColumnDefinitions="150,*,170,Auto" ColumnSpacing="10" IsVisible="{Binding ShowTemplateApplication}">
+          <Grid Grid.Row="2" ColumnDefinitions="150,*" ColumnSpacing="10" IsVisible="{Binding ShowSourceKeyPicker}">
+            <TextBlock Text="Private key" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding AvailableSourceKeys}"
+                      SelectedItem="{Binding SelectedSourceKey}"
+                      HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding DisplayName}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </Grid>
+          <Grid Grid.Row="3" ColumnDefinitions="150,*,170,Auto" ColumnSpacing="10" IsVisible="{Binding ShowTemplateApplication}">
             <TextBlock Text="Template" VerticalAlignment="Center" />
             <ComboBox Grid.Column="1" ItemsSource="{Binding Templates}" SelectedItem="{Binding SelectedTemplate}">
               <ComboBox.ItemTemplate>
@@ -25,7 +38,7 @@
             <ComboBox Grid.Column="2" ItemsSource="{Binding TemplateApplicationModes}" SelectedItem="{Binding SelectedTemplateApplicationMode}" />
             <Button Grid.Column="3" Content="Apply" Command="{Binding ApplyTemplateCommand}" />
           </Grid>
-          <Grid Grid.Row="3" ColumnDefinitions="150,220" ColumnSpacing="10" IsVisible="{Binding ShowValiditySection}">
+          <Grid Grid.Row="4" ColumnDefinitions="150,220" ColumnSpacing="10" IsVisible="{Binding ShowValiditySection}">
             <TextBlock Text="Validity days" VerticalAlignment="Center" />
             <NumericUpDown Grid.Column="1" Minimum="1" Maximum="36500" Value="{Binding ValidityDays}" />
           </Grid>
