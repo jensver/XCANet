@@ -12,6 +12,11 @@ internal static class OpenSslBridgeTestHarness
 {
     public static OpenSslBridgeBuildResult BuildNativeBridge()
     {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        {
+            return new OpenSslBridgeBuildResult(false, null, "Bridge build requires a Unix shell; not supported on Windows.");
+        }
+
         var repositoryRoot = FindRepositoryRoot();
         if (repositoryRoot is null)
         {
@@ -29,7 +34,7 @@ internal static class OpenSslBridgeTestHarness
 
         var startInfo = new ProcessStartInfo
         {
-            FileName = "/bin/zsh",
+            FileName = "/bin/bash",
             ArgumentList = { scriptPath, outputDirectory },
             RedirectStandardOutput = true,
             RedirectStandardError = true,
