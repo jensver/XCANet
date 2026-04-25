@@ -16,6 +16,7 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     private string _exportPreview = string.Empty;
     private bool _isNewKeyDialogOpen;
     private bool _isKeyDetailDialogOpen;
+    private bool _isDeleteConfirmDialogOpen;
 
     public PrivateKeysPageViewModel()
         : base("Private Keys")
@@ -27,6 +28,8 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
         CloseNewKeyDialogCommand = new DelegateCommand(() => IsNewKeyDialogOpen = false);
         ShowDetailsCommand = new DelegateCommand(() => { if (SelectedItem is not null) IsKeyDetailDialogOpen = true; });
         CloseKeyDetailCommand = new DelegateCommand(() => IsKeyDetailDialogOpen = false);
+        OpenDeleteConfirmCommand = new DelegateCommand(() => { if (SelectedItem is not null) IsDeleteConfirmDialogOpen = true; });
+        CloseDeleteConfirmCommand = new DelegateCommand(() => IsDeleteConfirmDialogOpen = false);
     }
 
     public IReadOnlyList<KeyAlgorithmView> Algorithms { get; } = [KeyAlgorithmView.Rsa, KeyAlgorithmView.Ecdsa];
@@ -44,6 +47,16 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
     public DelegateCommand ShowDetailsCommand { get; }
 
     public DelegateCommand CloseKeyDetailCommand { get; }
+
+    public DelegateCommand OpenDeleteConfirmCommand { get; }
+
+    public DelegateCommand CloseDeleteConfirmCommand { get; }
+
+    public bool IsDeleteConfirmDialogOpen
+    {
+        get => _isDeleteConfirmDialogOpen;
+        set => SetProperty(ref _isDeleteConfirmDialogOpen, value);
+    }
 
     public CertificateAuthoringViewModel SelfSignedCaAuthoring { get; } = new(
         "Certificate Input",

@@ -537,6 +537,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                     request.IssuerCertificateId),
                 cancellationToken);
 
+            await _certificateRequestRepository.MarkSignedAsync(databasePath, request.CertificateSigningRequestId, cancellationToken);
             await _auditEventRepository.AddAsync(databasePath, CreateAuditEvent(AuditEventKind.CertificateSigningRequestSigned, "Certificate signing request signed."), cancellationToken);
 
             return OperationResult<StoredCertificateResult>.Success(
@@ -1192,7 +1193,8 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
                     x.PrivateKeyId == Guid.Empty ? null : new NavigationTarget(BrowserEntityType.PrivateKey, x.PrivateKeyId, NavigationFocusSection.Overview),
                     x.KeyAlgorithm,
                     x.SubjectAlternativeNames,
-                    DateTime.SpecifyKind(x.CreatedUtc, DateTimeKind.Utc)))
+                    DateTime.SpecifyKind(x.CreatedUtc, DateTimeKind.Utc),
+                    x.IsSigned))
                 .ToList();
 
             return OperationResult<IReadOnlyList<CertificateRequestListItem>>.Success(items, "Certificate signing requests loaded.");
@@ -1410,6 +1412,60 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
 
             var template = await _templateRepository.GetAsync(databasePath, request.TemplateId, cancellationToken);
             return OperationResult<TemplateDetails>.Success(TemplateModelMapper.ToDetails(template!), "Template enabled state updated.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult> DeleteCertificateAsync(Guid certificateId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<object>(out var databasePath, out var failure))
+                return OperationResult.Failure(failure!.ErrorCode, failure.Message);
+
+            return await _certificateRepository.DeleteAsync(databasePath, certificateId, cancellationToken)
+                ? OperationResult.Success("Certificate deleted.")
+                : OperationResult.Failure(OperationErrorCode.DatabaseNotFound, "Certificate not found.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult> DeletePrivateKeyAsync(Guid privateKeyId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<object>(out var databasePath, out var failure))
+                return OperationResult.Failure(failure!.ErrorCode, failure.Message);
+
+            return await _privateKeyRepository.DeleteAsync(databasePath, privateKeyId, cancellationToken)
+                ? OperationResult.Success("Private key deleted.")
+                : OperationResult.Failure(OperationErrorCode.DatabaseNotFound, "Private key not found.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult> DeleteCertificateSigningRequestAsync(Guid csrId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<object>(out var databasePath, out var failure))
+                return OperationResult.Failure(failure!.ErrorCode, failure.Message);
+
+            return await _certificateRequestRepository.DeleteAsync(databasePath, csrId, cancellationToken)
+                ? OperationResult.Success("Certificate signing request deleted.")
+                : OperationResult.Failure(OperationErrorCode.DatabaseNotFound, "Certificate signing request not found.");
         }
         finally
         {

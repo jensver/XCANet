@@ -34,4 +34,16 @@ public sealed class PrivateKeyRepository : IPrivateKeyRepository
             .OrderByDescending(x => x.CreatedUtc)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<bool> DeleteAsync(string databasePath, Guid privateKeyId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var existing = await dbContext.PrivateKeys.SingleOrDefaultAsync(x => x.Id == privateKeyId, cancellationToken);
+        if (existing is null)
+            return false;
+
+        dbContext.PrivateKeys.Remove(existing);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }

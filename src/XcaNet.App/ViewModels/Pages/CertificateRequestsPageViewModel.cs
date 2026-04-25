@@ -9,6 +9,7 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     private CryptoFormatView _selectedExportFormat = CryptoFormatView.Pem;
     private string _exportPreview = string.Empty;
     private bool _isDetailDialogOpen;
+    private bool _isDeleteConfirmDialogOpen;
 
     public CertificateRequestsPageViewModel()
         : base("Certificate signing requests")
@@ -18,6 +19,8 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
 
         ShowDetailsCommand = new DelegateCommand(() => { if (SelectedItem is not null) IsDetailDialogOpen = true; });
         CloseDetailCommand = new DelegateCommand(() => IsDetailDialogOpen = false);
+        OpenDeleteConfirmCommand = new DelegateCommand(() => { if (SelectedItem is not null) IsDeleteConfirmDialogOpen = true; });
+        CloseDeleteConfirmCommand = new DelegateCommand(() => IsDeleteConfirmDialogOpen = false);
     }
 
     public CertificateAuthoringViewModel IssuanceAuthoring { get; } = new(
@@ -46,6 +49,16 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
     public DelegateCommand ShowDetailsCommand { get; }
 
     public DelegateCommand CloseDetailCommand { get; }
+
+    public DelegateCommand OpenDeleteConfirmCommand { get; }
+
+    public DelegateCommand CloseDeleteConfirmCommand { get; }
+
+    public bool IsDeleteConfirmDialogOpen
+    {
+        get => _isDeleteConfirmDialogOpen;
+        set => SetProperty(ref _isDeleteConfirmDialogOpen, value);
+    }
 
     public bool IsDetailDialogOpen
     {

@@ -28,8 +28,8 @@
                 <MenuItem Header="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
                 <MenuItem Header="Create Certificate" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
                 <Separator />
-                <MenuItem Header="Import" IsEnabled="False" />
-                <MenuItem Header="Delete" IsEnabled="False" />
+                <MenuItem Header="Import" Command="{Binding ImportCommand}" />
+                <MenuItem Header="Delete" Command="{Binding OpenDeleteConfirmCommand}" />
               </ContextMenu>
             </ListBox.ContextMenu>
             <ListBox.ItemTemplate>
@@ -55,9 +55,9 @@
       <StackPanel>
         <Button Classes="side-action" Content="New Key" Command="{Binding OpenNewKeyDialogCommand}" />
         <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedToFileCommand}" />
-        <Button Classes="side-action" Content="Import" IsEnabled="False" />
+        <Button Classes="side-action" Content="Import" Command="{Binding ImportCommand}" />
         <Button Classes="side-action" Content="Show Details" Command="{Binding ShowDetailsCommand}" IsEnabled="{Binding HasSelection}" />
-        <Button Classes="side-action" Content="Delete" IsEnabled="False" />
+        <Button Classes="side-action" Content="Delete" Command="{Binding OpenDeleteConfirmCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Classes="side-action" Content="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
         <Button Classes="side-action" Content="Create Certificate" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
@@ -165,6 +165,26 @@
             <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedItem.PublicKeyFingerprint}" TextWrapping="Wrap" />
           </Grid>
           <Button Grid.Row="2" Content="OK" Command="{Binding CloseKeyDetailCommand}" HorizontalAlignment="Right" MinWidth="80" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Delete confirmation dialog overlay -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsDeleteConfirmDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="400"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+          <TextBlock Text="Delete Private Key" FontSize="16" FontWeight="SemiBold" />
+          <TextBlock Grid.Row="1" Text="{Binding SelectedItem.DisplayName, StringFormat='Delete &quot;{0}&quot;? This action cannot be undone.'}" TextWrapping="Wrap" />
+          <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CloseDeleteConfirmCommand}" />
+            <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="danger" />
+          </StackPanel>
         </Grid>
       </Border>
     </Grid>
