@@ -7,12 +7,13 @@
     <Border Grid.Row="0" Classes="workspace-pane">
       <Grid RowDefinitions="Auto,*">
         <Border Classes="table-header" Padding="8,6">
-          <Grid ColumnDefinitions="1.2*,2.0*,0.9*,0.9*,1.0*" ColumnSpacing="8">
+          <Grid ColumnDefinitions="1.2*,2.0*,0.7*,0.7*,0.9*,0.6*" ColumnSpacing="8">
             <TextBlock Text="Certificate signing requests" FontWeight="SemiBold" />
             <TextBlock Grid.Column="1" Text="Subject" Classes="table-header-text" />
             <TextBlock Grid.Column="2" Text="Key" Classes="table-header-text" />
             <TextBlock Grid.Column="3" Text="Created" Classes="table-header-text" />
             <TextBlock Grid.Column="4" Text="Algorithm" Classes="table-header-text" />
+            <TextBlock Grid.Column="5" Text="Signed" Classes="table-header-text" />
           </Grid>
         </Border>
         <Grid Grid.Row="1">
@@ -30,19 +31,20 @@
                 <MenuItem Header="To Template" Command="{Binding CreateTemplateFromRequestCommand}" />
                 <MenuItem Header="Open Key" Command="{Binding OpenSelectedPrivateKeyCommand}" />
                 <Separator />
-                <MenuItem Header="Import" IsEnabled="False" />
-                <MenuItem Header="Delete" IsEnabled="False" />
+                <MenuItem Header="Import" Command="{Binding ImportCommand}" />
+                <MenuItem Header="Delete" Command="{Binding OpenDeleteConfirmCommand}" />
               </ContextMenu>
             </ListBox.ContextMenu>
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
-                  <Grid ColumnDefinitions="1.2*,2.0*,0.9*,0.9*,1.0*" ColumnSpacing="8">
+                  <Grid ColumnDefinitions="1.2*,2.0*,0.7*,0.7*,0.9*,0.6*" ColumnSpacing="8">
                     <TextBlock Text="{Binding DisplayName}" />
                     <TextBlock Grid.Column="1" Text="{Binding Subject}" TextWrapping="Wrap" />
                     <TextBlock Grid.Column="2" Text="{Binding PrivateKeySummary}" />
                     <TextBlock Grid.Column="3" Text="{Binding CreatedUtc, StringFormat='{}{0:yyyy-MM-dd}'}" />
                     <TextBlock Grid.Column="4" Text="{Binding KeyAlgorithm}" />
+                    <TextBlock Grid.Column="5" Text="{Binding IsSigned}" />
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -55,12 +57,12 @@
     <!-- Side action panel -->
     <Border Grid.Column="1" Classes="classic-side-panel" Padding="8">
       <StackPanel>
-        <Button Classes="side-action" Content="New Request" IsEnabled="False" />
+        <Button Classes="side-action" Content="New Request" Command="{Binding OpenNewRequestAuthoringCommand}" IsEnabled="{Binding OpenNewRequestAuthoringCommand, Converter={x:Static ObjectConverters.IsNotNull}}" />
         <Button Classes="side-action" Content="Sign" Command="{Binding OpenIssuanceAuthoringCommand}" />
         <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedToFileCommand}" />
-        <Button Classes="side-action" Content="Import" IsEnabled="False" />
+        <Button Classes="side-action" Content="Import" Command="{Binding ImportCommand}" />
         <Button Classes="side-action" Content="Show Details" Command="{Binding ShowDetailsCommand}" IsEnabled="{Binding HasSelection}" />
-        <Button Classes="side-action" Content="Delete" IsEnabled="False" />
+        <Button Classes="side-action" Content="Delete" Command="{Binding OpenDeleteConfirmCommand}" IsEnabled="{Binding HasSelection}" />
         <Button Classes="side-action" Content="Similar Request" Command="{Binding CreateSimilarRequestCommand}" />
         <Button Classes="side-action" Content="To Template" Command="{Binding CreateTemplateFromRequestCommand}" />
         <Button Classes="side-action" Content="Open Key" Command="{Binding OpenSelectedPrivateKeyCommand}" />
@@ -107,7 +109,7 @@
             <TextBlock Text="Request Details" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
             <Button Grid.Column="1" Content="Close" Command="{Binding CloseDetailCommand}" />
           </Grid>
-          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
             <TextBlock Text="Internal name" />
             <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" />
             <TextBlock Grid.Row="1" Text="Subject" />
@@ -118,8 +120,30 @@
             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.KeyAlgorithm}" />
             <TextBlock Grid.Row="4" Text="Private key" />
             <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedItem.PrivateKeySummary}" />
+            <TextBlock Grid.Row="5" Text="Signed" />
+            <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedItem.IsSigned}" />
           </Grid>
           <Button Grid.Row="2" Content="OK" Command="{Binding CloseDetailCommand}" HorizontalAlignment="Right" MinWidth="80" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Delete confirmation dialog overlay -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsDeleteConfirmDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="400"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+          <TextBlock Text="Delete Certificate Signing Request" FontSize="16" FontWeight="SemiBold" />
+          <TextBlock Grid.Row="1" Text="{Binding SelectedItem.DisplayName, StringFormat='Delete &quot;{0}&quot;? This action cannot be undone.'}" TextWrapping="Wrap" />
+          <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+            <Button Content="Cancel" Command="{Binding CloseDeleteConfirmCommand}" />
+            <Button Content="Delete" Command="{Binding DeleteSelectedCommand}" Classes="danger" />
+          </StackPanel>
         </Grid>
       </Border>
     </Grid>

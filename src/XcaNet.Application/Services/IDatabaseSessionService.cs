@@ -70,6 +70,10 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<TemplateDetails>> SetTemplateEnabledAsync(SetTemplateEnabledRequest request, CancellationToken cancellationToken);
 
+    Task<OperationResult> DeletePrivateKeyAsync(Guid privateKeyId, CancellationToken cancellationToken);
+
+    Task<OperationResult> DeleteCertificateSigningRequestAsync(Guid csrId, CancellationToken cancellationToken);
+
     Task<OperationResult> DeleteTemplateAsync(Guid templateId, CancellationToken cancellationToken);
 
     Task<OperationResult<AppliedTemplateDefaults>> ApplyTemplateAsync(ApplyTemplateRequest request, CancellationToken cancellationToken);

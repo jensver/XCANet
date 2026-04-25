@@ -11,4 +11,5 @@ public sealed class CertificateRequestEntity
     public string KeyAlgorithm { get; set; } = string.Empty;
     public string SubjectAlternativeNames { get; set; } = string.Empty;
     public DateTime CreatedUtc { get; set; }
+    public bool IsSigned { get; set; }
 }

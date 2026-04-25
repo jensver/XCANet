@@ -65,6 +65,8 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _cloneTemplateCommand;
     private readonly AsyncCommand _toggleTemplateFavoriteCommand;
     private readonly AsyncCommand _toggleTemplateEnabledCommand;
+    private readonly AsyncCommand _deletePrivateKeyCommand;
+    private readonly AsyncCommand _deleteCsrCommand;
     private readonly AsyncCommand _deleteTemplateCommand;
     private readonly AsyncCommand _applySelfSignedCaTemplateCommand;
     private readonly AsyncCommand _applyCertificateSigningRequestTemplateCommand;
@@ -146,6 +148,8 @@ public sealed class ShellViewModel : ViewModelBase
         _cloneTemplateCommand = new AsyncCommand(CloneTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _toggleTemplateFavoriteCommand = new AsyncCommand(ToggleTemplateFavoriteAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _toggleTemplateEnabledCommand = new AsyncCommand(ToggleTemplateEnabledAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
+        _deletePrivateKeyCommand = new AsyncCommand(DeletePrivateKeyAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && PrivateKeysPage.HasSelection);
+        _deleteCsrCommand = new AsyncCommand(DeleteCsrAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRequestsPage.HasSelection);
         _deleteTemplateCommand = new AsyncCommand(DeleteTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && TemplatesPage.HasSelection);
         _applySelfSignedCaTemplateCommand = new AsyncCommand(ApplySelfSignedCaTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && PrivateKeysPage.SelfSignedCaAuthoring.SelectedTemplate is not null);
         _applyCertificateSigningRequestTemplateCommand = new AsyncCommand(ApplyCertificateSigningRequestTemplateAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && PrivateKeysPage.CertificateSigningRequestAuthoring.SelectedTemplate is not null);
@@ -191,6 +195,8 @@ public sealed class ShellViewModel : ViewModelBase
         PrivateKeysPage.ApplyCertificateSigningRequestTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
         PrivateKeysPage.ExportSelectedCommand = _exportPrivateKeyCommand;
         PrivateKeysPage.ExportSelectedToFileCommand = _exportPrivateKeyToFileCommand;
+        PrivateKeysPage.ImportCommand = _importFilesCommand;
+        PrivateKeysPage.DeleteSelectedCommand = _deletePrivateKeyCommand;
         PrivateKeysPage.SelfSignedCaAuthoring.ApplyTemplateCommand = _applySelfSignedCaTemplateCommand;
         PrivateKeysPage.SelfSignedCaAuthoring.PrimaryActionCommand = _createSelfSignedCaCommand;
         PrivateKeysPage.CertificateSigningRequestAuthoring.ApplyTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
@@ -205,6 +211,9 @@ public sealed class ShellViewModel : ViewModelBase
         CertificateRequestsPage.OpenSelectedPrivateKeyCommand = _navigateRequestPrivateKeyCommand;
         CertificateRequestsPage.CreateTemplateFromRequestCommand = _createTemplateFromRequestCommand;
         CertificateRequestsPage.CreateSimilarRequestCommand = _createSimilarRequestCommand;
+        CertificateRequestsPage.ImportCommand = _importFilesCommand;
+        CertificateRequestsPage.DeleteSelectedCommand = _deleteCsrCommand;
+        CertificateRequestsPage.OpenNewRequestAuthoringCommand = _openCertificateSigningRequestAuthoringCommand;
         CertificateRequestsPage.IssuanceAuthoring.ApplyTemplateCommand = _applyIssuanceTemplateCommand;
         CertificateRequestsPage.IssuanceAuthoring.PrimaryActionCommand = _signCertificateSigningRequestCommand;
 
@@ -1204,6 +1213,42 @@ public sealed class ShellViewModel : ViewModelBase
         NotifySuccess("Template enabled state updated.");
     }
 
+    private async Task DeletePrivateKeyAsync()
+    {
+        if (PrivateKeysPage.SelectedItem is null)
+            return;
+
+        PrivateKeysPage.IsDeleteConfirmDialogOpen = false;
+        using var scope = BeginBusy("Deleting private key");
+        var result = await _databaseSessionService.DeletePrivateKeyAsync(PrivateKeysPage.SelectedItem.PrivateKeyId, CancellationToken.None);
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await LoadPrivateKeysAsync();
+        NotifySuccess("Private key deleted.");
+    }
+
+    private async Task DeleteCsrAsync()
+    {
+        if (CertificateRequestsPage.SelectedItem is null)
+            return;
+
+        CertificateRequestsPage.IsDeleteConfirmDialogOpen = false;
+        using var scope = BeginBusy("Deleting certificate signing request");
+        var result = await _databaseSessionService.DeleteCertificateSigningRequestAsync(CertificateRequestsPage.SelectedItem.CertificateSigningRequestId, CancellationToken.None);
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await LoadCertificateRequestsAsync();
+        NotifySuccess("Certificate signing request deleted.");
+    }
+
     private async Task DeleteTemplateAsync()
     {
         if (TemplatesPage.SelectedItem is null)
@@ -1711,6 +1756,8 @@ public sealed class ShellViewModel : ViewModelBase
         _cloneTemplateCommand.RaiseCanExecuteChanged();
         _toggleTemplateFavoriteCommand.RaiseCanExecuteChanged();
         _toggleTemplateEnabledCommand.RaiseCanExecuteChanged();
+        _deletePrivateKeyCommand.RaiseCanExecuteChanged();
+        _deleteCsrCommand.RaiseCanExecuteChanged();
         _deleteTemplateCommand.RaiseCanExecuteChanged();
         _applySelfSignedCaTemplateCommand.RaiseCanExecuteChanged();
         _applyCertificateSigningRequestTemplateCommand.RaiseCanExecuteChanged();
