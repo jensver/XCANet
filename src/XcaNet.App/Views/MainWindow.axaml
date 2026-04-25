@@ -19,36 +19,44 @@
           <MenuItem Header="Unlock" Command="{Binding UnlockDatabaseCommand}" />
           <MenuItem Header="Lock" Command="{Binding LockDatabaseCommand}" />
           <Separator />
-          <MenuItem Header="Refresh" Command="{Binding RefreshWorkspaceCommand}" />
+          <MenuItem Header="Options" Command="{Binding SettingsSecurityCommand}" />
+          <Separator />
+          <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
         </MenuItem>
         <MenuItem Header="_Import">
-          <MenuItem Header="Private Keys" Command="{Binding ImportFilesCommand}" />
-          <MenuItem Header="Certificate Requests" Command="{Binding ImportFilesCommand}" />
+          <MenuItem Header="Keys" Command="{Binding ImportFilesCommand}" />
+          <MenuItem Header="Requests" Command="{Binding ImportFilesCommand}" />
           <MenuItem Header="Certificates" Command="{Binding ImportFilesCommand}" />
           <Separator />
           <MenuItem Header="PKCS#12" Command="{Binding ImportFilesCommand}" />
           <MenuItem Header="PKCS#7" Command="{Binding ImportFilesCommand}" />
           <Separator />
+          <MenuItem Header="Template" IsEnabled="False" />
           <MenuItem Header="Revocation list" Command="{Binding ImportFilesCommand}" />
+          <Separator />
           <MenuItem Header="PEM file" Command="{Binding ImportFilesCommand}" />
         </MenuItem>
-        <MenuItem Header="E_xtra">
-          <MenuItem Header="Dump / Show Audit Log" IsEnabled="False" />
-          <MenuItem Header="Options" IsEnabled="False" />
-        </MenuItem>
         <MenuItem Header="_Token">
-          <MenuItem Header="Generate Request" IsEnabled="False" />
-          <MenuItem Header="Import from Request" IsEnabled="False" />
+          <MenuItem Header="Manage Security token" IsEnabled="False" />
+          <MenuItem Header="Init Security token" IsEnabled="False" />
           <Separator />
-          <MenuItem Header="Init Token" IsEnabled="False" />
           <MenuItem Header="Change PIN" IsEnabled="False" />
-          <MenuItem Header="Change SO-PIN" IsEnabled="False" />
+          <MenuItem Header="Change SO PIN" IsEnabled="False" />
+          <MenuItem Header="Init PIN" IsEnabled="False" />
+        </MenuItem>
+        <MenuItem Header="E_xtra">
+          <MenuItem Header="Database dump" IsEnabled="False" />
+          <MenuItem Header="Certificate index export" IsEnabled="False" />
+          <MenuItem Header="Hierarchy export" IsEnabled="False" />
           <Separator />
-          <MenuItem Header="Show token info" IsEnabled="False" />
+          <MenuItem Header="Password change" IsEnabled="False" />
+          <Separator />
+          <MenuItem Header="DH parameter generation" IsEnabled="False" />
+          <MenuItem Header="OID Resolver" IsEnabled="False" />
         </MenuItem>
         <MenuItem Header="_Help">
           <MenuItem Header="Overview" Command="{Binding DashboardCommand}" />
-          <MenuItem Header="Settings / Security" Command="{Binding SettingsSecurityCommand}" />
+          <MenuItem Header="Documentation" IsEnabled="False" />
           <Separator />
           <MenuItem Header="About" IsEnabled="False" />
         </MenuItem>
