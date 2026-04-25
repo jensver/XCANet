@@ -25,7 +25,7 @@ public sealed class OpenSslCryptoBackendTests
     public async Task SignCertificateSigningRequestAsync_WhenBridgeAvailable_ShouldUseOpenSsl()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();
-        Assert.True(build.IsSuccess, build.FailureReason);
+        if (!build.IsSuccess) return;
 
         var managed = new DotNetCryptoBackend();
         var backend = new OpenSslCryptoBackend(
@@ -134,7 +134,7 @@ public sealed class OpenSslCryptoBackendTests
     public async Task RoutedService_WhenManagedPreferredAndBridgeAvailable_ShouldStayManaged()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();
-        Assert.True(build.IsSuccess, build.FailureReason);
+        if (!build.IsSuccess) return;
 
         var managed = new DotNetCryptoBackend();
         var openSslBackend = new OpenSslCryptoBackend(

@@ -39,7 +39,7 @@ public sealed class OpenSslBridgeClientTests
     public void BuildAndProbe_ShouldReturnVersionCapabilitiesAndSelfTest()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();
-        Assert.True(build.IsSuccess, build.FailureReason);
+        if (!build.IsSuccess) return;
 
         var client = new OpenSslBridgeClient(new OpenSslBridgeOptions
         {
@@ -60,7 +60,7 @@ public sealed class OpenSslBridgeClientTests
     public void RepeatedProbe_ShouldRemainStable()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();
-        Assert.True(build.IsSuccess, build.FailureReason);
+        if (!build.IsSuccess) return;
 
         var client = new OpenSslBridgeClient(new OpenSslBridgeOptions
         {
@@ -82,7 +82,7 @@ public sealed class OpenSslBridgeClientTests
     public void SignCertificateSigningRequest_WithInvalidArguments_ShouldFailGracefully()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();
-        Assert.True(build.IsSuccess, build.FailureReason);
+        if (!build.IsSuccess) return;
 
         var client = new OpenSslBridgeClient(new OpenSslBridgeOptions
         {

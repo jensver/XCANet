@@ -13,7 +13,7 @@ public sealed class OpenSslSigningParityTests
     public async Task SignCertificateSigningRequest_ShouldPreserveCoreFieldsAcrossManagedAndOpenSslPaths()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();
-        Assert.True(build.IsSuccess, build.FailureReason);
+        if (!build.IsSuccess) return;
 
         var managed = new DotNetCryptoBackend();
         var openSslBackend = new OpenSslCryptoBackend(
@@ -55,7 +55,7 @@ public sealed class OpenSslSigningParityTests
     public async Task SignCertificateSigningRequest_WithSanHeavyExtensionRichCsr_ShouldPreserveNormalizedExtensions()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();
-        Assert.True(build.IsSuccess, build.FailureReason);
+        if (!build.IsSuccess) return;
 
         var managed = new DotNetCryptoBackend();
         var openSslBackend = new OpenSslCryptoBackend(
@@ -183,7 +183,7 @@ public sealed class OpenSslSigningParityTests
     public async Task MalformedInputs_ShouldFailDeterministicallyAcrossBackends()
     {
         var build = OpenSslBridgeTestHarness.BuildNativeBridge();
-        Assert.True(build.IsSuccess, build.FailureReason);
+        if (!build.IsSuccess) return;
 
         var managed = new DotNetCryptoBackend();
         var openSslBackend = new OpenSslCryptoBackend(

@@ -30,6 +30,7 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _lockDatabaseCommand;
     private readonly AsyncCommand _closeDatabaseCommand;
     private readonly AsyncCommand _refreshWorkspaceCommand;
+    private readonly DelegateCommand _exitCommand;
     private readonly AsyncCommand _refreshCertificatesCommand;
     private readonly AsyncCommand _importFilesCommand;
     private readonly AsyncCommand _importMaterialCommand;
@@ -105,6 +106,7 @@ public sealed class ShellViewModel : ViewModelBase
         _lockDatabaseCommand = new AsyncCommand(LockDatabaseAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
         _closeDatabaseCommand = new AsyncCommand(CloseDatabaseAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _refreshWorkspaceCommand = new AsyncCommand(RefreshAllAsync, () => !IsBusy);
+        _exitCommand = new DelegateCommand(() => Environment.Exit(0));
         _refreshCertificatesCommand = new AsyncCommand(LoadCertificatesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed);
         _importFilesCommand = new AsyncCommand(ImportFilesFromPickerAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
         _importMaterialCommand = new AsyncCommand(ImportMaterialAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
@@ -364,6 +366,10 @@ public sealed class ShellViewModel : ViewModelBase
     public ICommand CloseDatabaseCommand => _closeDatabaseCommand;
 
     public ICommand RefreshWorkspaceCommand => _refreshWorkspaceCommand;
+
+    public ICommand ImportFilesCommand => _importFilesCommand;
+
+    public ICommand ExitCommand => _exitCommand;
 
     public ICommand DashboardCommand => UtilityNavigationItems[0].Command;
 
