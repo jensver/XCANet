@@ -65,6 +65,8 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
         set => SetProperty(ref _exportPreview, value);
     }
 
+    public ICommand? OpenNewRequestAuthoringCommand { get; set; }
+
     public ICommand? SignSelectedCommand { get; set; }
 
     public ICommand? OpenIssuanceAuthoringCommand { get; set; }

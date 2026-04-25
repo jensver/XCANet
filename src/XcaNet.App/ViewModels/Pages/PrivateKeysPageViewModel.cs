@@ -77,7 +77,8 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
         false,
         false,
         true,
-        "Create CSR");
+        "Create CSR",
+        true);
 
     public bool IsNewKeyDialogOpen
     {
