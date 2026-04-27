@@ -4,7 +4,7 @@
   <Grid RowDefinitions="*,Auto" RowSpacing="10">
     <TabControl Classes="authoring-tabs">
       <TabItem Header="Source">
-        <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
+        <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
           <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
             <TextBlock Text="Operation" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="{Binding OperationModeSummary}" TextWrapping="Wrap" />
@@ -29,34 +29,71 @@
             <TextBlock Text="Validity days" VerticalAlignment="Center" />
             <NumericUpDown Grid.Column="1" Minimum="1" Maximum="36500" Value="{Binding ValidityDays}" />
           </Grid>
+          <Grid Grid.Row="4" ColumnDefinitions="150,220" ColumnSpacing="10" IsVisible="{Binding ShowValiditySection}">
+            <TextBlock Text="Not before" VerticalAlignment="Center" />
+            <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding NotBeforeDate}" />
+          </Grid>
+          <Grid Grid.Row="5" ColumnDefinitions="150,220" ColumnSpacing="10" IsVisible="{Binding ShowValiditySection}">
+            <TextBlock Text="Not after" VerticalAlignment="Center" />
+            <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding NotAfterDate}" />
+          </Grid>
         </Grid>
       </TabItem>
 
       <TabItem Header="Subject">
-        <Grid Margin="10" RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
-          <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
-            <TextBlock Text="Name" VerticalAlignment="Center" />
-            <TextBox Grid.Column="1" Text="{Binding DisplayName}" />
+        <ScrollViewer>
+          <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+            <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Name" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding DisplayName}" />
+            </Grid>
+            <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Common Name" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding DnCommonName}" Watermark="CN" />
+            </Grid>
+            <Grid Grid.Row="2" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Organization" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding DnOrganization}" Watermark="O" />
+            </Grid>
+            <Grid Grid.Row="3" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Org. Unit" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding DnOrganizationalUnit}" Watermark="OU" />
+            </Grid>
+            <Grid Grid.Row="4" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Country" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding DnCountry}" Watermark="C (2-letter code)" MaxLength="2" />
+            </Grid>
+            <Grid Grid.Row="5" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="State / Province" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding DnState}" Watermark="ST" />
+            </Grid>
+            <Grid Grid.Row="6" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Locality" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding DnLocality}" Watermark="L" />
+            </Grid>
+            <Grid Grid.Row="7" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Email" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding DnEmail}" Watermark="E" />
+            </Grid>
+            <Grid Grid.Row="8" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Subject (raw)" VerticalAlignment="Center" />
+              <TextBox Grid.Column="1" Text="{Binding SubjectName}" />
+            </Grid>
+            <Grid Grid.Row="9" ColumnDefinitions="150,*" ColumnSpacing="10">
+              <TextBlock Text="Alternative names" VerticalAlignment="Top" Margin="0,6,0,0" />
+              <TextBox Grid.Column="1" Text="{Binding SubjectAlternativeNames}" AcceptsReturn="True" Height="80" TextWrapping="Wrap" />
+            </Grid>
           </Grid>
-          <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
-            <TextBlock Text="Subject" VerticalAlignment="Center" />
-            <TextBox Grid.Column="1" Text="{Binding SubjectName}" />
-          </Grid>
-          <Grid Grid.Row="2" ColumnDefinitions="150,*" ColumnSpacing="10">
-            <TextBlock Text="Alternative names" VerticalAlignment="Top" Margin="0,6,0,0" />
-            <TextBox Grid.Column="1" Text="{Binding SubjectAlternativeNames}" AcceptsReturn="True" Height="100" TextWrapping="Wrap" />
-          </Grid>
-        </Grid>
+        </ScrollViewer>
       </TabItem>
 
       <TabItem Header="Extensions">
         <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
           <CheckBox Content="Certificate authority" IsChecked="{Binding IsCertificateAuthority}" />
-          <Grid Grid.Row="1" ColumnDefinitions="150,Auto,120,*" ColumnSpacing="10">
+          <Grid Grid.Row="1" ColumnDefinitions="150,Auto,120" ColumnSpacing="10">
             <TextBlock Text="Path length" VerticalAlignment="Center" />
             <CheckBox Grid.Column="1" Content="Constrained" IsChecked="{Binding HasPathLengthConstraint}" />
             <NumericUpDown Grid.Column="2" Minimum="0" Maximum="16" Value="{Binding PathLengthConstraint}" IsEnabled="{Binding HasPathLengthConstraint}" />
-            <TextBox Grid.Column="3" Text="{Binding SignatureAlgorithm}" Watermark="Signature algorithm" IsVisible="{Binding ShowSignatureAlgorithm}" />
           </Grid>
           <Grid Grid.Row="2" ColumnDefinitions="150,*" ColumnSpacing="10">
             <TextBlock Text="Key algorithm" VerticalAlignment="Center" />
@@ -66,33 +103,39 @@
               <ComboBox Grid.Column="2" ItemsSource="{Binding Curves}" SelectedItem="{Binding Curve}" IsVisible="{Binding IsEcdsa}" />
             </Grid>
           </Grid>
+          <Grid Grid.Row="3" ColumnDefinitions="150,220" ColumnSpacing="10" IsVisible="{Binding ShowSignatureAlgorithm}">
+            <TextBlock Text="Signature algorithm" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1" ItemsSource="{Binding SignatureAlgorithms}" SelectedItem="{Binding SignatureAlgorithm}" />
+          </Grid>
         </Grid>
       </TabItem>
 
       <TabItem Header="Key usage">
-        <Grid Margin="10" RowDefinitions="Auto,Auto" RowSpacing="8">
-          <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
-            <TextBlock Text="Key usage" VerticalAlignment="Top" Margin="0,6,0,0" />
-            <TextBox Grid.Column="1" Text="{Binding KeyUsages}" AcceptsReturn="True" Height="100" TextWrapping="Wrap" />
+        <ScrollViewer>
+          <Grid Margin="10" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+            <TextBlock Text="Key Usage" FontWeight="SemiBold" />
+            <WrapPanel Grid.Row="1" Orientation="Horizontal">
+              <CheckBox Content="Digital Signature" IsChecked="{Binding KuDigitalSignature}" Margin="0,0,16,4" />
+              <CheckBox Content="Non-Repudiation" IsChecked="{Binding KuNonRepudiation}" Margin="0,0,16,4" />
+              <CheckBox Content="Key Encipherment" IsChecked="{Binding KuKeyEncipherment}" Margin="0,0,16,4" />
+              <CheckBox Content="Data Encipherment" IsChecked="{Binding KuDataEncipherment}" Margin="0,0,16,4" />
+              <CheckBox Content="Key Agreement" IsChecked="{Binding KuKeyAgreement}" Margin="0,0,16,4" />
+              <CheckBox Content="Key Cert Sign" IsChecked="{Binding KuKeyCertSign}" Margin="0,0,16,4" />
+              <CheckBox Content="CRL Sign" IsChecked="{Binding KuCrlSign}" Margin="0,0,16,4" />
+              <CheckBox Content="Encipher Only" IsChecked="{Binding KuEncipherOnly}" Margin="0,0,16,4" />
+              <CheckBox Content="Decipher Only" IsChecked="{Binding KuDecipherOnly}" Margin="0,0,16,4" />
+            </WrapPanel>
+            <TextBlock Grid.Row="2" Text="Extended Key Usage" FontWeight="SemiBold" />
+            <WrapPanel Grid.Row="3" Orientation="Horizontal">
+              <CheckBox Content="Server Authentication" IsChecked="{Binding EkuServerAuth}" Margin="0,0,16,4" />
+              <CheckBox Content="Client Authentication" IsChecked="{Binding EkuClientAuth}" Margin="0,0,16,4" />
+              <CheckBox Content="Code Signing" IsChecked="{Binding EkuCodeSigning}" Margin="0,0,16,4" />
+              <CheckBox Content="Email Protection" IsChecked="{Binding EkuEmailProtection}" Margin="0,0,16,4" />
+              <CheckBox Content="Time Stamping" IsChecked="{Binding EkuTimeStamping}" Margin="0,0,16,4" />
+              <CheckBox Content="OCSP Signing" IsChecked="{Binding EkuOcspSigning}" Margin="0,0,16,4" />
+            </WrapPanel>
           </Grid>
-          <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
-            <TextBlock Text="Extended key usage" VerticalAlignment="Top" Margin="0,6,0,0" />
-            <TextBox Grid.Column="1" Text="{Binding EnhancedKeyUsages}" AcceptsReturn="True" Height="100" TextWrapping="Wrap" />
-          </Grid>
-        </Grid>
-      </TabItem>
-
-      <TabItem Header="Advanced">
-        <Grid Margin="10" RowDefinitions="Auto,Auto" RowSpacing="8">
-          <Grid ColumnDefinitions="150,*" ColumnSpacing="10">
-            <TextBlock Text="Raw key usage" VerticalAlignment="Top" Margin="0,6,0,0" />
-            <TextBox Grid.Column="1" Text="{Binding KeyUsages}" AcceptsReturn="True" Height="110" TextWrapping="Wrap" />
-          </Grid>
-          <Grid Grid.Row="1" ColumnDefinitions="150,*" ColumnSpacing="10">
-            <TextBlock Text="Raw extended usage" VerticalAlignment="Top" Margin="0,6,0,0" />
-            <TextBox Grid.Column="1" Text="{Binding EnhancedKeyUsages}" AcceptsReturn="True" Height="110" TextWrapping="Wrap" />
-          </Grid>
-        </Grid>
+        </ScrollViewer>
       </TabItem>
 
       <TabItem Header="Signing / Issuer" IsVisible="{Binding ShowSigningSection}">
@@ -117,6 +160,12 @@
               </ComboBox.ItemTemplate>
             </ComboBox>
           </Grid>
+        </Grid>
+      </TabItem>
+
+      <TabItem Header="Comment">
+        <Grid Margin="10">
+          <TextBox Text="{Binding Comment}" AcceptsReturn="True" TextWrapping="Wrap" />
         </Grid>
       </TabItem>
     </TabControl>
