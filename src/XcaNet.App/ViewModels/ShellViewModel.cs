@@ -78,6 +78,15 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly DelegateCommand _openRevokeDialogCommand;
     private readonly DelegateCommand _closeRevokeDialogCommand;
     private readonly DelegateCommand _togglePlainViewCommand;
+    private readonly AsyncCommand _unrevokeCertificateCommand;
+    private readonly DelegateCommand _openManageRevocationsCommand;
+    private readonly DelegateCommand _openCaPropertiesCommand;
+    private readonly AsyncCommand _saveCaPropertiesCommand;
+    private readonly DelegateCommand _openRenewalDialogCommand;
+    private readonly AsyncCommand _deleteCrlCommand;
+    private readonly DelegateCommand _showCrlDetailsCommand;
+    private readonly DelegateCommand _openGenerateCrlDialogCommand;
+    private readonly AsyncCommand _generateCrlFromDialogCommand;
 
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
@@ -159,6 +168,15 @@ public sealed class ShellViewModel : ViewModelBase
         _openRevokeDialogCommand = new DelegateCommand(OpenRevokeDialog, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.SelectedItem is { } cert && !string.Equals(cert.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase));
         _closeRevokeDialogCommand = new DelegateCommand(() => CertificatesPage.IsRevokeDialogOpen = false);
         _togglePlainViewCommand = new DelegateCommand(() => CertificatesPage.IsPlainView = !CertificatesPage.IsPlainView);
+        _unrevokeCertificateCommand = new AsyncCommand(UnrevokeCertificateAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.SelectedItem is { } cert && string.Equals(cert.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase) && CertificatesPage.IsUnrevokeConfirmDialogOpen);
+        _openManageRevocationsCommand = new DelegateCommand(OpenManageRevocations, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.SelectedItem is { IsCertificateAuthority: true });
+        _openCaPropertiesCommand = new DelegateCommand(OpenCaProperties, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && CertificatesPage.SelectedItem is { IsCertificateAuthority: true });
+        _saveCaPropertiesCommand = new AsyncCommand(SaveCaPropertiesAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && CertificatesPage.SelectedItem is not null);
+        _openRenewalDialogCommand = new DelegateCommand(OpenRenewalDialog, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.HasSelection);
+        _deleteCrlCommand = new AsyncCommand(DeleteCrlAsync, () => !IsBusy && Snapshot.State != DatabaseSessionState.Closed && CertificateRevocationListsPage.HasSelection && CertificateRevocationListsPage.IsDeleteConfirmDialogOpen);
+        _showCrlDetailsCommand = new DelegateCommand(ShowCrlDetails, () => CertificateRevocationListsPage.HasSelection && CertificateRevocationListsPage.Inspector is not null);
+        _openGenerateCrlDialogCommand = new DelegateCommand(OpenGenerateCrlDialog, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
+        _generateCrlFromDialogCommand = new AsyncCommand(GenerateCrlFromDialogAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificateRevocationListsPage.CrlGenerateSelectedCa is not null);
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
         SettingsSecurityPage.OpenDatabaseCommand = _openDatabaseCommand;
@@ -180,6 +198,11 @@ public sealed class ShellViewModel : ViewModelBase
         CertificatesPage.OpenRevokeDialogCommand = _openRevokeDialogCommand;
         CertificatesPage.CloseRevokeDialogCommand = _closeRevokeDialogCommand;
         CertificatesPage.TogglePlainViewCommand = _togglePlainViewCommand;
+        CertificatesPage.UnrevokeSelectedCommand = _unrevokeCertificateCommand;
+        CertificatesPage.OpenManageRevocationsCommand = _openManageRevocationsCommand;
+        CertificatesPage.OpenCaPropertiesCommand = _openCaPropertiesCommand;
+        CertificatesPage.SaveCaPropertiesCommand = _saveCaPropertiesCommand;
+        CertificatesPage.OpenRenewalDialogCommand = _openRenewalDialogCommand;
 
         PrivateKeysPage.RefreshCommand = _refreshPrivateKeysCommand;
         PrivateKeysPage.GenerateKeyCommand = _generateKeyCommand;
@@ -211,6 +234,11 @@ public sealed class ShellViewModel : ViewModelBase
         CertificateRevocationListsPage.RefreshCommand = _refreshCertificateRevocationListsCommand;
         CertificateRevocationListsPage.ExportSelectedCommand = _exportCertificateRevocationListToFileCommand;
         CertificateRevocationListsPage.OpenIssuerCommand = _navigateCrlIssuerCommand;
+        CertificateRevocationListsPage.ShowDetailsCommand = _showCrlDetailsCommand;
+        CertificateRevocationListsPage.DeleteSelectedCommand = _deleteCrlCommand;
+        CertificateRevocationListsPage.ImportCommand = _importFilesCommand;
+        CertificateRevocationListsPage.OpenGenerateCrlDialogCommand = _openGenerateCrlDialogCommand;
+        CertificateRevocationListsPage.GenerateCrlCommand = _generateCrlFromDialogCommand;
         TemplatesPage.RefreshCommand = _refreshTemplatesCommand;
         TemplatesPage.CreateNewCommand = _createTemplateCommand;
         TemplatesPage.EditTemplateCommand = _editTemplateCommand;
@@ -643,6 +671,169 @@ public sealed class ShellViewModel : ViewModelBase
         await RefreshAllAsync();
         NavigateTo(new NavigationTarget(BrowserEntityType.CertificateRevocationList, result.Value.CertificateRevocationListId, NavigationFocusSection.RevokedEntries));
         NotifySuccess("Certificate revocation list generated.");
+    }
+
+    private async Task UnrevokeCertificateAsync()
+    {
+        if (CertificatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a certificate first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Unrevoking certificate");
+        var result = await _databaseSessionService.UnrevokeCertificateAsync(CertificatesPage.SelectedItem.CertificateId, CancellationToken.None);
+        CertificatesPage.IsUnrevokeConfirmDialogOpen = false;
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await RefreshAllAsync();
+        NotifySuccess("Certificate unrevoked.");
+    }
+
+    private void OpenManageRevocations()
+    {
+        if (CertificatesPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a CA certificate first.");
+            return;
+        }
+
+        var caId = CertificatesPage.SelectedItem.CertificateId;
+        CertificatesPage.ManageRevocationsEntries.Clear();
+        foreach (var cert in CertificatesPage.Items.Where(x =>
+            x.IssuerCertificateId == caId &&
+            string.Equals(x.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase)))
+        {
+            CertificatesPage.ManageRevocationsEntries.Add(cert);
+        }
+
+        CertificatesPage.IsManageRevocationsDialogOpen = true;
+    }
+
+    private void OpenCaProperties()
+    {
+        if (CertificatesPage.SelectedItem is null)
+            return;
+
+        CertificatesPage.IsCaPropertiesDialogOpen = true;
+        _ = LoadCaPropertiesAsync(CertificatesPage.SelectedItem.CertificateId);
+    }
+
+    private async Task LoadCaPropertiesAsync(Guid caCertId)
+    {
+        var result = await _databaseSessionService.GetCaPropertiesAsync(caCertId, CancellationToken.None);
+        if (result.IsSuccess && result.Value is not null)
+        {
+            CertificatesPage.CaPropertiesCrlDays = result.Value.CrlDays;
+            CertificatesPage.CaPropertiesDefaultTemplateId = result.Value.DefaultTemplateId;
+        }
+    }
+
+    private async Task SaveCaPropertiesAsync()
+    {
+        if (CertificatesPage.SelectedItem is null)
+            return;
+
+        using var scope = BeginBusy("Saving CA properties");
+        var result = await _databaseSessionService.SaveCaPropertiesAsync(
+            CertificatesPage.SelectedItem.CertificateId,
+            new XcaNet.Contracts.Browser.CaPropertiesData(CertificatesPage.CaPropertiesCrlDays, CertificatesPage.CaPropertiesDefaultTemplateId),
+            CancellationToken.None);
+
+        CertificatesPage.IsCaPropertiesDialogOpen = false;
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        NotifySuccess("CA properties saved.");
+    }
+
+    private void OpenRenewalDialog()
+    {
+        if (CertificatesPage.SelectedItem is null)
+            return;
+
+        CertificatesPage.RenewalNotBefore = CertificatesPage.SelectedItem.NotBefore?.DateTime ?? DateTime.Today;
+        CertificatesPage.RenewalNotAfter = (CertificatesPage.SelectedItem.NotAfter?.DateTime ?? DateTime.Today.AddYears(1)).AddYears(1);
+        CertificatesPage.RenewalRevokeOld = false;
+        CertificatesPage.RenewalReplaceOld = false;
+        CertificatesPage.IsRenewalDialogOpen = true;
+    }
+
+    private async Task DeleteCrlAsync()
+    {
+        if (CertificateRevocationListsPage.SelectedItem is null)
+        {
+            NotifyFailure("Select a CRL first.");
+            return;
+        }
+
+        using var scope = BeginBusy("Deleting revocation list");
+        var result = await _databaseSessionService.DeleteCertificateRevocationListAsync(CertificateRevocationListsPage.SelectedItem.CertificateRevocationListId, CancellationToken.None);
+        CertificateRevocationListsPage.IsDeleteConfirmDialogOpen = false;
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await LoadCertificateRevocationListsAsync();
+        NotifySuccess("Revocation list deleted.");
+    }
+
+    private void ShowCrlDetails()
+    {
+        if (CertificateRevocationListsPage.Inspector is null)
+            return;
+
+        CertificateRevocationListsPage.IsDetailDialogOpen = true;
+    }
+
+    private void OpenGenerateCrlDialog()
+    {
+        var caItems = CertificatesPage.Items
+            .Where(x => x.IsCertificateAuthority && x.PrivateKeyId.HasValue)
+            .ToList();
+
+        CertificateRevocationListsPage.CaItems.Clear();
+        foreach (var ca in caItems)
+            CertificateRevocationListsPage.CaItems.Add(ca);
+
+        CertificateRevocationListsPage.CrlGenerateSelectedCa = CertificateRevocationListsPage.CaItems.FirstOrDefault();
+        CertificateRevocationListsPage.CrlGenerateNextUpdateDays = 7;
+        CertificateRevocationListsPage.IsGenerateCrlDialogOpen = true;
+    }
+
+    private async Task GenerateCrlFromDialogAsync()
+    {
+        if (CertificateRevocationListsPage.CrlGenerateSelectedCa is { PrivateKeyId: { } privateKeyId } selectedCa)
+        {
+            using var scope = BeginBusy("Generating certificate revocation list");
+            var result = await _databaseSessionService.GenerateCertificateRevocationListAsync(
+                new GenerateCertificateRevocationListWorkflowRequest(
+                    selectedCa.CertificateId,
+                    privateKeyId,
+                    $"{selectedCa.DisplayName} CRL",
+                    CertificateRevocationListsPage.CrlGenerateNextUpdateDays),
+                CancellationToken.None);
+
+            CertificateRevocationListsPage.IsGenerateCrlDialogOpen = false;
+            if (!result.IsSuccess || result.Value is null)
+            {
+                NotifyFailure(result.Message);
+                return;
+            }
+
+            await LoadCertificateRevocationListsAsync();
+            NavigateTo(new NavigationTarget(BrowserEntityType.CertificateRevocationList, result.Value.CertificateRevocationListId, NavigationFocusSection.RevokedEntries));
+            NotifySuccess("Certificate revocation list generated.");
+        }
     }
 
     private async Task ImportMaterialAsync()
@@ -1492,6 +1683,7 @@ public sealed class ShellViewModel : ViewModelBase
         if (e.PropertyName is nameof(CertificatesPageViewModel.SelectedItem)
             or nameof(CertificatesPageViewModel.Filter)
             or nameof(CertificatesPageViewModel.IsRevokeDialogOpen)
+            or nameof(CertificatesPageViewModel.IsUnrevokeConfirmDialogOpen)
             or nameof(CertificatesPageViewModel.SelectedChildNavigationItem))
         {
             if (e.PropertyName == nameof(CertificatesPageViewModel.SelectedItem))
@@ -1509,7 +1701,9 @@ public sealed class ShellViewModel : ViewModelBase
         if (e.PropertyName is nameof(PrivateKeysPageViewModel.SelectedItem)
             or nameof(CertificateRequestsPageViewModel.SelectedItem)
             or nameof(TemplatesPageViewModel.SelectedItem)
-            or nameof(CertificateRevocationListsPageViewModel.SelectedItem))
+            or nameof(CertificateRevocationListsPageViewModel.SelectedItem)
+            or nameof(CertificateRevocationListsPageViewModel.IsDeleteConfirmDialogOpen)
+            or nameof(CertificateRevocationListsPageViewModel.CrlGenerateSelectedCa))
         {
             if (sender == PrivateKeysPage && e.PropertyName == nameof(PrivateKeysPageViewModel.SelectedItem))
             {
@@ -1721,6 +1915,15 @@ public sealed class ShellViewModel : ViewModelBase
         _openRevokeDialogCommand.RaiseCanExecuteChanged();
         _closeRevokeDialogCommand.RaiseCanExecuteChanged();
         _togglePlainViewCommand.RaiseCanExecuteChanged();
+        _unrevokeCertificateCommand.RaiseCanExecuteChanged();
+        _openManageRevocationsCommand.RaiseCanExecuteChanged();
+        _openCaPropertiesCommand.RaiseCanExecuteChanged();
+        _saveCaPropertiesCommand.RaiseCanExecuteChanged();
+        _openRenewalDialogCommand.RaiseCanExecuteChanged();
+        _deleteCrlCommand.RaiseCanExecuteChanged();
+        _showCrlDetailsCommand.RaiseCanExecuteChanged();
+        _openGenerateCrlDialogCommand.RaiseCanExecuteChanged();
+        _generateCrlFromDialogCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)

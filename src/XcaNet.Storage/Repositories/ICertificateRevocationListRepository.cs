@@ -9,4 +9,6 @@ public interface ICertificateRevocationListRepository
     Task<CertificateRevocationListEntity?> GetAsync(string databasePath, Guid certificateRevocationListId, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<CertificateRevocationListEntity>> ListAsync(string databasePath, CancellationToken cancellationToken);
+
+    Task<bool> DeleteAsync(string databasePath, Guid certificateRevocationListId, CancellationToken cancellationToken);
 }

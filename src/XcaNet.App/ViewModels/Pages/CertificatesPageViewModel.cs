@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using XcaNet.App.Commands;
 using XcaNet.Contracts.Browser;
 using XcaNet.Contracts.Revocation;
 
@@ -20,17 +21,34 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     private string _exportPreview = string.Empty;
     private CertificateRevocationReason _selectedRevocationReason = CertificateRevocationReason.Unspecified;
     private DateTimeOffset _selectedRevocationDate = DateTimeOffset.UtcNow;
+    private DateTime? _revocationDate = DateTime.Now;
     private RelatedNavigationItem? _selectedChildNavigationItem;
     private CertificateTreeNodeViewModel? _selectedTreeNode;
     private bool _isPlainView;
     private bool _isDetailDialogOpen;
     private bool _isRevokeDialogOpen;
+    private bool _isUnrevokeConfirmDialogOpen;
+    private bool _isManageRevocationsDialogOpen;
+    private bool _isCaPropertiesDialogOpen;
+    private bool _isRenewalDialogOpen;
+    private int _caPropertiesCrlDays = 7;
+    private Guid? _caPropertiesDefaultTemplateId;
+    private DateTime? _renewalNotBefore = DateTime.Today;
+    private DateTime? _renewalNotAfter = DateTime.Today.AddYears(1);
+    private bool _renewalRevokeOld;
+    private bool _renewalReplaceOld;
 
     public CertificatesPageViewModel()
         : base("Certificates")
     {
         EmptyStateTitle = "No certificates yet";
         EmptyStateMessage = "Import certificate material, create a self-signed CA, or sign a CSR to populate this workspace.";
+
+        OpenUnrevokeConfirmCommand = new DelegateCommand(() => { if (SelectedItem is not null) IsUnrevokeConfirmDialogOpen = true; });
+        CloseUnrevokeConfirmCommand = new DelegateCommand(() => IsUnrevokeConfirmDialogOpen = false);
+        CloseManageRevocationsCommand = new DelegateCommand(() => IsManageRevocationsDialogOpen = false);
+        CloseCaPropertiesCommand = new DelegateCommand(() => IsCaPropertiesDialogOpen = false);
+        CloseRenewalDialogCommand = new DelegateCommand(() => IsRenewalDialogOpen = false);
     }
 
     public IReadOnlyList<CertificateValidityFilter> ValidityFilters { get; } =
@@ -54,9 +72,13 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     public IReadOnlyList<CertificateRevocationReason> RevocationReasons { get; } =
         Enum.GetValues<CertificateRevocationReason>();
 
-    // --- Tree ---
+    // --- Collections ---
 
     public ObservableCollection<CertificateTreeNodeViewModel> CertificateTreeRoots { get; } = [];
+
+    public ObservableCollection<CertificateListItem> ManageRevocationsEntries { get; } = [];
+
+    // --- Tree ---
 
     public CertificateTreeNodeViewModel? SelectedTreeNode
     {
@@ -90,6 +112,70 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     {
         get => _isRevokeDialogOpen;
         set => SetProperty(ref _isRevokeDialogOpen, value);
+    }
+
+    public bool IsUnrevokeConfirmDialogOpen
+    {
+        get => _isUnrevokeConfirmDialogOpen;
+        set => SetProperty(ref _isUnrevokeConfirmDialogOpen, value);
+    }
+
+    public bool IsManageRevocationsDialogOpen
+    {
+        get => _isManageRevocationsDialogOpen;
+        set => SetProperty(ref _isManageRevocationsDialogOpen, value);
+    }
+
+    public bool IsCaPropertiesDialogOpen
+    {
+        get => _isCaPropertiesDialogOpen;
+        set => SetProperty(ref _isCaPropertiesDialogOpen, value);
+    }
+
+    public bool IsRenewalDialogOpen
+    {
+        get => _isRenewalDialogOpen;
+        set => SetProperty(ref _isRenewalDialogOpen, value);
+    }
+
+    // --- CA Properties fields ---
+
+    public int CaPropertiesCrlDays
+    {
+        get => _caPropertiesCrlDays;
+        set => SetProperty(ref _caPropertiesCrlDays, value);
+    }
+
+    public Guid? CaPropertiesDefaultTemplateId
+    {
+        get => _caPropertiesDefaultTemplateId;
+        set => SetProperty(ref _caPropertiesDefaultTemplateId, value);
+    }
+
+    // --- Renewal fields ---
+
+    public DateTime? RenewalNotBefore
+    {
+        get => _renewalNotBefore;
+        set => SetProperty(ref _renewalNotBefore, value);
+    }
+
+    public DateTime? RenewalNotAfter
+    {
+        get => _renewalNotAfter;
+        set => SetProperty(ref _renewalNotAfter, value);
+    }
+
+    public bool RenewalRevokeOld
+    {
+        get => _renewalRevokeOld;
+        set => SetProperty(ref _renewalRevokeOld, value);
+    }
+
+    public bool RenewalReplaceOld
+    {
+        get => _renewalReplaceOld;
+        set => SetProperty(ref _renewalReplaceOld, value);
     }
 
     // --- Existing data properties ---
@@ -172,6 +258,18 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
         set => SetProperty(ref _selectedRevocationDate, value);
     }
 
+    public DateTime? RevocationDate
+    {
+        get => _revocationDate;
+        set
+        {
+            if (SetProperty(ref _revocationDate, value))
+                SelectedRevocationDate = value.HasValue
+                    ? new DateTimeOffset(DateTime.SpecifyKind(value.Value, DateTimeKind.Utc))
+                    : DateTimeOffset.UtcNow;
+        }
+    }
+
     public RelatedNavigationItem? SelectedChildNavigationItem
     {
         get => _selectedChildNavigationItem;
@@ -191,6 +289,28 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     public ICommand? OpenRevokeDialogCommand { get; set; }
 
     public ICommand? CloseRevokeDialogCommand { get; set; }
+
+    public ICommand? UnrevokeSelectedCommand { get; set; }
+
+    public DelegateCommand OpenUnrevokeConfirmCommand { get; }
+
+    public DelegateCommand CloseUnrevokeConfirmCommand { get; }
+
+    public ICommand? OpenManageRevocationsCommand { get; set; }
+
+    public DelegateCommand CloseManageRevocationsCommand { get; }
+
+    public ICommand? OpenCaPropertiesCommand { get; set; }
+
+    public DelegateCommand CloseCaPropertiesCommand { get; }
+
+    public ICommand? SaveCaPropertiesCommand { get; set; }
+
+    public ICommand? OpenRenewalDialogCommand { get; set; }
+
+    public DelegateCommand CloseRenewalDialogCommand { get; }
+
+    public ICommand? ConfirmRenewalCommand { get; set; }
 
     public ICommand? GenerateCertificateRevocationListCommand { get; set; }
 

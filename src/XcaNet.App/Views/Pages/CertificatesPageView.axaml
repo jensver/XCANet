@@ -49,10 +49,13 @@
                 <MenuItem Header="Export" Command="{Binding ExportSelectedCommand}" />
                 <Separator />
                 <MenuItem Header="Revoke" Command="{Binding OpenRevokeDialogCommand}" />
+                <MenuItem Header="Unrevoke" Command="{Binding OpenUnrevokeConfirmCommand}" />
                 <MenuItem Header="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />
                 <Separator />
+                <MenuItem Header="Renew" Command="{Binding OpenRenewalDialogCommand}" />
+                <MenuItem Header="CA Properties" Command="{Binding OpenCaPropertiesCommand}" />
+                <MenuItem Header="Manage Revocations" Command="{Binding OpenManageRevocationsCommand}" />
                 <MenuItem Header="To Template" Command="{Binding CreateTemplateFromCertificateCommand}" />
-                <MenuItem Header="Renew" IsEnabled="False" />
                 <Separator />
                 <MenuItem Header="Open Issuer" Command="{Binding OpenIssuerCommand}" />
                 <MenuItem Header="Delete" IsEnabled="False" />
@@ -86,10 +89,13 @@
                 <MenuItem Header="Export" Command="{Binding ExportSelectedCommand}" />
                 <Separator />
                 <MenuItem Header="Revoke" Command="{Binding OpenRevokeDialogCommand}" />
+                <MenuItem Header="Unrevoke" Command="{Binding OpenUnrevokeConfirmCommand}" />
                 <MenuItem Header="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />
                 <Separator />
+                <MenuItem Header="Renew" Command="{Binding OpenRenewalDialogCommand}" />
+                <MenuItem Header="CA Properties" Command="{Binding OpenCaPropertiesCommand}" />
+                <MenuItem Header="Manage Revocations" Command="{Binding OpenManageRevocationsCommand}" />
                 <MenuItem Header="To Template" Command="{Binding CreateTemplateFromCertificateCommand}" />
-                <MenuItem Header="Renew" IsEnabled="False" />
                 <Separator />
                 <MenuItem Header="Open Issuer" Command="{Binding OpenIssuerCommand}" />
                 <MenuItem Header="Delete" IsEnabled="False" />
@@ -124,8 +130,11 @@
         <Button Classes="side-action" Content="Show Details" Command="{Binding ShowDetailsCommand}" />
         <Button Classes="side-action" Content="Delete" IsEnabled="False" />
         <Button Classes="side-action" Content="Revoke" Command="{Binding OpenRevokeDialogCommand}" />
+        <Button Classes="side-action" Content="Unrevoke" Command="{Binding OpenUnrevokeConfirmCommand}" />
         <Button Classes="side-action" Content="Generate CRL" Command="{Binding GenerateCertificateRevocationListCommand}" />
-        <Button Classes="side-action" Content="Renew" IsEnabled="False" />
+        <Button Classes="side-action" Content="Renew" Command="{Binding OpenRenewalDialogCommand}" />
+        <Button Classes="side-action" Content="CA Properties" Command="{Binding OpenCaPropertiesCommand}" />
+        <Button Classes="side-action" Content="Manage Revocations" Command="{Binding OpenManageRevocationsCommand}" />
         <Button Classes="side-action" Content="To Template" Command="{Binding CreateTemplateFromCertificateCommand}" />
         <Button Classes="side-action" Content="Open Issuer" Command="{Binding OpenIssuerCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
@@ -293,7 +302,7 @@
           <TextBlock Text="Certificate revocation" FontSize="16" FontWeight="SemiBold" />
 
           <!-- Fields -->
-          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
             <TextBlock Text="Certificate" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" TextWrapping="Wrap" />
             <TextBlock Grid.Row="1" Text="Serial number" VerticalAlignment="Center" />
@@ -303,16 +312,183 @@
                       ItemsSource="{Binding RevocationReasons}"
                       SelectedItem="{Binding SelectedRevocationReason}"
                       HorizontalAlignment="Stretch" />
+            <TextBlock Grid.Row="3" Text="Revocation date" VerticalAlignment="Center" />
+            <CalendarDatePicker Grid.Row="3" Grid.Column="1"
+                                SelectedDate="{Binding RevocationDate}"
+                                HorizontalAlignment="Stretch" />
           </Grid>
 
-          <!-- Revocation date note -->
-          <TextBlock Grid.Row="2" Text="Revocation date will be recorded as the current UTC time." Classes="secondary-text" TextWrapping="Wrap" />
+          <!-- Spacer -->
+          <TextBlock Grid.Row="2" Classes="secondary-text" Text="" />
 
           <!-- Action buttons -->
           <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
             <TextBlock Text="This action cannot be undone." Classes="secondary-text" VerticalAlignment="Center" />
             <Button Grid.Column="1" Content="Revoke" Command="{Binding RevokeSelectedCommand}" />
             <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseRevokeDialogCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Unrevoke confirmation dialog overlay                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsUnrevokeConfirmDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="420"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+
+          <TextBlock Text="Unrevoke certificate" FontSize="16" FontWeight="SemiBold" />
+
+          <Grid Grid.Row="1" ColumnDefinitions="120,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="8">
+            <TextBlock Text="Certificate" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1" Text="Serial number" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.SerialNumber}" />
+          </Grid>
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Text="Remove this certificate from the revocation list?" Classes="secondary-text" VerticalAlignment="Center" TextWrapping="Wrap" />
+            <Button Grid.Column="1" Content="Unrevoke" Command="{Binding UnrevokeSelectedCommand}" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseUnrevokeConfirmCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Manage Revocations dialog overlay                                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsManageRevocationsDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="660"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="12">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Manage revocations" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseManageRevocationsCommand}" />
+          </Grid>
+
+          <TextBlock Grid.Row="1" Classes="secondary-text"
+                     Text="{Binding SelectedItem.DisplayName, StringFormat='Revoked certificates issued by: {0}'}" />
+
+          <Border Grid.Row="2" Classes="workspace-pane" Padding="0">
+            <ListBox ItemsSource="{Binding ManageRevocationsEntries}"
+                     SelectedItem="{Binding SelectedItem}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border Padding="8,5" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+                    <Grid ColumnDefinitions="1.4*,1.0*,0.7*,1.0*" ColumnSpacing="8">
+                      <TextBlock Text="{Binding DisplayName}" />
+                      <TextBlock Grid.Column="1" Text="{Binding SerialNumber}" />
+                      <TextBlock Grid.Column="2" Text="{Binding StatusDisplay}" />
+                      <TextBlock Grid.Column="3" Text="{Binding NotAfter, StringFormat='{}{0:yyyy-MM-dd}'}" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Border>
+
+          <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Classes="secondary-text" Text="Select a certificate above, then click Unrevoke." VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Unrevoke" Command="{Binding OpenUnrevokeConfirmCommand}" />
+            <Button Grid.Column="2" Content="Done" Command="{Binding CloseManageRevocationsCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CA Properties dialog overlay                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsCaPropertiesDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="400"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="CA Properties" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseCaPropertiesCommand}" />
+          </Grid>
+
+          <Grid Grid.Row="1" ColumnDefinitions="160,*" RowDefinitions="Auto" ColumnSpacing="12" RowSpacing="10">
+            <TextBlock Text="Default CRL days" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Column="1"
+                           Value="{Binding CaPropertiesCrlDays}"
+                           Minimum="1"
+                           Maximum="3650"
+                           Increment="1"
+                           FormatString="0"
+                           HorizontalAlignment="Stretch" />
+          </Grid>
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Button Grid.Column="1" Content="Save" Command="{Binding SaveCaPropertiesCommand}" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseCaPropertiesCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Certificate Renewal dialog overlay                                 -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsRenewalDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="460"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Renew certificate" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseRenewalDialogCommand}" />
+          </Grid>
+
+          <TextBlock Grid.Row="1" Classes="secondary-text"
+                     Text="{Binding SelectedItem.DisplayName, StringFormat='Renewing: {0}'}" />
+
+          <Grid Grid.Row="2" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+            <TextBlock Text="Not before" VerticalAlignment="Center" />
+            <CalendarDatePicker Grid.Column="1"
+                                SelectedDate="{Binding RenewalNotBefore}"
+                                HorizontalAlignment="Stretch" />
+            <TextBlock Grid.Row="1" Text="Not after" VerticalAlignment="Center" />
+            <CalendarDatePicker Grid.Row="1" Grid.Column="1"
+                                SelectedDate="{Binding RenewalNotAfter}"
+                                HorizontalAlignment="Stretch" />
+            <CheckBox Grid.Row="2" Grid.ColumnSpan="2"
+                      IsChecked="{Binding RenewalRevokeOld}"
+                      Content="Revoke old certificate" />
+            <CheckBox Grid.Row="3" Grid.ColumnSpan="2"
+                      IsChecked="{Binding RenewalReplaceOld}"
+                      Content="Replace old certificate in the database" />
+          </Grid>
+
+          <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Classes="secondary-text" Text="Renewal uses the same key and subject." VerticalAlignment="Center" TextWrapping="Wrap" />
+            <Button Grid.Column="1" Content="Renew" Command="{Binding ConfirmRenewalCommand}" IsEnabled="False" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseRenewalDialogCommand}" />
           </Grid>
         </Grid>
       </Border>

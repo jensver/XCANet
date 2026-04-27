@@ -26,6 +26,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
     private readonly ICertificateRevocationListRepository _certificateRevocationListRepository;
     private readonly IPrivateKeyRepository _privateKeyRepository;
     private readonly ITemplateRepository _templateRepository;
+    private readonly IAppSettingRepository _appSettingRepository;
     private readonly IDatabaseSecretProtector _databaseSecretProtector;
     private readonly IKeyService _keyService;
     private readonly ICertificateService _certificateService;
@@ -50,6 +51,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         ICertificateRevocationListRepository certificateRevocationListRepository,
         IPrivateKeyRepository privateKeyRepository,
         ITemplateRepository templateRepository,
+        IAppSettingRepository appSettingRepository,
         IDatabaseSecretProtector databaseSecretProtector,
         IKeyService keyService,
         ICertificateService certificateService,
@@ -66,6 +68,7 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         _certificateRevocationListRepository = certificateRevocationListRepository;
         _privateKeyRepository = privateKeyRepository;
         _templateRepository = templateRepository;
+        _appSettingRepository = appSettingRepository;
         _databaseSecretProtector = databaseSecretProtector;
         _keyService = keyService;
         _certificateService = certificateService;
@@ -602,6 +605,30 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         }
     }
 
+    public async Task<OperationResult> UnrevokeCertificateAsync(Guid certificateId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetUnlockedDatabasePath<object>(out var databasePath, out var failure))
+                return OperationResult.Failure(failure!.ErrorCode, failure.Message);
+
+            var certificate = await _certificateRepository.GetAsync(databasePath, certificateId, cancellationToken);
+            if (certificate is null)
+                return OperationResult.Failure(OperationErrorCode.DatabaseNotFound, "Certificate not found.");
+
+            if (certificate.RevocationState != (int)RevocationState.Revoked)
+                return OperationResult.Failure(OperationErrorCode.ValidationFailed, "Certificate is not revoked.");
+
+            await _certificateRepository.UpdateRevocationAsync(databasePath, certificateId, (int)RevocationState.Active, null, null, cancellationToken);
+            return OperationResult.Success("Certificate unrevoked.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<OperationResult<StoredCertificateRevocationListResult>> GenerateCertificateRevocationListAsync(GenerateCertificateRevocationListWorkflowRequest request, CancellationToken cancellationToken)
     {
         await _gate.WaitAsync(cancellationToken);
@@ -704,6 +731,66 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             {
                 Array.Clear(decryptedIssuerKey, 0, decryptedIssuerKey.Length);
             }
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult> DeleteCertificateRevocationListAsync(Guid certificateRevocationListId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<object>(out var databasePath, out var failure))
+                return OperationResult.Failure(failure!.ErrorCode, failure.Message);
+
+            return await _certificateRevocationListRepository.DeleteAsync(databasePath, certificateRevocationListId, cancellationToken)
+                ? OperationResult.Success("CRL deleted.")
+                : OperationResult.Failure(OperationErrorCode.DatabaseNotFound, "CRL not found.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult<CaPropertiesData>> GetCaPropertiesAsync(Guid caCertificateId, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<CaPropertiesData>(out var databasePath, out var failure))
+                return failure!;
+
+            var crlDaysRaw = await _appSettingRepository.GetAsync(databasePath, $"ca_crl_days_{caCertificateId}", cancellationToken);
+            var templateIdRaw = await _appSettingRepository.GetAsync(databasePath, $"ca_template_{caCertificateId}", cancellationToken);
+
+            var crlDays = int.TryParse(crlDaysRaw, out var d) ? d : 7;
+            var templateId = Guid.TryParse(templateIdRaw, out var t) ? (Guid?)t : null;
+
+            return OperationResult<CaPropertiesData>.Success(new CaPropertiesData(crlDays, templateId), "CA properties retrieved.");
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<OperationResult> SaveCaPropertiesAsync(Guid caCertificateId, CaPropertiesData data, CancellationToken cancellationToken)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            if (!TryGetOpenDatabasePath<object>(out var databasePath, out var failure))
+                return OperationResult.Failure(failure!.ErrorCode, failure.Message);
+
+            await _appSettingRepository.SetAsync(databasePath, $"ca_crl_days_{caCertificateId}", data.CrlDays.ToString(), cancellationToken);
+            if (data.DefaultTemplateId.HasValue)
+                await _appSettingRepository.SetAsync(databasePath, $"ca_template_{caCertificateId}", data.DefaultTemplateId.Value.ToString(), cancellationToken);
+
+            return OperationResult.Success("CA properties saved.");
         }
         finally
         {

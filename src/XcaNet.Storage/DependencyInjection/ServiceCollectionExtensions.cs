@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICertificateRevocationListRepository, CertificateRevocationListRepository>();
         services.AddSingleton<IPrivateKeyRepository, PrivateKeyRepository>();
         services.AddSingleton<ITemplateRepository, TemplateRepository>();
+        services.AddSingleton<IAppSettingRepository, AppSettingRepository>();
         return services;
     }
 }

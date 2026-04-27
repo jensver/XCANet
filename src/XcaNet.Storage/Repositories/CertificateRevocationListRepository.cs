@@ -38,4 +38,16 @@ public sealed class CertificateRevocationListRepository : ICertificateRevocation
             .OrderByDescending(x => x.ThisUpdateUtc)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<bool> DeleteAsync(string databasePath, Guid certificateRevocationListId, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var existing = await dbContext.CertificateRevocationLists
+            .SingleOrDefaultAsync(x => x.Id == certificateRevocationListId, cancellationToken);
+        if (existing is null)
+            return false;
+        dbContext.CertificateRevocationLists.Remove(existing);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }
