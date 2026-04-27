@@ -19,6 +19,15 @@
             <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.ContextMenu>
+              <ContextMenu>
+                <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />
+                <MenuItem Header="Export" Command="{Binding ExportSelectedCommand}" />
+                <Separator />
+                <MenuItem Header="Delete" Command="{Binding OpenDeleteConfirmCommand}" />
+                <MenuItem Header="Open Issuer" Command="{Binding OpenIssuerCommand}" />
+              </ContextMenu>
+            </ListBox.ContextMenu>
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
@@ -40,11 +49,11 @@
 
     <Border Grid.Column="1" Classes="classic-side-panel" Padding="8">
       <StackPanel>
-        <Button Classes="side-action" Content="Generate CRL" IsEnabled="False" />
+        <Button Classes="side-action" Content="Generate CRL" Command="{Binding OpenGenerateCrlDialogCommand}" />
         <Button Classes="side-action" Content="Export" Command="{Binding ExportSelectedCommand}" />
-        <Button Classes="side-action" Content="Import" IsEnabled="False" />
-        <Button Classes="side-action" Content="Show Details" IsEnabled="False" />
-        <Button Classes="side-action" Content="Delete" IsEnabled="False" />
+        <Button Classes="side-action" Content="Import" Command="{Binding ImportCommand}" />
+        <Button Classes="side-action" Content="Show Details" Command="{Binding ShowDetailsCommand}" />
+        <Button Classes="side-action" Content="Delete" Command="{Binding OpenDeleteConfirmCommand}" />
         <Button Classes="side-action" Content="Open Issuer" Command="{Binding OpenIssuerCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
       </StackPanel>
@@ -82,5 +91,141 @@
         </TabItem>
       </TabControl>
     </Border>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CRL Detail dialog overlay                                          -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsDetailDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="640"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="12">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding SelectedItem.DisplayName}" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseDetailCommand}" />
+          </Grid>
+
+          <TabControl Grid.Row="1">
+            <TabItem Header="Status">
+              <Grid Margin="6" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="8">
+                <TextBlock Text="CRL number" />
+                <TextBlock Grid.Column="1" Text="{Binding Inspector.CrlNumber}" />
+                <TextBlock Grid.Row="1" Text="This update" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Inspector.ThisUpdate}" />
+                <TextBlock Grid.Row="2" Text="Next update" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Inspector.NextUpdate}" />
+                <TextBlock Grid.Row="3" Text="Revoked entries" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SelectedItem.RevokedEntryCount}" />
+              </Grid>
+            </TabItem>
+            <TabItem Header="Issuer">
+              <Grid Margin="6" ColumnDefinitions="140,*" RowDefinitions="Auto" ColumnSpacing="12" RowSpacing="8">
+                <TextBlock Text="Issuer" />
+                <TextBlock Grid.Column="1" Text="{Binding Inspector.IssuerDisplayName}" TextWrapping="Wrap" />
+              </Grid>
+            </TabItem>
+            <TabItem Header="Revoked entries">
+              <ListBox Margin="6" ItemsSource="{Binding Inspector.RevokedEntries}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Padding="8,5" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
+                      <Grid ColumnDefinitions="1.4*,1.2*,1*,1*" ColumnSpacing="8">
+                        <TextBlock Text="{Binding DisplayName}" />
+                        <TextBlock Grid.Column="1" Text="{Binding SerialNumber}" />
+                        <TextBlock Grid.Column="2" Text="{Binding Reason}" />
+                        <TextBlock Grid.Column="3" Text="{Binding RevokedAt}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </TabItem>
+          </TabControl>
+
+          <Button Grid.Row="2" Content="OK" Command="{Binding CloseDetailCommand}" HorizontalAlignment="Right" MinWidth="80" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Delete CRL confirmation dialog overlay                             -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsDeleteConfirmDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="400"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+
+          <TextBlock Text="Delete revocation list" FontSize="16" FontWeight="SemiBold" />
+
+          <Grid Grid.Row="1" ColumnDefinitions="120,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="8">
+            <TextBlock Text="CRL" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding SelectedItem.DisplayName}" TextWrapping="Wrap" />
+            <TextBlock Grid.Row="1" Text="Issuer" VerticalAlignment="Center" />
+            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedItem.IssuerDisplayName}" TextWrapping="Wrap" />
+          </Grid>
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Text="This action cannot be undone." Classes="secondary-text" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Delete" Command="{Binding DeleteSelectedCommand}" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseDeleteConfirmCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Generate CRL dialog overlay                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="2" Grid.ColumnSpan="2"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsGenerateCrlDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="460"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+
+          <TextBlock Text="Generate revocation list" FontSize="16" FontWeight="SemiBold" />
+
+          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+            <TextBlock Text="CA certificate" VerticalAlignment="Center" />
+            <ComboBox Grid.Column="1"
+                      ItemsSource="{Binding CaItems}"
+                      SelectedItem="{Binding CrlGenerateSelectedCa}"
+                      DisplayMemberBinding="{Binding DisplayName}"
+                      HorizontalAlignment="Stretch" />
+            <TextBlock Grid.Row="1" Text="Next update (days)" VerticalAlignment="Center" />
+            <NumericUpDown Grid.Row="1" Grid.Column="1"
+                           Value="{Binding CrlGenerateNextUpdateDays}"
+                           Minimum="1"
+                           Maximum="3650"
+                           Increment="1"
+                           FormatString="0"
+                           HorizontalAlignment="Stretch" />
+            <TextBlock Grid.Row="2" Text="Next update date" VerticalAlignment="Center" />
+            <CalendarDatePicker Grid.Row="2" Grid.Column="1"
+                                SelectedDate="{Binding CrlGenerateNextUpdateDate}"
+                                HorizontalAlignment="Stretch" />
+          </Grid>
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <Button Grid.Column="1" Content="Generate" Command="{Binding GenerateCrlCommand}" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseGenerateCrlDialogCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
   </Grid>
 </UserControl>

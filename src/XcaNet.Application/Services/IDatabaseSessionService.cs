@@ -1,7 +1,7 @@
-using XcaNet.Contracts.Database;
 using XcaNet.Contracts.Browser;
 using XcaNet.Contracts.Crypto;
 using XcaNet.Contracts.Crypto.Workflow;
+using XcaNet.Contracts.Database;
 using XcaNet.Contracts.Results;
 
 namespace XcaNet.Application.Services;
@@ -30,7 +30,15 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<StoredCertificateResult>> RevokeCertificateAsync(RevokeStoredCertificateRequest request, CancellationToken cancellationToken);
 
+    Task<OperationResult> UnrevokeCertificateAsync(Guid certificateId, CancellationToken cancellationToken);
+
     Task<OperationResult<StoredCertificateRevocationListResult>> GenerateCertificateRevocationListAsync(GenerateCertificateRevocationListWorkflowRequest request, CancellationToken cancellationToken);
+
+    Task<OperationResult> DeleteCertificateRevocationListAsync(Guid certificateRevocationListId, CancellationToken cancellationToken);
+
+    Task<OperationResult<CaPropertiesData>> GetCaPropertiesAsync(Guid caCertificateId, CancellationToken cancellationToken);
+
+    Task<OperationResult> SaveCaPropertiesAsync(Guid caCertificateId, CaPropertiesData data, CancellationToken cancellationToken);
 
     Task<OperationResult<ImportStoredMaterialResult>> ImportStoredMaterialAsync(ImportStoredMaterialRequest request, CancellationToken cancellationToken);
 
