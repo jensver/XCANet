@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using XcaNet.App.Commands;
 using XcaNet.Contracts.Browser;
 using XcaNet.Contracts.Revocation;
 
@@ -25,12 +26,16 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     private bool _isPlainView;
     private bool _isDetailDialogOpen;
     private bool _isRevokeDialogOpen;
+    private bool _isDeleteConfirmDialogOpen;
 
     public CertificatesPageViewModel()
         : base("Certificates")
     {
         EmptyStateTitle = "No certificates yet";
         EmptyStateMessage = "Import certificate material, create a self-signed CA, or sign a CSR to populate this workspace.";
+
+        OpenDeleteConfirmCommand = new DelegateCommand(() => { if (SelectedItem is not null) IsDeleteConfirmDialogOpen = true; });
+        CloseDeleteConfirmCommand = new DelegateCommand(() => IsDeleteConfirmDialogOpen = false);
     }
 
     public IReadOnlyList<CertificateValidityFilter> ValidityFilters { get; } =
@@ -90,6 +95,12 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     {
         get => _isRevokeDialogOpen;
         set => SetProperty(ref _isRevokeDialogOpen, value);
+    }
+
+    public bool IsDeleteConfirmDialogOpen
+    {
+        get => _isDeleteConfirmDialogOpen;
+        set => SetProperty(ref _isDeleteConfirmDialogOpen, value);
     }
 
     // --- Existing data properties ---
@@ -207,6 +218,12 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
     public ICommand? CloseDetailCommand { get; set; }
 
     public ICommand? TogglePlainViewCommand { get; set; }
+
+    public ICommand? DeleteSelectedCommand { get; set; }
+
+    public DelegateCommand OpenDeleteConfirmCommand { get; }
+
+    public DelegateCommand CloseDeleteConfirmCommand { get; }
 
     // --- Tree building ---
 

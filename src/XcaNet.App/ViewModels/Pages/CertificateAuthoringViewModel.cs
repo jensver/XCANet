@@ -18,11 +18,14 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
     private EllipticCurveKind _curve;
     private string _signatureAlgorithm;
     private int _validityDays;
+    private DateTime? _notBeforeDate;
+    private DateTime? _notAfterDate;
     private bool _isCertificateAuthority;
     private bool _hasPathLengthConstraint;
     private int _pathLengthConstraint;
     private string _keyUsages;
     private string _enhancedKeyUsages;
+    private string _comment;
     private bool _showTemplateApplication;
     private bool _showKeySection;
     private bool _showSigningSection;
@@ -35,6 +38,37 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
     private PrivateKeyListItem? _selectedIssuerPrivateKey;
     private ICommand? _applyTemplateCommand;
     private ICommand? _primaryActionCommand;
+
+    // Structured DN backing fields
+    private string _dnCommonName = string.Empty;
+    private string _dnOrganization = string.Empty;
+    private string _dnOrganizationalUnit = string.Empty;
+    private string _dnCountry = string.Empty;
+    private string _dnState = string.Empty;
+    private string _dnLocality = string.Empty;
+    private string _dnEmail = string.Empty;
+    private bool _syncingSubject;
+
+    // KU backing fields
+    private bool _kuDigitalSignature;
+    private bool _kuNonRepudiation;
+    private bool _kuKeyEncipherment;
+    private bool _kuDataEncipherment;
+    private bool _kuKeyAgreement;
+    private bool _kuKeyCertSign;
+    private bool _kuCrlSign;
+    private bool _kuEncipherOnly;
+    private bool _kuDecipherOnly;
+    private bool _syncingKu;
+
+    // EKU backing fields
+    private bool _ekuServerAuth;
+    private bool _ekuClientAuth;
+    private bool _ekuCodeSigning;
+    private bool _ekuEmailProtection;
+    private bool _ekuTimeStamping;
+    private bool _ekuOcspSigning;
+    private bool _syncingEku;
 
     public CertificateAuthoringViewModel(
         string title,
@@ -69,25 +103,38 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         _showSignatureAlgorithm = showSignatureAlgorithm;
         _primaryActionLabel = primaryActionLabel;
         _subjectAlternativeNames = string.Empty;
+        _comment = string.Empty;
         _keyAlgorithm = KeyAlgorithmKind.Rsa;
         _rsaKeySize = 3072;
         _curve = EllipticCurveKind.P256;
         _signatureAlgorithm = "SHA-256";
         _selectedTemplateApplicationMode = TemplateApplicationModeView.Full;
+
+        var today = DateTime.Today;
+        _notBeforeDate = today;
+        _notAfterDate = today.AddDays(validityDays);
+
+        ParseSubjectNameToDn(subjectName);
+        ParseKeyUsagesToBools(keyUsages);
+        ParseEnhancedKeyUsagesToBools(enhancedKeyUsages);
     }
+
+    // ── Static option lists ────────────────────────────────────────────────
 
     public IReadOnlyList<KeyAlgorithmKind> KeyAlgorithms { get; } = [KeyAlgorithmKind.Rsa, KeyAlgorithmKind.Ecdsa];
 
     public IReadOnlyList<EllipticCurveKind> Curves { get; } = [EllipticCurveKind.P256, EllipticCurveKind.P384];
 
+    public IReadOnlyList<string> SignatureAlgorithms { get; } = ["SHA-256", "SHA-384", "SHA-512"];
+
     public IReadOnlyList<TemplateApplicationModeView> TemplateApplicationModes { get; } =
         [TemplateApplicationModeView.Full, TemplateApplicationModeView.SubjectOnly, TemplateApplicationModeView.ExtensionsOnly];
 
     public ObservableCollection<TemplateListItem> Templates { get; } = [];
-
     public ObservableCollection<CertificateListItem> IssuerCertificates { get; } = [];
-
     public ObservableCollection<PrivateKeyListItem> IssuerPrivateKeys { get; } = [];
+
+    // ── Metadata ──────────────────────────────────────────────────────────
 
     public string Title
     {
@@ -113,10 +160,96 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         set => SetProperty(ref _displayName, value);
     }
 
+    public string Comment
+    {
+        get => _comment;
+        set => SetProperty(ref _comment, value);
+    }
+
+    // ── Subject / DN ──────────────────────────────────────────────────────
+
     public string SubjectName
     {
         get => _subjectName;
-        set => SetProperty(ref _subjectName, value);
+        set
+        {
+            if (SetProperty(ref _subjectName, value) && !_syncingSubject)
+            {
+                _syncingSubject = true;
+                ParseSubjectNameToDn(value);
+                _syncingSubject = false;
+            }
+        }
+    }
+
+    public string DnCommonName
+    {
+        get => _dnCommonName;
+        set
+        {
+            if (SetProperty(ref _dnCommonName, value) && !_syncingSubject)
+                RebuildSubjectName();
+        }
+    }
+
+    public string DnOrganization
+    {
+        get => _dnOrganization;
+        set
+        {
+            if (SetProperty(ref _dnOrganization, value) && !_syncingSubject)
+                RebuildSubjectName();
+        }
+    }
+
+    public string DnOrganizationalUnit
+    {
+        get => _dnOrganizationalUnit;
+        set
+        {
+            if (SetProperty(ref _dnOrganizationalUnit, value) && !_syncingSubject)
+                RebuildSubjectName();
+        }
+    }
+
+    public string DnCountry
+    {
+        get => _dnCountry;
+        set
+        {
+            if (SetProperty(ref _dnCountry, value) && !_syncingSubject)
+                RebuildSubjectName();
+        }
+    }
+
+    public string DnState
+    {
+        get => _dnState;
+        set
+        {
+            if (SetProperty(ref _dnState, value) && !_syncingSubject)
+                RebuildSubjectName();
+        }
+    }
+
+    public string DnLocality
+    {
+        get => _dnLocality;
+        set
+        {
+            if (SetProperty(ref _dnLocality, value) && !_syncingSubject)
+                RebuildSubjectName();
+        }
+    }
+
+    public string DnEmail
+    {
+        get => _dnEmail;
+        set
+        {
+            if (SetProperty(ref _dnEmail, value) && !_syncingSubject)
+                RebuildSubjectName();
+        }
     }
 
     public string SubjectAlternativeNames
@@ -124,6 +257,52 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         get => _subjectAlternativeNames;
         set => SetProperty(ref _subjectAlternativeNames, value);
     }
+
+    // ── Validity / Dates ──────────────────────────────────────────────────
+
+    public int ValidityDays
+    {
+        get => _validityDays;
+        set
+        {
+            if (SetProperty(ref _validityDays, value))
+            {
+                _notAfterDate = _notBeforeDate?.AddDays(value);
+                OnPropertyChanged(nameof(NotAfterDate));
+            }
+        }
+    }
+
+    public DateTime? NotBeforeDate
+    {
+        get => _notBeforeDate;
+        set
+        {
+            if (SetProperty(ref _notBeforeDate, value))
+            {
+                _notAfterDate = value?.AddDays(_validityDays);
+                OnPropertyChanged(nameof(NotAfterDate));
+            }
+        }
+    }
+
+    public DateTime? NotAfterDate
+    {
+        get => _notAfterDate;
+        set
+        {
+            if (SetProperty(ref _notAfterDate, value))
+            {
+                if (_notBeforeDate is { } nb && value is { } na)
+                {
+                    _validityDays = Math.Max(1, (int)Math.Round((na - nb).TotalDays, MidpointRounding.AwayFromZero));
+                    OnPropertyChanged(nameof(ValidityDays));
+                }
+            }
+        }
+    }
+
+    // ── Key / Algorithm ───────────────────────────────────────────────────
 
     public KeyAlgorithmKind KeyAlgorithm
     {
@@ -160,11 +339,7 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         set => SetProperty(ref _signatureAlgorithm, value);
     }
 
-    public int ValidityDays
-    {
-        get => _validityDays;
-        set => SetProperty(ref _validityDays, value);
-    }
+    // ── CA / Extensions ───────────────────────────────────────────────────
 
     public bool IsCertificateAuthority
     {
@@ -184,17 +359,56 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         set => SetProperty(ref _pathLengthConstraint, value);
     }
 
+    // ── Key Usage ─────────────────────────────────────────────────────────
+
     public string KeyUsages
     {
         get => _keyUsages;
-        set => SetProperty(ref _keyUsages, value);
+        set
+        {
+            if (SetProperty(ref _keyUsages, value) && !_syncingKu)
+            {
+                _syncingKu = true;
+                ParseKeyUsagesToBools(value);
+                _syncingKu = false;
+            }
+        }
     }
+
+    public bool KuDigitalSignature { get => _kuDigitalSignature; set { if (SetProperty(ref _kuDigitalSignature, value) && !_syncingKu) RebuildKeyUsages(); } }
+    public bool KuNonRepudiation { get => _kuNonRepudiation; set { if (SetProperty(ref _kuNonRepudiation, value) && !_syncingKu) RebuildKeyUsages(); } }
+    public bool KuKeyEncipherment { get => _kuKeyEncipherment; set { if (SetProperty(ref _kuKeyEncipherment, value) && !_syncingKu) RebuildKeyUsages(); } }
+    public bool KuDataEncipherment { get => _kuDataEncipherment; set { if (SetProperty(ref _kuDataEncipherment, value) && !_syncingKu) RebuildKeyUsages(); } }
+    public bool KuKeyAgreement { get => _kuKeyAgreement; set { if (SetProperty(ref _kuKeyAgreement, value) && !_syncingKu) RebuildKeyUsages(); } }
+    public bool KuKeyCertSign { get => _kuKeyCertSign; set { if (SetProperty(ref _kuKeyCertSign, value) && !_syncingKu) RebuildKeyUsages(); } }
+    public bool KuCrlSign { get => _kuCrlSign; set { if (SetProperty(ref _kuCrlSign, value) && !_syncingKu) RebuildKeyUsages(); } }
+    public bool KuEncipherOnly { get => _kuEncipherOnly; set { if (SetProperty(ref _kuEncipherOnly, value) && !_syncingKu) RebuildKeyUsages(); } }
+    public bool KuDecipherOnly { get => _kuDecipherOnly; set { if (SetProperty(ref _kuDecipherOnly, value) && !_syncingKu) RebuildKeyUsages(); } }
+
+    // ── Enhanced Key Usage ────────────────────────────────────────────────
 
     public string EnhancedKeyUsages
     {
         get => _enhancedKeyUsages;
-        set => SetProperty(ref _enhancedKeyUsages, value);
+        set
+        {
+            if (SetProperty(ref _enhancedKeyUsages, value) && !_syncingEku)
+            {
+                _syncingEku = true;
+                ParseEnhancedKeyUsagesToBools(value);
+                _syncingEku = false;
+            }
+        }
     }
+
+    public bool EkuServerAuth { get => _ekuServerAuth; set { if (SetProperty(ref _ekuServerAuth, value) && !_syncingEku) RebuildEnhancedKeyUsages(); } }
+    public bool EkuClientAuth { get => _ekuClientAuth; set { if (SetProperty(ref _ekuClientAuth, value) && !_syncingEku) RebuildEnhancedKeyUsages(); } }
+    public bool EkuCodeSigning { get => _ekuCodeSigning; set { if (SetProperty(ref _ekuCodeSigning, value) && !_syncingEku) RebuildEnhancedKeyUsages(); } }
+    public bool EkuEmailProtection { get => _ekuEmailProtection; set { if (SetProperty(ref _ekuEmailProtection, value) && !_syncingEku) RebuildEnhancedKeyUsages(); } }
+    public bool EkuTimeStamping { get => _ekuTimeStamping; set { if (SetProperty(ref _ekuTimeStamping, value) && !_syncingEku) RebuildEnhancedKeyUsages(); } }
+    public bool EkuOcspSigning { get => _ekuOcspSigning; set { if (SetProperty(ref _ekuOcspSigning, value) && !_syncingEku) RebuildEnhancedKeyUsages(); } }
+
+    // ── Visibility flags ──────────────────────────────────────────────────
 
     public bool ShowTemplateApplication
     {
@@ -225,6 +439,8 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         get => _showSignatureAlgorithm;
         set => SetProperty(ref _showSignatureAlgorithm, value);
     }
+
+    // ── Commands / Actions ────────────────────────────────────────────────
 
     public string PrimaryActionLabel
     {
@@ -268,13 +484,13 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         set => SetProperty(ref _primaryActionCommand, value);
     }
 
+    // ── Public mutators ───────────────────────────────────────────────────
+
     public void SetTemplates(IEnumerable<TemplateListItem> templates)
     {
         Templates.Clear();
         foreach (var template in templates)
-        {
             Templates.Add(template);
-        }
 
         SelectedTemplate = Templates.FirstOrDefault(x => SelectedTemplate is not null && x.TemplateId == SelectedTemplate.TemplateId)
             ?? Templates.FirstOrDefault();
@@ -284,15 +500,11 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
     {
         IssuerCertificates.Clear();
         foreach (var certificate in certificates.Where(x => x.IsCertificateAuthority))
-        {
             IssuerCertificates.Add(certificate);
-        }
 
         IssuerPrivateKeys.Clear();
         foreach (var privateKey in privateKeys)
-        {
             IssuerPrivateKeys.Add(privateKey);
-        }
 
         SelectedIssuerCertificate = IssuerCertificates.FirstOrDefault(x => SelectedIssuerCertificate is not null && x.CertificateId == SelectedIssuerCertificate.CertificateId)
             ?? IssuerCertificates.FirstOrDefault();
@@ -380,6 +592,7 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         DisplayName = "Template";
         SubjectName = string.Empty;
         SubjectAlternativeNames = string.Empty;
+        Comment = string.Empty;
         KeyAlgorithm = KeyAlgorithmKind.Rsa;
         RsaKeySize = 3072;
         Curve = EllipticCurveKind.P256;
@@ -392,13 +605,138 @@ public sealed class CertificateAuthoringViewModel : ViewModelBase
         EnhancedKeyUsages = "Server Authentication";
     }
 
+    // ── Private helpers ───────────────────────────────────────────────────
+
+    private void RebuildSubjectName()
+    {
+        _syncingSubject = true;
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(_dnCommonName)) parts.Add($"CN={_dnCommonName}");
+        if (!string.IsNullOrWhiteSpace(_dnOrganization)) parts.Add($"O={_dnOrganization}");
+        if (!string.IsNullOrWhiteSpace(_dnOrganizationalUnit)) parts.Add($"OU={_dnOrganizationalUnit}");
+        if (!string.IsNullOrWhiteSpace(_dnCountry)) parts.Add($"C={_dnCountry}");
+        if (!string.IsNullOrWhiteSpace(_dnState)) parts.Add($"ST={_dnState}");
+        if (!string.IsNullOrWhiteSpace(_dnLocality)) parts.Add($"L={_dnLocality}");
+        if (!string.IsNullOrWhiteSpace(_dnEmail)) parts.Add($"E={_dnEmail}");
+        _subjectName = string.Join(", ", parts);
+        OnPropertyChanged(nameof(SubjectName));
+        _syncingSubject = false;
+    }
+
+    private void ParseSubjectNameToDn(string subjectName)
+    {
+        var components = ParseDnComponents(subjectName);
+        _dnCommonName = components.GetValueOrDefault("CN", string.Empty);
+        _dnOrganization = components.GetValueOrDefault("O", string.Empty);
+        _dnOrganizationalUnit = components.GetValueOrDefault("OU", string.Empty);
+        _dnCountry = components.GetValueOrDefault("C", string.Empty);
+        _dnState = components.GetValueOrDefault("ST", string.Empty);
+        _dnLocality = components.GetValueOrDefault("L", string.Empty);
+        _dnEmail = components.GetValueOrDefault("E", components.GetValueOrDefault("EMAIL", string.Empty));
+        OnPropertyChanged(nameof(DnCommonName));
+        OnPropertyChanged(nameof(DnOrganization));
+        OnPropertyChanged(nameof(DnOrganizationalUnit));
+        OnPropertyChanged(nameof(DnCountry));
+        OnPropertyChanged(nameof(DnState));
+        OnPropertyChanged(nameof(DnLocality));
+        OnPropertyChanged(nameof(DnEmail));
+    }
+
+    private static Dictionary<string, string> ParseDnComponents(string dn)
+    {
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(dn))
+            return result;
+        foreach (var part in dn.Split(','))
+        {
+            var eq = part.IndexOf('=');
+            if (eq > 0)
+                result[part[..eq].Trim()] = part[(eq + 1)..].Trim();
+        }
+        return result;
+    }
+
+    private void RebuildKeyUsages()
+    {
+        _syncingKu = true;
+        var parts = new List<string>();
+        if (_kuDigitalSignature) parts.Add("DigitalSignature");
+        if (_kuNonRepudiation) parts.Add("NonRepudiation");
+        if (_kuKeyEncipherment) parts.Add("KeyEncipherment");
+        if (_kuDataEncipherment) parts.Add("DataEncipherment");
+        if (_kuKeyAgreement) parts.Add("KeyAgreement");
+        if (_kuKeyCertSign) parts.Add("KeyCertSign");
+        if (_kuCrlSign) parts.Add("CrlSign");
+        if (_kuEncipherOnly) parts.Add("EncipherOnly");
+        if (_kuDecipherOnly) parts.Add("DecipherOnly");
+        _keyUsages = string.Join(", ", parts);
+        OnPropertyChanged(nameof(KeyUsages));
+        _syncingKu = false;
+    }
+
+    private void ParseKeyUsagesToBools(string value)
+    {
+        var set = SplitToSet(value);
+        _kuDigitalSignature = set.Contains("DigitalSignature");
+        _kuNonRepudiation = set.Contains("NonRepudiation");
+        _kuKeyEncipherment = set.Contains("KeyEncipherment");
+        _kuDataEncipherment = set.Contains("DataEncipherment");
+        _kuKeyAgreement = set.Contains("KeyAgreement");
+        _kuKeyCertSign = set.Contains("KeyCertSign");
+        _kuCrlSign = set.Contains("CrlSign");
+        _kuEncipherOnly = set.Contains("EncipherOnly");
+        _kuDecipherOnly = set.Contains("DecipherOnly");
+        OnPropertyChanged(nameof(KuDigitalSignature));
+        OnPropertyChanged(nameof(KuNonRepudiation));
+        OnPropertyChanged(nameof(KuKeyEncipherment));
+        OnPropertyChanged(nameof(KuDataEncipherment));
+        OnPropertyChanged(nameof(KuKeyAgreement));
+        OnPropertyChanged(nameof(KuKeyCertSign));
+        OnPropertyChanged(nameof(KuCrlSign));
+        OnPropertyChanged(nameof(KuEncipherOnly));
+        OnPropertyChanged(nameof(KuDecipherOnly));
+    }
+
+    private void RebuildEnhancedKeyUsages()
+    {
+        _syncingEku = true;
+        var parts = new List<string>();
+        if (_ekuServerAuth) parts.Add("Server Authentication");
+        if (_ekuClientAuth) parts.Add("Client Authentication");
+        if (_ekuCodeSigning) parts.Add("Code Signing");
+        if (_ekuEmailProtection) parts.Add("Email Protection");
+        if (_ekuTimeStamping) parts.Add("Time Stamping");
+        if (_ekuOcspSigning) parts.Add("OCSP Signing");
+        _enhancedKeyUsages = string.Join(", ", parts);
+        OnPropertyChanged(nameof(EnhancedKeyUsages));
+        _syncingEku = false;
+    }
+
+    private void ParseEnhancedKeyUsagesToBools(string value)
+    {
+        var set = SplitToSet(value);
+        _ekuServerAuth = set.Contains("Server Authentication");
+        _ekuClientAuth = set.Contains("Client Authentication");
+        _ekuCodeSigning = set.Contains("Code Signing");
+        _ekuEmailProtection = set.Contains("Email Protection");
+        _ekuTimeStamping = set.Contains("Time Stamping");
+        _ekuOcspSigning = set.Contains("OCSP Signing");
+        OnPropertyChanged(nameof(EkuServerAuth));
+        OnPropertyChanged(nameof(EkuClientAuth));
+        OnPropertyChanged(nameof(EkuCodeSigning));
+        OnPropertyChanged(nameof(EkuEmailProtection));
+        OnPropertyChanged(nameof(EkuTimeStamping));
+        OnPropertyChanged(nameof(EkuOcspSigning));
+    }
+
+    private static HashSet<string> SplitToSet(string value)
+        => value.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     private static int BuildValidityDays(DateTimeOffset? notBefore, DateTimeOffset? notAfter, int fallback)
     {
         if (notBefore is null || notAfter is null)
-        {
             return fallback;
-        }
-
         return Math.Max(1, (int)Math.Round((notAfter.Value - notBefore.Value).TotalDays, MidpointRounding.AwayFromZero));
     }
 
