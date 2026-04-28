@@ -1455,6 +1455,11 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         }
     }
 
+    public Task<OperationResult> ChangePasswordAsync(string newPassword, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(OperationResult.Failure(OperationErrorCode.StorageFailure, "Password change is not yet implemented."));
+    }
+
     public DatabaseSessionSnapshot GetSnapshot()
     {
         var message = _state switch

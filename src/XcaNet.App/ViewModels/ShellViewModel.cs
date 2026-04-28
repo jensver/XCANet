@@ -22,6 +22,7 @@ public sealed class ShellViewModel : ViewModelBase
 {
     private readonly IDatabaseSessionService _databaseSessionService;
     private readonly IDesktopFileDialogService _fileDialogService;
+    private readonly IUserPreferencesService _userPreferences;
     private readonly ILogger<ShellViewModel> _logger;
 
     private readonly AsyncCommand _createDatabaseCommand;
@@ -79,6 +80,18 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly DelegateCommand _closeRevokeDialogCommand;
     private readonly DelegateCommand _togglePlainViewCommand;
 
+    // M15 commands
+    private readonly DelegateCommand _openAboutCommand;
+    private readonly DelegateCommand _closeAboutCommand;
+    private readonly DelegateCommand _openOidResolverCommand;
+    private readonly DelegateCommand _closeOidResolverCommand;
+    private readonly DelegateCommand _resolveOidCommand;
+    private readonly DelegateCommand _openPasswordChangeCommand;
+    private readonly DelegateCommand _closePasswordChangeCommand;
+    private readonly AsyncCommand _confirmPasswordChangeCommand;
+    private readonly AsyncCommand _pastePemCommand;
+    private readonly DelegateCommand _setDefaultDatabaseCommand;
+
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
     private bool _isBusy;
@@ -89,10 +102,20 @@ public sealed class ShellViewModel : ViewModelBase
     private string _authoringDialogTitle = string.Empty;
     private string _authoringDialogSubtitle = string.Empty;
 
-    public ShellViewModel(IDatabaseSessionService databaseSessionService, IDesktopFileDialogService fileDialogService, ILogger<ShellViewModel> logger)
+    // M15 dialog state
+    private bool _isAboutDialogOpen;
+    private bool _isOidResolverDialogOpen;
+    private bool _isPasswordChangeDialogOpen;
+    private string _oidResolverInput = string.Empty;
+    private string _oidResolverResult = string.Empty;
+    private string _passwordChangeNew = string.Empty;
+    private string _passwordChangeConfirm = string.Empty;
+
+    public ShellViewModel(IDatabaseSessionService databaseSessionService, IDesktopFileDialogService fileDialogService, IUserPreferencesService userPreferences, ILogger<ShellViewModel> logger)
     {
         _databaseSessionService = databaseSessionService;
         _fileDialogService = fileDialogService;
+        _userPreferences = userPreferences;
         _logger = logger;
 
         logger.LogInformation("Initializing XcaNet shell.");
@@ -159,6 +182,22 @@ public sealed class ShellViewModel : ViewModelBase
         _openRevokeDialogCommand = new DelegateCommand(OpenRevokeDialog, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.SelectedItem is { } cert && !string.Equals(cert.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase));
         _closeRevokeDialogCommand = new DelegateCommand(() => CertificatesPage.IsRevokeDialogOpen = false);
         _togglePlainViewCommand = new DelegateCommand(() => CertificatesPage.IsPlainView = !CertificatesPage.IsPlainView);
+
+        _openAboutCommand = new DelegateCommand(() => IsAboutDialogOpen = true);
+        _closeAboutCommand = new DelegateCommand(() => IsAboutDialogOpen = false);
+        _openOidResolverCommand = new DelegateCommand(() => { OidResolverInput = string.Empty; OidResolverResult = string.Empty; IsOidResolverDialogOpen = true; });
+        _closeOidResolverCommand = new DelegateCommand(() => IsOidResolverDialogOpen = false);
+        _resolveOidCommand = new DelegateCommand(ResolveOid, () => !string.IsNullOrWhiteSpace(OidResolverInput));
+        _openPasswordChangeCommand = new DelegateCommand(() => { PasswordChangeNew = string.Empty; PasswordChangeConfirm = string.Empty; IsPasswordChangeDialogOpen = true; }, () => Snapshot.State == DatabaseSessionState.Unlocked);
+        _closePasswordChangeCommand = new DelegateCommand(() => IsPasswordChangeDialogOpen = false);
+        _confirmPasswordChangeCommand = new AsyncCommand(ConfirmPasswordChangeAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(PasswordChangeNew) && PasswordChangeNew == PasswordChangeConfirm);
+        _pastePemCommand = new AsyncCommand(PastePemAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
+        _setDefaultDatabaseCommand = new DelegateCommand(SetDefaultDatabase, () => Snapshot.DatabasePath is not null);
+
+        if (_userPreferences.DefaultDatabasePath is { } defaultPath)
+            SettingsSecurityPage.DatabasePath = defaultPath;
+
+        RefreshRecentDatabases();
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
         SettingsSecurityPage.OpenDatabaseCommand = _openDatabaseCommand;
@@ -390,20 +429,106 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ICommand SettingsSecurityCommand => UtilityNavigationItems[1].Command;
 
+    // M15 dialog state properties
+
+    public bool IsAboutDialogOpen
+    {
+        get => _isAboutDialogOpen;
+        set => SetProperty(ref _isAboutDialogOpen, value);
+    }
+
+    public bool IsOidResolverDialogOpen
+    {
+        get => _isOidResolverDialogOpen;
+        set => SetProperty(ref _isOidResolverDialogOpen, value);
+    }
+
+    public bool IsPasswordChangeDialogOpen
+    {
+        get => _isPasswordChangeDialogOpen;
+        set => SetProperty(ref _isPasswordChangeDialogOpen, value);
+    }
+
+    public string OidResolverInput
+    {
+        get => _oidResolverInput;
+        set
+        {
+            if (SetProperty(ref _oidResolverInput, value))
+                _resolveOidCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string OidResolverResult
+    {
+        get => _oidResolverResult;
+        set => SetProperty(ref _oidResolverResult, value);
+    }
+
+    public string PasswordChangeNew
+    {
+        get => _passwordChangeNew;
+        set
+        {
+            if (SetProperty(ref _passwordChangeNew, value))
+                _confirmPasswordChangeCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string PasswordChangeConfirm
+    {
+        get => _passwordChangeConfirm;
+        set
+        {
+            if (SetProperty(ref _passwordChangeConfirm, value))
+                _confirmPasswordChangeCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    // M15 command accessors
+
+    public ICommand OpenAboutCommand => _openAboutCommand;
+
+    public ICommand CloseAboutCommand => _closeAboutCommand;
+
+    public ICommand OpenOidResolverCommand => _openOidResolverCommand;
+
+    public ICommand CloseOidResolverCommand => _closeOidResolverCommand;
+
+    public ICommand ResolveOidCommand => _resolveOidCommand;
+
+    public ICommand OpenPasswordChangeCommand => _openPasswordChangeCommand;
+
+    public ICommand ClosePasswordChangeCommand => _closePasswordChangeCommand;
+
+    public ICommand ConfirmPasswordChangeCommand => _confirmPasswordChangeCommand;
+
+    public ICommand PastePemCommand => _pastePemCommand;
+
+    public ICommand SetDefaultDatabaseCommand => _setDefaultDatabaseCommand;
+
+    public ObservableCollection<RecentDatabaseItemViewModel> RecentDatabases { get; } = [];
+
     private async Task CreateDatabaseAsync()
     {
+        var path = SettingsSecurityPage.DatabasePath;
         await RunDatabaseActionAsync(
             "Creating database",
             () => _databaseSessionService.CreateDatabaseAsync(
-                new CreateDatabaseRequest(SettingsSecurityPage.DatabasePath, SettingsSecurityPage.Password, SettingsSecurityPage.DisplayName),
+                new CreateDatabaseRequest(path, SettingsSecurityPage.Password, SettingsSecurityPage.DisplayName),
                 CancellationToken.None));
+        if (Snapshot.DatabasePath == path)
+            RecordRecentDatabase(path);
     }
 
     private async Task OpenDatabaseAsync()
     {
+        var path = SettingsSecurityPage.DatabasePath;
         await RunDatabaseActionAsync(
             "Opening database",
-            () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(SettingsSecurityPage.DatabasePath), CancellationToken.None));
+            () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(path), CancellationToken.None));
+        if (Snapshot.DatabasePath == path)
+            RecordRecentDatabase(path);
     }
 
     private async Task UnlockDatabaseAsync()
@@ -1666,6 +1791,99 @@ public sealed class ShellViewModel : ViewModelBase
         }
     }
 
+    private void ResolveOid()
+    {
+        if (string.IsNullOrWhiteSpace(_oidResolverInput))
+        {
+            OidResolverResult = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var oid = new System.Security.Cryptography.Oid(_oidResolverInput.Trim());
+            if (oid.Value is null && oid.FriendlyName is null)
+            {
+                OidResolverResult = "OID not found.";
+            }
+            else
+            {
+                OidResolverResult = $"OID: {oid.Value ?? "(unknown)"}\nName: {oid.FriendlyName ?? "(unknown)"}";
+            }
+        }
+        catch
+        {
+            OidResolverResult = "Invalid OID or name.";
+        }
+    }
+
+    private async Task ConfirmPasswordChangeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(PasswordChangeNew) || PasswordChangeNew != PasswordChangeConfirm)
+        {
+            NotifyFailure("Passwords do not match.");
+            return;
+        }
+
+        using var scope = BeginBusy("Changing password");
+        var result = await _databaseSessionService.ChangePasswordAsync(PasswordChangeNew, CancellationToken.None);
+        IsPasswordChangeDialogOpen = false;
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        NotifySuccess("Password changed.");
+    }
+
+    private async Task PastePemAsync()
+    {
+        var text = await _fileDialogService.GetClipboardTextAsync(CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            NotifyFailure("Clipboard is empty or does not contain text.");
+            return;
+        }
+
+        CertificatesPage.ImportPayload = text;
+        CertificatesPage.ImportDisplayName = "Pasted PEM";
+        SelectPage(CertificatesPage);
+        NotifySuccess("PEM content pasted — review and confirm in the Import dialog.");
+    }
+
+    private void RecordRecentDatabase(string path)
+    {
+        _userPreferences.AddRecentDatabase(path);
+        _userPreferences.Save();
+        RefreshRecentDatabases();
+    }
+
+    private void SetDefaultDatabase()
+    {
+        var path = Snapshot.DatabasePath;
+        if (path is null) return;
+        _userPreferences.SetDefaultDatabase(path);
+        _userPreferences.Save();
+        NotifySuccess($"Set default database: {path}");
+    }
+
+    private void RefreshRecentDatabases()
+    {
+        RecentDatabases.Clear();
+        foreach (var path in _userPreferences.RecentDatabases)
+        {
+            var captured = path;
+            RecentDatabases.Add(new RecentDatabaseItemViewModel(captured, new DelegateCommand(async () =>
+            {
+                SettingsSecurityPage.DatabasePath = captured;
+                await RunDatabaseActionAsync(
+                    "Opening database",
+                    () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(captured), CancellationToken.None));
+            })));
+        }
+    }
+
     private void RefreshCommandStates()
     {
         _createDatabaseCommand.RaiseCanExecuteChanged();
@@ -1721,6 +1939,10 @@ public sealed class ShellViewModel : ViewModelBase
         _openRevokeDialogCommand.RaiseCanExecuteChanged();
         _closeRevokeDialogCommand.RaiseCanExecuteChanged();
         _togglePlainViewCommand.RaiseCanExecuteChanged();
+        _openPasswordChangeCommand.RaiseCanExecuteChanged();
+        _confirmPasswordChangeCommand.RaiseCanExecuteChanged();
+        _pastePemCommand.RaiseCanExecuteChanged();
+        _setDefaultDatabaseCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)
