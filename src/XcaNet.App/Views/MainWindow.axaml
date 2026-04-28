@@ -35,6 +35,7 @@
           <MenuItem Header="Revocation list" Command="{Binding ImportFilesCommand}" />
           <Separator />
           <MenuItem Header="PEM file" Command="{Binding ImportFilesCommand}" />
+          <MenuItem Header="Paste PEM" Command="{Binding PastePemCommand}" />
         </MenuItem>
         <MenuItem Header="_Token">
           <MenuItem Header="Manage Security token" IsEnabled="False" />
@@ -49,16 +50,16 @@
           <MenuItem Header="Certificate index export" IsEnabled="False" />
           <MenuItem Header="Hierarchy export" IsEnabled="False" />
           <Separator />
-          <MenuItem Header="Password change" IsEnabled="False" />
+          <MenuItem Header="Change Database password" Command="{Binding OpenPasswordChangeCommand}" />
           <Separator />
           <MenuItem Header="DH parameter generation" IsEnabled="False" />
-          <MenuItem Header="OID Resolver" IsEnabled="False" />
+          <MenuItem Header="OID Resolver" Command="{Binding OpenOidResolverCommand}" />
         </MenuItem>
         <MenuItem Header="_Help">
           <MenuItem Header="Overview" Command="{Binding DashboardCommand}" />
           <MenuItem Header="Documentation" IsEnabled="False" />
           <Separator />
-          <MenuItem Header="About" IsEnabled="False" />
+          <MenuItem Header="About" Command="{Binding OpenAboutCommand}" />
         </MenuItem>
       </Menu>
       <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0" Spacing="10">
@@ -96,6 +97,7 @@
       </Grid>
     </Border>
 
+    <!-- Certificate authoring overlay -->
     <Border Grid.RowSpan="4"
             Background="{DynamicResource DialogOverlayBrush}"
             IsVisible="{Binding IsAuthoringDialogOpen}">
@@ -125,5 +127,102 @@
         </Border>
       </Grid>
     </Border>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- About dialog overlay                                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="4"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsAboutDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="380"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="24">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8">
+          <TextBlock Text="XcaNet" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
+          <TextBlock Grid.Row="1" Text="Version 0.1.0" Classes="secondary-text" HorizontalAlignment="Center" />
+          <TextBlock Grid.Row="2" Text="Cross-platform PKI manager" Classes="secondary-text" HorizontalAlignment="Center" />
+          <Separator Grid.Row="3" Margin="0,4" />
+          <TextBlock Grid.Row="4" Text="Copyright © 2024–2026 XcaNet contributors" Classes="secondary-text" HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center" />
+          <TextBlock Grid.Row="5" Text="Licensed under the MIT License" Classes="secondary-text" HorizontalAlignment="Center" />
+          <Button Grid.Row="6" Content="Close" Command="{Binding CloseAboutCommand}" HorizontalAlignment="Center" MinWidth="80" Margin="0,8,0,0" />
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- OID Resolver dialog overlay                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="4"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsOidResolverDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="440"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="12">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="OID Resolver" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseOidResolverCommand}" />
+          </Grid>
+
+          <TextBox Grid.Row="1"
+                   Text="{Binding OidResolverInput}"
+                   Watermark="Enter OID (e.g. 2.5.4.3) or name (e.g. commonName)" />
+
+          <Button Grid.Row="2" Content="Resolve" Command="{Binding ResolveOidCommand}" HorizontalAlignment="Left" />
+
+          <Border Grid.Row="3" Classes="workspace-pane" Padding="8" MinHeight="60">
+            <TextBlock Text="{Binding OidResolverResult}"
+                       TextWrapping="Wrap"
+                       Classes="secondary-text" />
+          </Border>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Change Password dialog overlay                                     -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="4"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsPasswordChangeDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="400"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Change Database Password" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding ClosePasswordChangeCommand}" />
+          </Grid>
+
+          <Grid Grid.Row="1" ColumnDefinitions="140,*" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="10">
+            <TextBlock Text="New password" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding PasswordChangeNew}"
+                     PasswordChar="*"
+                     Watermark="New password" />
+            <TextBlock Grid.Row="1" Text="Confirm password" VerticalAlignment="Center" />
+            <TextBox Grid.Row="1" Grid.Column="1"
+                     Text="{Binding PasswordChangeConfirm}"
+                     PasswordChar="*"
+                     Watermark="Confirm new password" />
+          </Grid>
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Classes="secondary-text" Text="Re-encrypts all stored private keys." VerticalAlignment="Center" TextWrapping="Wrap" />
+            <Button Grid.Column="1" Content="Change" Command="{Binding ConfirmPasswordChangeCommand}" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding ClosePasswordChangeCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
   </Grid>
 </Window>

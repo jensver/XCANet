@@ -59,4 +59,15 @@ public sealed class DesktopFileDialogService : IDesktopFileDialogService
         cancellationToken.ThrowIfCancellationRequested();
         return file?.TryGetLocalPath();
     }
+
+    public async Task<string?> GetClipboardTextAsync(CancellationToken cancellationToken)
+    {
+        if (_owner?.Clipboard is null)
+            return null;
+
+        cancellationToken.ThrowIfCancellationRequested();
+#pragma warning disable CS0618
+        return await _owner.Clipboard.GetTextAsync();
+#pragma warning restore CS0618
+    }
 }

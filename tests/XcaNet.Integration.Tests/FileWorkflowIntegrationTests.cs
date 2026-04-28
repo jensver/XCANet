@@ -179,5 +179,8 @@ public sealed class FileWorkflowIntegrationTests
 
         public Task<string?> PickSavePathAsync(string suggestedFileName, CancellationToken cancellationToken)
             => Task.FromResult<string?>(null);
+
+        public Task<string?> GetClipboardTextAsync(CancellationToken cancellationToken)
+            => Task.FromResult<string?>(null);
     }
 }
