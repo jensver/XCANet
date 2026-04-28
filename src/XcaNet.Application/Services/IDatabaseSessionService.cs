@@ -74,5 +74,7 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<AppliedTemplateDefaults>> ApplyTemplateAsync(ApplyTemplateRequest request, CancellationToken cancellationToken);
 
+    Task<OperationResult> ChangePasswordAsync(string newPassword, CancellationToken cancellationToken);
+
     DatabaseSessionSnapshot GetSnapshot();
 }
