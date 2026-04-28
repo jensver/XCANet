@@ -43,6 +43,9 @@
           <TreeView ItemsSource="{Binding CertificateTreeRoots}"
                     SelectedItem="{Binding SelectedTreeNode}"
                     IsVisible="{Binding !IsPlainView}">
+            <TreeView.KeyBindings>
+              <KeyBinding Gesture="F2" Command="{Binding OpenRenameDialogCommand}" />
+            </TreeView.KeyBindings>
             <TreeView.ContextMenu>
               <ContextMenu>
                 <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />
@@ -80,6 +83,9 @@
           <ListBox ItemsSource="{Binding Items}"
                    SelectedItem="{Binding SelectedItem}"
                    IsVisible="{Binding IsPlainView}">
+            <ListBox.KeyBindings>
+              <KeyBinding Gesture="F2" Command="{Binding OpenRenameDialogCommand}" />
+            </ListBox.KeyBindings>
             <ListBox.ContextMenu>
               <ContextMenu>
                 <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />

@@ -91,6 +91,9 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly AsyncCommand _confirmPasswordChangeCommand;
     private readonly AsyncCommand _pastePemCommand;
     private readonly DelegateCommand _setDefaultDatabaseCommand;
+    private readonly DelegateCommand _openRenameDialogCommand;
+    private readonly DelegateCommand _closeRenameDialogCommand;
+    private readonly AsyncCommand _confirmRenameCommand;
 
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
@@ -101,6 +104,10 @@ public sealed class ShellViewModel : ViewModelBase
     private CertificateAuthoringViewModel? _activeCertificateAuthoring;
     private string _authoringDialogTitle = string.Empty;
     private string _authoringDialogSubtitle = string.Empty;
+
+    // M15.7 rename state
+    private bool _isRenameDialogOpen;
+    private string _renamePendingName = string.Empty;
 
     // M15 dialog state
     private bool _isAboutDialogOpen;
@@ -193,6 +200,9 @@ public sealed class ShellViewModel : ViewModelBase
         _confirmPasswordChangeCommand = new AsyncCommand(ConfirmPasswordChangeAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(PasswordChangeNew) && PasswordChangeNew == PasswordChangeConfirm);
         _pastePemCommand = new AsyncCommand(PastePemAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
         _setDefaultDatabaseCommand = new DelegateCommand(SetDefaultDatabase, () => Snapshot.DatabasePath is not null);
+        _openRenameDialogCommand = new DelegateCommand(OpenRenameDialog, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && HasActiveSelection());
+        _closeRenameDialogCommand = new DelegateCommand(() => IsRenameDialogOpen = false);
+        _confirmRenameCommand = new AsyncCommand(ConfirmRenameAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(RenamePendingName));
 
         if (_userPreferences.DefaultDatabasePath is { } defaultPath)
             SettingsSecurityPage.DatabasePath = defaultPath;
@@ -219,6 +229,7 @@ public sealed class ShellViewModel : ViewModelBase
         CertificatesPage.OpenRevokeDialogCommand = _openRevokeDialogCommand;
         CertificatesPage.CloseRevokeDialogCommand = _closeRevokeDialogCommand;
         CertificatesPage.TogglePlainViewCommand = _togglePlainViewCommand;
+        CertificatesPage.OpenRenameDialogCommand = _openRenameDialogCommand;
 
         PrivateKeysPage.RefreshCommand = _refreshPrivateKeysCommand;
         PrivateKeysPage.GenerateKeyCommand = _generateKeyCommand;
@@ -230,6 +241,7 @@ public sealed class ShellViewModel : ViewModelBase
         PrivateKeysPage.ApplyCertificateSigningRequestTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
         PrivateKeysPage.ExportSelectedCommand = _exportPrivateKeyCommand;
         PrivateKeysPage.ExportSelectedToFileCommand = _exportPrivateKeyToFileCommand;
+        PrivateKeysPage.OpenRenameDialogCommand = _openRenameDialogCommand;
         PrivateKeysPage.SelfSignedCaAuthoring.ApplyTemplateCommand = _applySelfSignedCaTemplateCommand;
         PrivateKeysPage.SelfSignedCaAuthoring.PrimaryActionCommand = _createSelfSignedCaCommand;
         PrivateKeysPage.CertificateSigningRequestAuthoring.ApplyTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
@@ -244,12 +256,14 @@ public sealed class ShellViewModel : ViewModelBase
         CertificateRequestsPage.OpenSelectedPrivateKeyCommand = _navigateRequestPrivateKeyCommand;
         CertificateRequestsPage.CreateTemplateFromRequestCommand = _createTemplateFromRequestCommand;
         CertificateRequestsPage.CreateSimilarRequestCommand = _createSimilarRequestCommand;
+        CertificateRequestsPage.OpenRenameDialogCommand = _openRenameDialogCommand;
         CertificateRequestsPage.IssuanceAuthoring.ApplyTemplateCommand = _applyIssuanceTemplateCommand;
         CertificateRequestsPage.IssuanceAuthoring.PrimaryActionCommand = _signCertificateSigningRequestCommand;
 
         CertificateRevocationListsPage.RefreshCommand = _refreshCertificateRevocationListsCommand;
         CertificateRevocationListsPage.ExportSelectedCommand = _exportCertificateRevocationListToFileCommand;
         CertificateRevocationListsPage.OpenIssuerCommand = _navigateCrlIssuerCommand;
+        CertificateRevocationListsPage.OpenRenameDialogCommand = _openRenameDialogCommand;
         TemplatesPage.RefreshCommand = _refreshTemplatesCommand;
         TemplatesPage.CreateNewCommand = _createTemplateCommand;
         TemplatesPage.EditTemplateCommand = _editTemplateCommand;
@@ -259,6 +273,7 @@ public sealed class ShellViewModel : ViewModelBase
         TemplatesPage.ToggleEnabledCommand = _toggleTemplateEnabledCommand;
         TemplatesPage.DeleteTemplateCommand = _deleteTemplateCommand;
         TemplatesPage.Authoring.PrimaryActionCommand = _saveTemplateCommand;
+        TemplatesPage.OpenRenameDialogCommand = _openRenameDialogCommand;
 
         WorkspaceNavigationItems =
         [
@@ -506,6 +521,28 @@ public sealed class ShellViewModel : ViewModelBase
     public ICommand PastePemCommand => _pastePemCommand;
 
     public ICommand SetDefaultDatabaseCommand => _setDefaultDatabaseCommand;
+
+    public ICommand OpenRenameDialogCommand => _openRenameDialogCommand;
+
+    public ICommand CloseRenameDialogCommand => _closeRenameDialogCommand;
+
+    public ICommand ConfirmRenameCommand => _confirmRenameCommand;
+
+    public bool IsRenameDialogOpen
+    {
+        get => _isRenameDialogOpen;
+        set => SetProperty(ref _isRenameDialogOpen, value);
+    }
+
+    public string RenamePendingName
+    {
+        get => _renamePendingName;
+        set
+        {
+            if (SetProperty(ref _renamePendingName, value))
+                _confirmRenameCommand.RaiseCanExecuteChanged();
+        }
+    }
 
     public ObservableCollection<RecentDatabaseItemViewModel> RecentDatabases { get; } = [];
 
@@ -1852,6 +1889,80 @@ public sealed class ShellViewModel : ViewModelBase
         NotifySuccess("PEM content pasted — review and confirm in the Import dialog.");
     }
 
+    private bool HasActiveSelection() => CurrentPage switch
+    {
+        var p when p == CertificatesPage => CertificatesPage.SelectedItem is not null,
+        var p when p == PrivateKeysPage => PrivateKeysPage.SelectedItem is not null,
+        var p when p == CertificateRequestsPage => CertificateRequestsPage.SelectedItem is not null,
+        var p when p == CertificateRevocationListsPage => CertificateRevocationListsPage.SelectedItem is not null,
+        var p when p == TemplatesPage => TemplatesPage.SelectedItem is not null,
+        _ => false
+    };
+
+    private void OpenRenameDialog()
+    {
+        var currentName = CurrentPage switch
+        {
+            var p when p == CertificatesPage => CertificatesPage.SelectedItem?.DisplayName,
+            var p when p == PrivateKeysPage => PrivateKeysPage.SelectedItem?.DisplayName,
+            var p when p == CertificateRequestsPage => CertificateRequestsPage.SelectedItem?.DisplayName,
+            var p when p == CertificateRevocationListsPage => CertificateRevocationListsPage.SelectedItem?.DisplayName,
+            var p when p == TemplatesPage => TemplatesPage.SelectedItem?.Name,
+            _ => null
+        };
+
+        if (currentName is null) return;
+        RenamePendingName = currentName;
+        IsRenameDialogOpen = true;
+    }
+
+    private async Task ConfirmRenameAsync()
+    {
+        var newName = RenamePendingName.Trim();
+        if (string.IsNullOrWhiteSpace(newName)) return;
+
+        (BrowserEntityType kind, Guid id) = CurrentPage switch
+        {
+            var p when p == CertificatesPage && CertificatesPage.SelectedItem is { } cert =>
+                (BrowserEntityType.Certificate, cert.CertificateId),
+            var p when p == PrivateKeysPage && PrivateKeysPage.SelectedItem is { } key =>
+                (BrowserEntityType.PrivateKey, key.PrivateKeyId),
+            var p when p == CertificateRequestsPage && CertificateRequestsPage.SelectedItem is { } csr =>
+                (BrowserEntityType.CertificateSigningRequest, csr.CertificateSigningRequestId),
+            var p when p == CertificateRevocationListsPage && CertificateRevocationListsPage.SelectedItem is { } crl =>
+                (BrowserEntityType.CertificateRevocationList, crl.CertificateRevocationListId),
+            var p when p == TemplatesPage && TemplatesPage.SelectedItem is { } tmpl =>
+                (BrowserEntityType.Template, tmpl.TemplateId),
+            _ => (BrowserEntityType.Certificate, Guid.Empty)
+        };
+
+        if (id == Guid.Empty) return;
+
+        using var scope = BeginBusy("Renaming");
+        var result = await _databaseSessionService.RenameStoredItemAsync(
+            new RenameStoredItemRequest(kind, id, newName), CancellationToken.None);
+
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        IsRenameDialogOpen = false;
+        await RefreshCurrentPageAsync();
+        NotifySuccess($"Renamed to \"{newName}\".");
+    }
+
+    private Task RefreshCurrentPageAsync() => CurrentPage switch
+    {
+        var p when p == CertificatesPage => LoadCertificatesAsync(),
+        var p when p == PrivateKeysPage => LoadPrivateKeysAsync(),
+        var p when p == CertificateRequestsPage => LoadCertificateRequestsAsync(),
+        var p when p == CertificateRevocationListsPage => LoadCertificateRevocationListsAsync(),
+        var p when p == TemplatesPage => LoadTemplatesAsync(),
+        _ => Task.CompletedTask
+    };
+
     private void RecordRecentDatabase(string path)
     {
         _userPreferences.AddRecentDatabase(path);
@@ -1943,6 +2054,8 @@ public sealed class ShellViewModel : ViewModelBase
         _confirmPasswordChangeCommand.RaiseCanExecuteChanged();
         _pastePemCommand.RaiseCanExecuteChanged();
         _setDefaultDatabaseCommand.RaiseCanExecuteChanged();
+        _openRenameDialogCommand.RaiseCanExecuteChanged();
+        _confirmRenameCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)

@@ -76,5 +76,7 @@ public interface IDatabaseSessionService
 
     Task<OperationResult> ChangePasswordAsync(string newPassword, CancellationToken cancellationToken);
 
+    Task<OperationResult> RenameStoredItemAsync(RenameStoredItemRequest request, CancellationToken cancellationToken);
+
     DatabaseSessionSnapshot GetSnapshot();
 }

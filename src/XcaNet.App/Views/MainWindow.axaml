@@ -234,5 +234,36 @@
       </Border>
     </Grid>
 
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Rename dialog overlay                                              -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="4"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsRenameDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="380"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Rename" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseRenameDialogCommand}" />
+          </Grid>
+
+          <TextBox Grid.Row="1"
+                   Text="{Binding RenamePendingName}"
+                   Watermark="New name" />
+
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Classes="secondary-text" Text="Enter a new display name." VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Rename" Command="{Binding ConfirmRenameCommand}" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseRenameDialogCommand}" />
+          </Grid>
+        </Grid>
+      </Border>
+    </Grid>
+
   </Grid>
 </Window>

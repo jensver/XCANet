@@ -1460,6 +1460,45 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         return Task.FromResult(OperationResult.Failure(OperationErrorCode.StorageFailure, "Password change is not yet implemented."));
     }
 
+    public async Task<OperationResult> RenameStoredItemAsync(RenameStoredItemRequest request, CancellationToken cancellationToken)
+    {
+        if (_currentDatabasePath is null)
+            return OperationResult.Failure(OperationErrorCode.StorageFailure, "No database is open.");
+
+        if (string.IsNullOrWhiteSpace(request.NewName))
+            return OperationResult.Failure(OperationErrorCode.ValidationFailed, "Name cannot be empty.");
+
+        try
+        {
+            switch (request.Kind)
+            {
+                case BrowserEntityType.Certificate:
+                    await _certificateRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                case BrowserEntityType.PrivateKey:
+                    await _privateKeyRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                case BrowserEntityType.CertificateSigningRequest:
+                    await _certificateRequestRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                case BrowserEntityType.CertificateRevocationList:
+                    await _certificateRevocationListRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                case BrowserEntityType.Template:
+                    await _templateRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                default:
+                    return OperationResult.Failure(OperationErrorCode.ValidationFailed, $"Unknown entity type: {request.Kind}.");
+            }
+
+            return OperationResult.Success("Item renamed.");
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure(OperationErrorCode.StorageFailure, $"Could not rename item: {ex.Message}");
+        }
+    }
+
     public DatabaseSessionSnapshot GetSnapshot()
     {
         var message = _state switch

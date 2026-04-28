@@ -115,4 +115,12 @@ public sealed class CertificateRepository : ICertificateRepository
         certificate.RevokedAtUtc = revokedAtUtc;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task UpdateDisplayNameAsync(string databasePath, Guid certificateId, string newName, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var certificate = await dbContext.Certificates.SingleAsync(x => x.Id == certificateId, cancellationToken);
+        certificate.DisplayName = newName;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

@@ -38,4 +38,12 @@ public sealed class CertificateRevocationListRepository : ICertificateRevocation
             .OrderByDescending(x => x.ThisUpdateUtc)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task UpdateDisplayNameAsync(string databasePath, Guid certificateRevocationListId, string newName, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var crl = await dbContext.CertificateRevocationLists.SingleAsync(x => x.Id == certificateRevocationListId, cancellationToken);
+        crl.DisplayName = newName;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

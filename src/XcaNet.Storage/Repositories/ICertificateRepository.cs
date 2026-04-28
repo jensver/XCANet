@@ -20,4 +20,6 @@ public interface ICertificateRepository
         int? revocationReason,
         DateTime? revokedAtUtc,
         CancellationToken cancellationToken);
+
+    Task UpdateDisplayNameAsync(string databasePath, Guid certificateId, string newName, CancellationToken cancellationToken);
 }
