@@ -38,7 +38,7 @@ public sealed class ShellWorkflowTests
             new SignStoredCertificateSigningRequestRequest(csr.Value!.CertificateSigningRequestId, issuerCertificate.Value!.CertificateId, issuerKey.Value.PrivateKeyId, "Leaf Certificate", 180),
             CancellationToken.None);
 
-        var shell = new ShellViewModel(service, new TestDesktopFileDialogService(), NullLogger<ShellViewModel>.Instance);
+        var shell = new ShellViewModel(service, new TestDesktopFileDialogService(), new NullUserPreferences(), NullLogger<ShellViewModel>.Instance);
         await ((AsyncCommand)shell.CertificatesPage.RefreshCommand!).ExecuteAsync();
         shell.CertificatesPage.SelectedItem = shell.CertificatesPage.Items.Single(x => x.CertificateId == leafCertificate.Value!.CertificateId);
         await Task.Delay(50);
@@ -76,7 +76,7 @@ public sealed class ShellWorkflowTests
         await service.OpenDatabaseAsync(new OpenDatabaseRequest(databasePath), CancellationToken.None);
         await service.UnlockDatabaseAsync(new UnlockDatabaseRequest("correct horse battery staple"), CancellationToken.None);
 
-        var shell = new ShellViewModel(service, new TestDesktopFileDialogService(), NullLogger<ShellViewModel>.Instance);
+        var shell = new ShellViewModel(service, new TestDesktopFileDialogService(), new NullUserPreferences(), NullLogger<ShellViewModel>.Instance);
         while (shell.IsBusy)
         {
             await Task.Delay(20);
@@ -159,7 +159,7 @@ public sealed class ShellWorkflowTests
     {
         using var provider = BuildServiceProvider();
         var service = provider.GetRequiredService<IDatabaseSessionService>();
-        var shell = new ShellViewModel(service, new TestDesktopFileDialogService(), NullLogger<ShellViewModel>.Instance);
+        var shell = new ShellViewModel(service, new TestDesktopFileDialogService(), new NullUserPreferences(), NullLogger<ShellViewModel>.Instance);
 
         Assert.Equal("Certificates", shell.CurrentPage.Title);
         Assert.Equal(5, shell.WorkspaceNavigationItems.Count);
@@ -203,4 +203,13 @@ file sealed class TestDesktopFileDialogService : IDesktopFileDialogService
 
     public Task<string?> GetClipboardTextAsync(CancellationToken cancellationToken)
         => Task.FromResult<string?>(null);
+}
+
+file sealed class NullUserPreferences : IUserPreferencesService
+{
+    public string? DefaultDatabasePath => null;
+    public IReadOnlyList<string> RecentDatabases => [];
+    public void SetDefaultDatabase(string path) { }
+    public void AddRecentDatabase(string path) { }
+    public void Save() { }
 }

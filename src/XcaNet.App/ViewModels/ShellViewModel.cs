@@ -22,6 +22,7 @@ public sealed class ShellViewModel : ViewModelBase
 {
     private readonly IDatabaseSessionService _databaseSessionService;
     private readonly IDesktopFileDialogService _fileDialogService;
+    private readonly IUserPreferencesService _userPreferences;
     private readonly ILogger<ShellViewModel> _logger;
 
     private readonly AsyncCommand _createDatabaseCommand;
@@ -89,6 +90,7 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly DelegateCommand _closePasswordChangeCommand;
     private readonly AsyncCommand _confirmPasswordChangeCommand;
     private readonly AsyncCommand _pastePemCommand;
+    private readonly DelegateCommand _setDefaultDatabaseCommand;
 
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
@@ -109,10 +111,11 @@ public sealed class ShellViewModel : ViewModelBase
     private string _passwordChangeNew = string.Empty;
     private string _passwordChangeConfirm = string.Empty;
 
-    public ShellViewModel(IDatabaseSessionService databaseSessionService, IDesktopFileDialogService fileDialogService, ILogger<ShellViewModel> logger)
+    public ShellViewModel(IDatabaseSessionService databaseSessionService, IDesktopFileDialogService fileDialogService, IUserPreferencesService userPreferences, ILogger<ShellViewModel> logger)
     {
         _databaseSessionService = databaseSessionService;
         _fileDialogService = fileDialogService;
+        _userPreferences = userPreferences;
         _logger = logger;
 
         logger.LogInformation("Initializing XcaNet shell.");
@@ -189,6 +192,12 @@ public sealed class ShellViewModel : ViewModelBase
         _closePasswordChangeCommand = new DelegateCommand(() => IsPasswordChangeDialogOpen = false);
         _confirmPasswordChangeCommand = new AsyncCommand(ConfirmPasswordChangeAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(PasswordChangeNew) && PasswordChangeNew == PasswordChangeConfirm);
         _pastePemCommand = new AsyncCommand(PastePemAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
+        _setDefaultDatabaseCommand = new DelegateCommand(SetDefaultDatabase, () => Snapshot.DatabasePath is not null);
+
+        if (_userPreferences.DefaultDatabasePath is { } defaultPath)
+            SettingsSecurityPage.DatabasePath = defaultPath;
+
+        RefreshRecentDatabases();
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
         SettingsSecurityPage.OpenDatabaseCommand = _openDatabaseCommand;
@@ -496,20 +505,30 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ICommand PastePemCommand => _pastePemCommand;
 
+    public ICommand SetDefaultDatabaseCommand => _setDefaultDatabaseCommand;
+
+    public ObservableCollection<RecentDatabaseItemViewModel> RecentDatabases { get; } = [];
+
     private async Task CreateDatabaseAsync()
     {
+        var path = SettingsSecurityPage.DatabasePath;
         await RunDatabaseActionAsync(
             "Creating database",
             () => _databaseSessionService.CreateDatabaseAsync(
-                new CreateDatabaseRequest(SettingsSecurityPage.DatabasePath, SettingsSecurityPage.Password, SettingsSecurityPage.DisplayName),
+                new CreateDatabaseRequest(path, SettingsSecurityPage.Password, SettingsSecurityPage.DisplayName),
                 CancellationToken.None));
+        if (Snapshot.DatabasePath == path)
+            RecordRecentDatabase(path);
     }
 
     private async Task OpenDatabaseAsync()
     {
+        var path = SettingsSecurityPage.DatabasePath;
         await RunDatabaseActionAsync(
             "Opening database",
-            () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(SettingsSecurityPage.DatabasePath), CancellationToken.None));
+            () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(path), CancellationToken.None));
+        if (Snapshot.DatabasePath == path)
+            RecordRecentDatabase(path);
     }
 
     private async Task UnlockDatabaseAsync()
@@ -1833,6 +1852,38 @@ public sealed class ShellViewModel : ViewModelBase
         NotifySuccess("PEM content pasted — review and confirm in the Import dialog.");
     }
 
+    private void RecordRecentDatabase(string path)
+    {
+        _userPreferences.AddRecentDatabase(path);
+        _userPreferences.Save();
+        RefreshRecentDatabases();
+    }
+
+    private void SetDefaultDatabase()
+    {
+        var path = Snapshot.DatabasePath;
+        if (path is null) return;
+        _userPreferences.SetDefaultDatabase(path);
+        _userPreferences.Save();
+        NotifySuccess($"Set default database: {path}");
+    }
+
+    private void RefreshRecentDatabases()
+    {
+        RecentDatabases.Clear();
+        foreach (var path in _userPreferences.RecentDatabases)
+        {
+            var captured = path;
+            RecentDatabases.Add(new RecentDatabaseItemViewModel(captured, new DelegateCommand(async () =>
+            {
+                SettingsSecurityPage.DatabasePath = captured;
+                await RunDatabaseActionAsync(
+                    "Opening database",
+                    () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(captured), CancellationToken.None));
+            })));
+        }
+    }
+
     private void RefreshCommandStates()
     {
         _createDatabaseCommand.RaiseCanExecuteChanged();
@@ -1891,6 +1942,7 @@ public sealed class ShellViewModel : ViewModelBase
         _openPasswordChangeCommand.RaiseCanExecuteChanged();
         _confirmPasswordChangeCommand.RaiseCanExecuteChanged();
         _pastePemCommand.RaiseCanExecuteChanged();
+        _setDefaultDatabaseCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)

@@ -207,7 +207,7 @@ public sealed class CertificatesTabTests
             new SignStoredCertificateSigningRequestRequest(csr.Value!.CertificateSigningRequestId, issuerCert.Value!.CertificateId, issuerKey.Value.PrivateKeyId, "Leaf", 90),
             CancellationToken.None);
 
-        var shell = new ShellViewModel(service, new TestFileDialogService(), NullLogger<ShellViewModel>.Instance);
+        var shell = new ShellViewModel(service, new TestFileDialogService(), new NullUserPreferences(), NullLogger<ShellViewModel>.Instance);
         await ((AsyncCommand)shell.CertificatesPage.RefreshCommand!).ExecuteAsync();
         shell.CertificatesPage.SelectedItem = shell.CertificatesPage.Items.Single(x => x.CertificateId == leafCert.Value!.CertificateId);
         await Task.Delay(50);
@@ -231,7 +231,7 @@ public sealed class CertificatesTabTests
     {
         using var provider = BuildServiceProvider();
         var service = provider.GetRequiredService<IDatabaseSessionService>();
-        var shell = new ShellViewModel(service, new TestFileDialogService(), NullLogger<ShellViewModel>.Instance);
+        var shell = new ShellViewModel(service, new TestFileDialogService(), new NullUserPreferences(), NullLogger<ShellViewModel>.Instance);
 
         Assert.False(shell.CertificatesPage.IsPlainView);
         shell.CertificatesPage.TogglePlainViewCommand!.Execute(null);
@@ -261,7 +261,7 @@ public sealed class CertificatesTabTests
             new SignStoredCertificateSigningRequestRequest(csr.Value!.CertificateSigningRequestId, caCert.Value!.CertificateId, caKey.Value.PrivateKeyId, "Leaf", 90),
             CancellationToken.None);
 
-        var shell = new ShellViewModel(service, new TestFileDialogService(), NullLogger<ShellViewModel>.Instance);
+        var shell = new ShellViewModel(service, new TestFileDialogService(), new NullUserPreferences(), NullLogger<ShellViewModel>.Instance);
         await ((AsyncCommand)shell.CertificatesPage.RefreshCommand!).ExecuteAsync();
 
         // In tree view: exactly 1 root (the CA) with 1 child (leaf)
@@ -337,4 +337,13 @@ file sealed class TestFileDialogService : IDesktopFileDialogService
         => Task.FromResult<string?>(null);
     public Task<string?> GetClipboardTextAsync(CancellationToken cancellationToken)
         => Task.FromResult<string?>(null);
+}
+
+file sealed class NullUserPreferences : IUserPreferencesService
+{
+    public string? DefaultDatabasePath => null;
+    public IReadOnlyList<string> RecentDatabases => [];
+    public void SetDefaultDatabase(string path) { }
+    public void AddRecentDatabase(string path) { }
+    public void Save() { }
 }

@@ -73,7 +73,7 @@ public sealed class FileWorkflowIntegrationTests
             new ExportStoredMaterialToFileRequest(CryptoImportKind.Certificate, certificate.Value!.CertificateId, CryptoDataFormat.Pem, outputPath, null, "issuer-ca"),
             CancellationToken.None);
 
-        var shell = new ShellViewModel(service, new FileDialogServiceStub(), NullLogger<ShellViewModel>.Instance);
+        var shell = new ShellViewModel(service, new FileDialogServiceStub(), new NullUserPreferences(), NullLogger<ShellViewModel>.Instance);
         await shell.ImportFilesFromDropAsync([outputPath]);
 
         Assert.Equal("Available", shell.SettingsSecurityPage.ManagedBackendStatus);
@@ -182,5 +182,14 @@ public sealed class FileWorkflowIntegrationTests
 
         public Task<string?> GetClipboardTextAsync(CancellationToken cancellationToken)
             => Task.FromResult<string?>(null);
+    }
+
+    private sealed class NullUserPreferences : IUserPreferencesService
+    {
+        public string? DefaultDatabasePath => null;
+        public IReadOnlyList<string> RecentDatabases => [];
+        public void SetDefaultDatabase(string path) { }
+        public void AddRecentDatabase(string path) { }
+        public void Save() { }
     }
 }

@@ -21,6 +21,16 @@
           <Separator />
           <MenuItem Header="Options" Command="{Binding SettingsSecurityCommand}" />
           <Separator />
+          <MenuItem Header="Set as Default Database" Command="{Binding SetDefaultDatabaseCommand}" />
+          <MenuItem Header="Recent Databases" ItemsSource="{Binding RecentDatabases}">
+            <MenuItem.ItemContainerTheme>
+              <ControlTheme TargetType="MenuItem">
+                <Setter Property="Header" Value="{Binding Header}" />
+                <Setter Property="Command" Value="{Binding Command}" />
+              </ControlTheme>
+            </MenuItem.ItemContainerTheme>
+          </MenuItem>
+          <Separator />
           <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
         </MenuItem>
         <MenuItem Header="_Import">
