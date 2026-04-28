@@ -24,6 +24,9 @@
             <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.KeyBindings>
+              <KeyBinding Gesture="F2" Command="{Binding OpenRenameDialogCommand}" />
+            </ListBox.KeyBindings>
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">

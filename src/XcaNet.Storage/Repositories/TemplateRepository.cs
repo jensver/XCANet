@@ -141,4 +141,12 @@ public sealed class TemplateRepository : ITemplateRepository
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
+
+    public async Task UpdateDisplayNameAsync(string databasePath, Guid templateId, string newName, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var template = await dbContext.Templates.SingleAsync(x => x.Id == templateId, cancellationToken);
+        template.Name = newName;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }
