@@ -20,5 +20,6 @@ public sealed class CertificateEntity
     public string DataFormat { get; set; } = string.Empty;
     public string KeyAlgorithm { get; set; } = string.Empty;
     public bool IsCertificateAuthority { get; set; }
+    public string? Comment { get; set; }
     public ICollection<CertificateTagEntity> CertificateTags { get; set; } = [];
 }

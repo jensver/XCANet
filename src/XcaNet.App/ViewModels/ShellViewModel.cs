@@ -22,6 +22,7 @@ public sealed class ShellViewModel : ViewModelBase
 {
     private readonly IDatabaseSessionService _databaseSessionService;
     private readonly IDesktopFileDialogService _fileDialogService;
+    private readonly IUserPreferencesService _userPreferences;
     private readonly ILogger<ShellViewModel> _logger;
 
     private readonly AsyncCommand _createDatabaseCommand;
@@ -79,6 +80,24 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly DelegateCommand _closeRevokeDialogCommand;
     private readonly DelegateCommand _togglePlainViewCommand;
 
+    // M15 commands
+    private readonly DelegateCommand _openAboutCommand;
+    private readonly DelegateCommand _closeAboutCommand;
+    private readonly DelegateCommand _openOidResolverCommand;
+    private readonly DelegateCommand _closeOidResolverCommand;
+    private readonly DelegateCommand _resolveOidCommand;
+    private readonly DelegateCommand _openPasswordChangeCommand;
+    private readonly DelegateCommand _closePasswordChangeCommand;
+    private readonly AsyncCommand _confirmPasswordChangeCommand;
+    private readonly AsyncCommand _pastePemCommand;
+    private readonly DelegateCommand _setDefaultDatabaseCommand;
+    private readonly DelegateCommand _openRenameDialogCommand;
+    private readonly DelegateCommand _closeRenameDialogCommand;
+    private readonly AsyncCommand _confirmRenameCommand;
+    private readonly AsyncCommand _openObjectPropertiesCommand;
+    private readonly DelegateCommand _closeObjectPropertiesCommand;
+    private readonly AsyncCommand _confirmObjectPropertiesCommand;
+
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
     private bool _isBusy;
@@ -89,10 +108,33 @@ public sealed class ShellViewModel : ViewModelBase
     private string _authoringDialogTitle = string.Empty;
     private string _authoringDialogSubtitle = string.Empty;
 
-    public ShellViewModel(IDatabaseSessionService databaseSessionService, IDesktopFileDialogService fileDialogService, ILogger<ShellViewModel> logger)
+    // M15.7 rename state
+    private bool _isRenameDialogOpen;
+    private string _renamePendingName = string.Empty;
+
+    // M15.6 object properties state
+    private bool _isObjectPropertiesDialogOpen;
+    private BrowserEntityType _objectPropertiesKind;
+    private Guid _objectPropertiesId;
+    private string _objectPropertiesName = string.Empty;
+    private string? _objectPropertiesComment;
+    private string _objectPropertiesSource = string.Empty;
+    private string? _objectPropertiesCreatedAt;
+
+    // M15 dialog state
+    private bool _isAboutDialogOpen;
+    private bool _isOidResolverDialogOpen;
+    private bool _isPasswordChangeDialogOpen;
+    private string _oidResolverInput = string.Empty;
+    private string _oidResolverResult = string.Empty;
+    private string _passwordChangeNew = string.Empty;
+    private string _passwordChangeConfirm = string.Empty;
+
+    public ShellViewModel(IDatabaseSessionService databaseSessionService, IDesktopFileDialogService fileDialogService, IUserPreferencesService userPreferences, ILogger<ShellViewModel> logger)
     {
         _databaseSessionService = databaseSessionService;
         _fileDialogService = fileDialogService;
+        _userPreferences = userPreferences;
         _logger = logger;
 
         logger.LogInformation("Initializing XcaNet shell.");
@@ -160,6 +202,28 @@ public sealed class ShellViewModel : ViewModelBase
         _closeRevokeDialogCommand = new DelegateCommand(() => CertificatesPage.IsRevokeDialogOpen = false);
         _togglePlainViewCommand = new DelegateCommand(() => CertificatesPage.IsPlainView = !CertificatesPage.IsPlainView);
 
+        _openAboutCommand = new DelegateCommand(() => IsAboutDialogOpen = true);
+        _closeAboutCommand = new DelegateCommand(() => IsAboutDialogOpen = false);
+        _openOidResolverCommand = new DelegateCommand(() => { OidResolverInput = string.Empty; OidResolverResult = string.Empty; IsOidResolverDialogOpen = true; });
+        _closeOidResolverCommand = new DelegateCommand(() => IsOidResolverDialogOpen = false);
+        _resolveOidCommand = new DelegateCommand(ResolveOid, () => !string.IsNullOrWhiteSpace(OidResolverInput));
+        _openPasswordChangeCommand = new DelegateCommand(() => { PasswordChangeNew = string.Empty; PasswordChangeConfirm = string.Empty; IsPasswordChangeDialogOpen = true; }, () => Snapshot.State == DatabaseSessionState.Unlocked);
+        _closePasswordChangeCommand = new DelegateCommand(() => IsPasswordChangeDialogOpen = false);
+        _confirmPasswordChangeCommand = new AsyncCommand(ConfirmPasswordChangeAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(PasswordChangeNew) && PasswordChangeNew == PasswordChangeConfirm);
+        _pastePemCommand = new AsyncCommand(PastePemAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
+        _setDefaultDatabaseCommand = new DelegateCommand(SetDefaultDatabase, () => Snapshot.DatabasePath is not null);
+        _openRenameDialogCommand = new DelegateCommand(OpenRenameDialog, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && HasActiveSelection());
+        _closeRenameDialogCommand = new DelegateCommand(() => IsRenameDialogOpen = false);
+        _confirmRenameCommand = new AsyncCommand(ConfirmRenameAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(RenamePendingName));
+        _openObjectPropertiesCommand = new AsyncCommand(OpenObjectPropertiesAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && HasActiveSelection());
+        _closeObjectPropertiesCommand = new DelegateCommand(() => IsObjectPropertiesDialogOpen = false);
+        _confirmObjectPropertiesCommand = new AsyncCommand(ConfirmObjectPropertiesAsync, () => !IsBusy && !string.IsNullOrWhiteSpace(ObjectPropertiesName));
+
+        if (_userPreferences.DefaultDatabasePath is { } defaultPath)
+            SettingsSecurityPage.DatabasePath = defaultPath;
+
+        RefreshRecentDatabases();
+
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
         SettingsSecurityPage.OpenDatabaseCommand = _openDatabaseCommand;
         SettingsSecurityPage.UnlockDatabaseCommand = _unlockDatabaseCommand;
@@ -180,6 +244,8 @@ public sealed class ShellViewModel : ViewModelBase
         CertificatesPage.OpenRevokeDialogCommand = _openRevokeDialogCommand;
         CertificatesPage.CloseRevokeDialogCommand = _closeRevokeDialogCommand;
         CertificatesPage.TogglePlainViewCommand = _togglePlainViewCommand;
+        CertificatesPage.OpenRenameDialogCommand = _openRenameDialogCommand;
+        CertificatesPage.OpenObjectPropertiesCommand = _openObjectPropertiesCommand;
 
         PrivateKeysPage.RefreshCommand = _refreshPrivateKeysCommand;
         PrivateKeysPage.GenerateKeyCommand = _generateKeyCommand;
@@ -191,6 +257,8 @@ public sealed class ShellViewModel : ViewModelBase
         PrivateKeysPage.ApplyCertificateSigningRequestTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
         PrivateKeysPage.ExportSelectedCommand = _exportPrivateKeyCommand;
         PrivateKeysPage.ExportSelectedToFileCommand = _exportPrivateKeyToFileCommand;
+        PrivateKeysPage.OpenRenameDialogCommand = _openRenameDialogCommand;
+        PrivateKeysPage.OpenObjectPropertiesCommand = _openObjectPropertiesCommand;
         PrivateKeysPage.SelfSignedCaAuthoring.ApplyTemplateCommand = _applySelfSignedCaTemplateCommand;
         PrivateKeysPage.SelfSignedCaAuthoring.PrimaryActionCommand = _createSelfSignedCaCommand;
         PrivateKeysPage.CertificateSigningRequestAuthoring.ApplyTemplateCommand = _applyCertificateSigningRequestTemplateCommand;
@@ -205,12 +273,16 @@ public sealed class ShellViewModel : ViewModelBase
         CertificateRequestsPage.OpenSelectedPrivateKeyCommand = _navigateRequestPrivateKeyCommand;
         CertificateRequestsPage.CreateTemplateFromRequestCommand = _createTemplateFromRequestCommand;
         CertificateRequestsPage.CreateSimilarRequestCommand = _createSimilarRequestCommand;
+        CertificateRequestsPage.OpenRenameDialogCommand = _openRenameDialogCommand;
+        CertificateRequestsPage.OpenObjectPropertiesCommand = _openObjectPropertiesCommand;
         CertificateRequestsPage.IssuanceAuthoring.ApplyTemplateCommand = _applyIssuanceTemplateCommand;
         CertificateRequestsPage.IssuanceAuthoring.PrimaryActionCommand = _signCertificateSigningRequestCommand;
 
         CertificateRevocationListsPage.RefreshCommand = _refreshCertificateRevocationListsCommand;
         CertificateRevocationListsPage.ExportSelectedCommand = _exportCertificateRevocationListToFileCommand;
         CertificateRevocationListsPage.OpenIssuerCommand = _navigateCrlIssuerCommand;
+        CertificateRevocationListsPage.OpenRenameDialogCommand = _openRenameDialogCommand;
+        CertificateRevocationListsPage.OpenObjectPropertiesCommand = _openObjectPropertiesCommand;
         TemplatesPage.RefreshCommand = _refreshTemplatesCommand;
         TemplatesPage.CreateNewCommand = _createTemplateCommand;
         TemplatesPage.EditTemplateCommand = _editTemplateCommand;
@@ -220,6 +292,8 @@ public sealed class ShellViewModel : ViewModelBase
         TemplatesPage.ToggleEnabledCommand = _toggleTemplateEnabledCommand;
         TemplatesPage.DeleteTemplateCommand = _deleteTemplateCommand;
         TemplatesPage.Authoring.PrimaryActionCommand = _saveTemplateCommand;
+        TemplatesPage.OpenRenameDialogCommand = _openRenameDialogCommand;
+        TemplatesPage.OpenObjectPropertiesCommand = _openObjectPropertiesCommand;
 
         WorkspaceNavigationItems =
         [
@@ -390,20 +464,168 @@ public sealed class ShellViewModel : ViewModelBase
 
     public ICommand SettingsSecurityCommand => UtilityNavigationItems[1].Command;
 
+    // M15 dialog state properties
+
+    public bool IsAboutDialogOpen
+    {
+        get => _isAboutDialogOpen;
+        set => SetProperty(ref _isAboutDialogOpen, value);
+    }
+
+    public bool IsOidResolverDialogOpen
+    {
+        get => _isOidResolverDialogOpen;
+        set => SetProperty(ref _isOidResolverDialogOpen, value);
+    }
+
+    public bool IsPasswordChangeDialogOpen
+    {
+        get => _isPasswordChangeDialogOpen;
+        set => SetProperty(ref _isPasswordChangeDialogOpen, value);
+    }
+
+    public string OidResolverInput
+    {
+        get => _oidResolverInput;
+        set
+        {
+            if (SetProperty(ref _oidResolverInput, value))
+                _resolveOidCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string OidResolverResult
+    {
+        get => _oidResolverResult;
+        set => SetProperty(ref _oidResolverResult, value);
+    }
+
+    public string PasswordChangeNew
+    {
+        get => _passwordChangeNew;
+        set
+        {
+            if (SetProperty(ref _passwordChangeNew, value))
+                _confirmPasswordChangeCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string PasswordChangeConfirm
+    {
+        get => _passwordChangeConfirm;
+        set
+        {
+            if (SetProperty(ref _passwordChangeConfirm, value))
+                _confirmPasswordChangeCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    // M15 command accessors
+
+    public ICommand OpenAboutCommand => _openAboutCommand;
+
+    public ICommand CloseAboutCommand => _closeAboutCommand;
+
+    public ICommand OpenOidResolverCommand => _openOidResolverCommand;
+
+    public ICommand CloseOidResolverCommand => _closeOidResolverCommand;
+
+    public ICommand ResolveOidCommand => _resolveOidCommand;
+
+    public ICommand OpenPasswordChangeCommand => _openPasswordChangeCommand;
+
+    public ICommand ClosePasswordChangeCommand => _closePasswordChangeCommand;
+
+    public ICommand ConfirmPasswordChangeCommand => _confirmPasswordChangeCommand;
+
+    public ICommand PastePemCommand => _pastePemCommand;
+
+    public ICommand SetDefaultDatabaseCommand => _setDefaultDatabaseCommand;
+
+    public ICommand OpenRenameDialogCommand => _openRenameDialogCommand;
+
+    public ICommand CloseRenameDialogCommand => _closeRenameDialogCommand;
+
+    public ICommand ConfirmRenameCommand => _confirmRenameCommand;
+
+    public ICommand OpenObjectPropertiesCommand => _openObjectPropertiesCommand;
+
+    public ICommand CloseObjectPropertiesCommand => _closeObjectPropertiesCommand;
+
+    public ICommand ConfirmObjectPropertiesCommand => _confirmObjectPropertiesCommand;
+
+    public bool IsRenameDialogOpen
+    {
+        get => _isRenameDialogOpen;
+        set => SetProperty(ref _isRenameDialogOpen, value);
+    }
+
+    public string RenamePendingName
+    {
+        get => _renamePendingName;
+        set
+        {
+            if (SetProperty(ref _renamePendingName, value))
+                _confirmRenameCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool IsObjectPropertiesDialogOpen
+    {
+        get => _isObjectPropertiesDialogOpen;
+        set => SetProperty(ref _isObjectPropertiesDialogOpen, value);
+    }
+
+    public string ObjectPropertiesName
+    {
+        get => _objectPropertiesName;
+        set
+        {
+            if (SetProperty(ref _objectPropertiesName, value))
+                _confirmObjectPropertiesCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string? ObjectPropertiesComment
+    {
+        get => _objectPropertiesComment;
+        set => SetProperty(ref _objectPropertiesComment, value);
+    }
+
+    public string ObjectPropertiesSource
+    {
+        get => _objectPropertiesSource;
+        set => SetProperty(ref _objectPropertiesSource, value);
+    }
+
+    public string? ObjectPropertiesCreatedAt
+    {
+        get => _objectPropertiesCreatedAt;
+        set => SetProperty(ref _objectPropertiesCreatedAt, value);
+    }
+
+    public ObservableCollection<RecentDatabaseItemViewModel> RecentDatabases { get; } = [];
+
     private async Task CreateDatabaseAsync()
     {
+        var path = SettingsSecurityPage.DatabasePath;
         await RunDatabaseActionAsync(
             "Creating database",
             () => _databaseSessionService.CreateDatabaseAsync(
-                new CreateDatabaseRequest(SettingsSecurityPage.DatabasePath, SettingsSecurityPage.Password, SettingsSecurityPage.DisplayName),
+                new CreateDatabaseRequest(path, SettingsSecurityPage.Password, SettingsSecurityPage.DisplayName),
                 CancellationToken.None));
+        if (Snapshot.DatabasePath == path)
+            RecordRecentDatabase(path);
     }
 
     private async Task OpenDatabaseAsync()
     {
+        var path = SettingsSecurityPage.DatabasePath;
         await RunDatabaseActionAsync(
             "Opening database",
-            () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(SettingsSecurityPage.DatabasePath), CancellationToken.None));
+            () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(path), CancellationToken.None));
+        if (Snapshot.DatabasePath == path)
+            RecordRecentDatabase(path);
     }
 
     private async Task UnlockDatabaseAsync()
@@ -1666,6 +1888,231 @@ public sealed class ShellViewModel : ViewModelBase
         }
     }
 
+    private void ResolveOid()
+    {
+        if (string.IsNullOrWhiteSpace(_oidResolverInput))
+        {
+            OidResolverResult = string.Empty;
+            return;
+        }
+
+        try
+        {
+            var oid = new System.Security.Cryptography.Oid(_oidResolverInput.Trim());
+            if (oid.Value is null && oid.FriendlyName is null)
+            {
+                OidResolverResult = "OID not found.";
+            }
+            else
+            {
+                OidResolverResult = $"OID: {oid.Value ?? "(unknown)"}\nName: {oid.FriendlyName ?? "(unknown)"}";
+            }
+        }
+        catch
+        {
+            OidResolverResult = "Invalid OID or name.";
+        }
+    }
+
+    private async Task ConfirmPasswordChangeAsync()
+    {
+        if (string.IsNullOrWhiteSpace(PasswordChangeNew) || PasswordChangeNew != PasswordChangeConfirm)
+        {
+            NotifyFailure("Passwords do not match.");
+            return;
+        }
+
+        using var scope = BeginBusy("Changing password");
+        var result = await _databaseSessionService.ChangePasswordAsync(PasswordChangeNew, CancellationToken.None);
+        IsPasswordChangeDialogOpen = false;
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        NotifySuccess("Password changed.");
+    }
+
+    private async Task PastePemAsync()
+    {
+        var text = await _fileDialogService.GetClipboardTextAsync(CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            NotifyFailure("Clipboard is empty or does not contain text.");
+            return;
+        }
+
+        CertificatesPage.ImportPayload = text;
+        CertificatesPage.ImportDisplayName = "Pasted PEM";
+        SelectPage(CertificatesPage);
+        NotifySuccess("PEM content pasted — review and confirm in the Import dialog.");
+    }
+
+    private bool HasActiveSelection() => CurrentPage switch
+    {
+        var p when p == CertificatesPage => CertificatesPage.SelectedItem is not null,
+        var p when p == PrivateKeysPage => PrivateKeysPage.SelectedItem is not null,
+        var p when p == CertificateRequestsPage => CertificateRequestsPage.SelectedItem is not null,
+        var p when p == CertificateRevocationListsPage => CertificateRevocationListsPage.SelectedItem is not null,
+        var p when p == TemplatesPage => TemplatesPage.SelectedItem is not null,
+        _ => false
+    };
+
+    private void OpenRenameDialog()
+    {
+        var currentName = CurrentPage switch
+        {
+            var p when p == CertificatesPage => CertificatesPage.SelectedItem?.DisplayName,
+            var p when p == PrivateKeysPage => PrivateKeysPage.SelectedItem?.DisplayName,
+            var p when p == CertificateRequestsPage => CertificateRequestsPage.SelectedItem?.DisplayName,
+            var p when p == CertificateRevocationListsPage => CertificateRevocationListsPage.SelectedItem?.DisplayName,
+            var p when p == TemplatesPage => TemplatesPage.SelectedItem?.Name,
+            _ => null
+        };
+
+        if (currentName is null) return;
+        RenamePendingName = currentName;
+        IsRenameDialogOpen = true;
+    }
+
+    private async Task ConfirmRenameAsync()
+    {
+        var newName = RenamePendingName.Trim();
+        if (string.IsNullOrWhiteSpace(newName)) return;
+
+        (BrowserEntityType kind, Guid id) = CurrentPage switch
+        {
+            var p when p == CertificatesPage && CertificatesPage.SelectedItem is { } cert =>
+                (BrowserEntityType.Certificate, cert.CertificateId),
+            var p when p == PrivateKeysPage && PrivateKeysPage.SelectedItem is { } key =>
+                (BrowserEntityType.PrivateKey, key.PrivateKeyId),
+            var p when p == CertificateRequestsPage && CertificateRequestsPage.SelectedItem is { } csr =>
+                (BrowserEntityType.CertificateSigningRequest, csr.CertificateSigningRequestId),
+            var p when p == CertificateRevocationListsPage && CertificateRevocationListsPage.SelectedItem is { } crl =>
+                (BrowserEntityType.CertificateRevocationList, crl.CertificateRevocationListId),
+            var p when p == TemplatesPage && TemplatesPage.SelectedItem is { } tmpl =>
+                (BrowserEntityType.Template, tmpl.TemplateId),
+            _ => (BrowserEntityType.Certificate, Guid.Empty)
+        };
+
+        if (id == Guid.Empty) return;
+
+        using var scope = BeginBusy("Renaming");
+        var result = await _databaseSessionService.RenameStoredItemAsync(
+            new RenameStoredItemRequest(kind, id, newName), CancellationToken.None);
+
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        IsRenameDialogOpen = false;
+        await RefreshCurrentPageAsync();
+        NotifySuccess($"Renamed to \"{newName}\".");
+    }
+
+    private async Task OpenObjectPropertiesAsync()
+    {
+        (BrowserEntityType kind, Guid id) = CurrentPage switch
+        {
+            var p when p == CertificatesPage && CertificatesPage.SelectedItem is { } cert =>
+                (BrowserEntityType.Certificate, cert.CertificateId),
+            var p when p == PrivateKeysPage && PrivateKeysPage.SelectedItem is { } key =>
+                (BrowserEntityType.PrivateKey, key.PrivateKeyId),
+            var p when p == CertificateRequestsPage && CertificateRequestsPage.SelectedItem is { } csr =>
+                (BrowserEntityType.CertificateSigningRequest, csr.CertificateSigningRequestId),
+            var p when p == CertificateRevocationListsPage && CertificateRevocationListsPage.SelectedItem is { } crl =>
+                (BrowserEntityType.CertificateRevocationList, crl.CertificateRevocationListId),
+            var p when p == TemplatesPage && TemplatesPage.SelectedItem is { } tmpl =>
+                (BrowserEntityType.Template, tmpl.TemplateId),
+            _ => (BrowserEntityType.Certificate, Guid.Empty)
+        };
+
+        if (id == Guid.Empty) return;
+
+        using var scope = BeginBusy("Loading properties");
+        var result = await _databaseSessionService.GetObjectPropertiesAsync(kind, id, CancellationToken.None);
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        var data = result.Value!;
+        _objectPropertiesKind = data.Kind;
+        _objectPropertiesId = data.Id;
+        ObjectPropertiesName = data.Name;
+        ObjectPropertiesComment = data.Comment;
+        ObjectPropertiesSource = data.Source;
+        ObjectPropertiesCreatedAt = data.CreatedAt;
+        IsObjectPropertiesDialogOpen = true;
+    }
+
+    private async Task ConfirmObjectPropertiesAsync()
+    {
+        var name = ObjectPropertiesName.Trim();
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        using var scope = BeginBusy("Saving properties");
+        var result = await _databaseSessionService.SaveObjectPropertiesAsync(
+            new SaveObjectPropertiesRequest(_objectPropertiesKind, _objectPropertiesId, name, ObjectPropertiesComment),
+            CancellationToken.None);
+
+        if (!result.IsSuccess)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        IsObjectPropertiesDialogOpen = false;
+        await RefreshCurrentPageAsync();
+        NotifySuccess("Properties saved.");
+    }
+
+    private Task RefreshCurrentPageAsync() => CurrentPage switch
+    {
+        var p when p == CertificatesPage => LoadCertificatesAsync(),
+        var p when p == PrivateKeysPage => LoadPrivateKeysAsync(),
+        var p when p == CertificateRequestsPage => LoadCertificateRequestsAsync(),
+        var p when p == CertificateRevocationListsPage => LoadCertificateRevocationListsAsync(),
+        var p when p == TemplatesPage => LoadTemplatesAsync(),
+        _ => Task.CompletedTask
+    };
+
+    private void RecordRecentDatabase(string path)
+    {
+        _userPreferences.AddRecentDatabase(path);
+        _userPreferences.Save();
+        RefreshRecentDatabases();
+    }
+
+    private void SetDefaultDatabase()
+    {
+        var path = Snapshot.DatabasePath;
+        if (path is null) return;
+        _userPreferences.SetDefaultDatabase(path);
+        _userPreferences.Save();
+        NotifySuccess($"Set default database: {path}");
+    }
+
+    private void RefreshRecentDatabases()
+    {
+        RecentDatabases.Clear();
+        foreach (var path in _userPreferences.RecentDatabases)
+        {
+            var captured = path;
+            RecentDatabases.Add(new RecentDatabaseItemViewModel(captured, new DelegateCommand(async () =>
+            {
+                SettingsSecurityPage.DatabasePath = captured;
+                await RunDatabaseActionAsync(
+                    "Opening database",
+                    () => _databaseSessionService.OpenDatabaseAsync(new OpenDatabaseRequest(captured), CancellationToken.None));
+            })));
+        }
+    }
+
     private void RefreshCommandStates()
     {
         _createDatabaseCommand.RaiseCanExecuteChanged();
@@ -1721,6 +2168,14 @@ public sealed class ShellViewModel : ViewModelBase
         _openRevokeDialogCommand.RaiseCanExecuteChanged();
         _closeRevokeDialogCommand.RaiseCanExecuteChanged();
         _togglePlainViewCommand.RaiseCanExecuteChanged();
+        _openPasswordChangeCommand.RaiseCanExecuteChanged();
+        _confirmPasswordChangeCommand.RaiseCanExecuteChanged();
+        _pastePemCommand.RaiseCanExecuteChanged();
+        _setDefaultDatabaseCommand.RaiseCanExecuteChanged();
+        _openRenameDialogCommand.RaiseCanExecuteChanged();
+        _confirmRenameCommand.RaiseCanExecuteChanged();
+        _openObjectPropertiesCommand.RaiseCanExecuteChanged();
+        _confirmObjectPropertiesCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)

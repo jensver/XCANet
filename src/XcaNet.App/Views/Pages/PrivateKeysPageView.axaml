@@ -20,6 +20,9 @@
             <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.KeyBindings>
+              <KeyBinding Gesture="F2" Command="{Binding OpenRenameDialogCommand}" />
+            </ListBox.KeyBindings>
             <ListBox.ContextMenu>
               <ContextMenu>
                 <MenuItem Header="Show Details" Command="{Binding ShowDetailsCommand}" />
@@ -61,6 +64,7 @@
         <Button Classes="side-action" Content="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
         <Button Classes="side-action" Content="Create Certificate" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
+        <Button Classes="side-action" Content="Properties" Command="{Binding OpenObjectPropertiesCommand}" />
       </StackPanel>
     </Border>
 

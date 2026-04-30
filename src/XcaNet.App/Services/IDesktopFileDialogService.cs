@@ -7,4 +7,6 @@ public interface IDesktopFileDialogService
     Task<IReadOnlyList<string>> PickImportFilesAsync(CancellationToken cancellationToken);
 
     Task<string?> PickSavePathAsync(string suggestedFileName, CancellationToken cancellationToken);
+
+    Task<string?> GetClipboardTextAsync(CancellationToken cancellationToken);
 }

@@ -11,4 +11,8 @@ public interface ITemplateRepository
     Task<bool> SetFavoriteAsync(string databasePath, Guid templateId, bool isFavorite, CancellationToken cancellationToken);
     Task<bool> SetEnabledAsync(string databasePath, Guid templateId, bool isEnabled, CancellationToken cancellationToken);
     Task<bool> DeleteAsync(string databasePath, Guid templateId, CancellationToken cancellationToken);
+
+    Task UpdateDisplayNameAsync(string databasePath, Guid templateId, string newName, CancellationToken cancellationToken);
+
+    Task UpdateCommentAsync(string databasePath, Guid templateId, string? comment, CancellationToken cancellationToken);
 }

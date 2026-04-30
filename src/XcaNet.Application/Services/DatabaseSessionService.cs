@@ -1455,6 +1455,151 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         }
     }
 
+    public Task<OperationResult> ChangePasswordAsync(string newPassword, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(OperationResult.Failure(OperationErrorCode.StorageFailure, "Password change is not yet implemented."));
+    }
+
+    public async Task<OperationResult> RenameStoredItemAsync(RenameStoredItemRequest request, CancellationToken cancellationToken)
+    {
+        if (_currentDatabasePath is null)
+            return OperationResult.Failure(OperationErrorCode.StorageFailure, "No database is open.");
+
+        if (string.IsNullOrWhiteSpace(request.NewName))
+            return OperationResult.Failure(OperationErrorCode.ValidationFailed, "Name cannot be empty.");
+
+        try
+        {
+            switch (request.Kind)
+            {
+                case BrowserEntityType.Certificate:
+                    await _certificateRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                case BrowserEntityType.PrivateKey:
+                    await _privateKeyRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                case BrowserEntityType.CertificateSigningRequest:
+                    await _certificateRequestRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                case BrowserEntityType.CertificateRevocationList:
+                    await _certificateRevocationListRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                case BrowserEntityType.Template:
+                    await _templateRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, request.NewName.Trim(), cancellationToken);
+                    break;
+                default:
+                    return OperationResult.Failure(OperationErrorCode.ValidationFailed, $"Unknown entity type: {request.Kind}.");
+            }
+
+            return OperationResult.Success("Item renamed.");
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure(OperationErrorCode.StorageFailure, $"Could not rename item: {ex.Message}");
+        }
+    }
+
+    public async Task<OperationResult<ObjectPropertiesData>> GetObjectPropertiesAsync(BrowserEntityType kind, Guid id, CancellationToken cancellationToken)
+    {
+        if (_currentDatabasePath is null)
+            return OperationResult<ObjectPropertiesData>.Failure(OperationErrorCode.StorageFailure, "No database is open.");
+
+        try
+        {
+            ObjectPropertiesData data = kind switch
+            {
+                BrowserEntityType.Certificate => await GetCertificatePropertiesAsync(_currentDatabasePath, id, cancellationToken),
+                BrowserEntityType.PrivateKey => await GetPrivateKeyPropertiesAsync(_currentDatabasePath, id, cancellationToken),
+                BrowserEntityType.CertificateSigningRequest => await GetCsrPropertiesAsync(_currentDatabasePath, id, cancellationToken),
+                BrowserEntityType.CertificateRevocationList => await GetCrlPropertiesAsync(_currentDatabasePath, id, cancellationToken),
+                BrowserEntityType.Template => await GetTemplatePropertiesAsync(_currentDatabasePath, id, cancellationToken),
+                _ => throw new InvalidOperationException($"Unknown entity type: {kind}.")
+            };
+            return OperationResult<ObjectPropertiesData>.Success(data, "Properties loaded.");
+        }
+        catch (Exception ex)
+        {
+            return OperationResult<ObjectPropertiesData>.Failure(OperationErrorCode.StorageFailure, $"Could not load properties: {ex.Message}");
+        }
+    }
+
+    private async Task<ObjectPropertiesData> GetCertificatePropertiesAsync(string path, Guid id, CancellationToken ct)
+    {
+        var cert = await _certificateRepository.GetAsync(path, id, ct) ?? throw new InvalidOperationException("Certificate not found.");
+        return new ObjectPropertiesData(BrowserEntityType.Certificate, cert.Id, cert.DisplayName, cert.Comment, cert.Subject, cert.NotBeforeUtc?.ToString("yyyy-MM-dd"));
+    }
+
+    private async Task<ObjectPropertiesData> GetPrivateKeyPropertiesAsync(string path, Guid id, CancellationToken ct)
+    {
+        var key = await _privateKeyRepository.GetAsync(path, id, ct) ?? throw new InvalidOperationException("Private key not found.");
+        return new ObjectPropertiesData(BrowserEntityType.PrivateKey, key.Id, key.DisplayName, key.Comment, key.Algorithm, key.CreatedUtc.ToString("yyyy-MM-dd"));
+    }
+
+    private async Task<ObjectPropertiesData> GetCsrPropertiesAsync(string path, Guid id, CancellationToken ct)
+    {
+        var csr = await _certificateRequestRepository.GetAsync(path, id, ct) ?? throw new InvalidOperationException("CSR not found.");
+        return new ObjectPropertiesData(BrowserEntityType.CertificateSigningRequest, csr.Id, csr.DisplayName, csr.Comment, csr.Subject, csr.CreatedUtc.ToString("yyyy-MM-dd"));
+    }
+
+    private async Task<ObjectPropertiesData> GetCrlPropertiesAsync(string path, Guid id, CancellationToken ct)
+    {
+        var crl = await _certificateRevocationListRepository.GetAsync(path, id, ct) ?? throw new InvalidOperationException("CRL not found.");
+        return new ObjectPropertiesData(BrowserEntityType.CertificateRevocationList, crl!.Id, crl.DisplayName, crl.Comment, crl.IssuerDisplayName, crl.ThisUpdateUtc.ToString("yyyy-MM-dd"));
+    }
+
+    private async Task<ObjectPropertiesData> GetTemplatePropertiesAsync(string path, Guid id, CancellationToken ct)
+    {
+        var template = await _templateRepository.GetAsync(path, id, ct) ?? throw new InvalidOperationException("Template not found.");
+        return new ObjectPropertiesData(BrowserEntityType.Template, template.Id, template.Name, template.Comment, template.IntendedUsage, null);
+    }
+
+    public async Task<OperationResult> SaveObjectPropertiesAsync(SaveObjectPropertiesRequest request, CancellationToken cancellationToken)
+    {
+        if (_currentDatabasePath is null)
+            return OperationResult.Failure(OperationErrorCode.StorageFailure, "No database is open.");
+
+        if (string.IsNullOrWhiteSpace(request.Name))
+            return OperationResult.Failure(OperationErrorCode.ValidationFailed, "Name cannot be empty.");
+
+        try
+        {
+            var trimmedName = request.Name.Trim();
+            var trimmedComment = string.IsNullOrWhiteSpace(request.Comment) ? null : request.Comment.Trim();
+
+            switch (request.Kind)
+            {
+                case BrowserEntityType.Certificate:
+                    await _certificateRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, trimmedName, cancellationToken);
+                    await _certificateRepository.UpdateCommentAsync(_currentDatabasePath, request.Id, trimmedComment, cancellationToken);
+                    break;
+                case BrowserEntityType.PrivateKey:
+                    await _privateKeyRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, trimmedName, cancellationToken);
+                    await _privateKeyRepository.UpdateCommentAsync(_currentDatabasePath, request.Id, trimmedComment, cancellationToken);
+                    break;
+                case BrowserEntityType.CertificateSigningRequest:
+                    await _certificateRequestRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, trimmedName, cancellationToken);
+                    await _certificateRequestRepository.UpdateCommentAsync(_currentDatabasePath, request.Id, trimmedComment, cancellationToken);
+                    break;
+                case BrowserEntityType.CertificateRevocationList:
+                    await _certificateRevocationListRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, trimmedName, cancellationToken);
+                    await _certificateRevocationListRepository.UpdateCommentAsync(_currentDatabasePath, request.Id, trimmedComment, cancellationToken);
+                    break;
+                case BrowserEntityType.Template:
+                    await _templateRepository.UpdateDisplayNameAsync(_currentDatabasePath, request.Id, trimmedName, cancellationToken);
+                    await _templateRepository.UpdateCommentAsync(_currentDatabasePath, request.Id, trimmedComment, cancellationToken);
+                    break;
+                default:
+                    return OperationResult.Failure(OperationErrorCode.ValidationFailed, $"Unknown entity type: {request.Kind}.");
+            }
+
+            return OperationResult.Success("Properties saved.");
+        }
+        catch (Exception ex)
+        {
+            return OperationResult.Failure(OperationErrorCode.StorageFailure, $"Could not save properties: {ex.Message}");
+        }
+    }
+
     public DatabaseSessionSnapshot GetSnapshot()
     {
         var message = _state switch

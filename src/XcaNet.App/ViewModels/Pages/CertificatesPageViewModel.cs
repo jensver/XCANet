@@ -208,6 +208,10 @@ public sealed class CertificatesPageViewModel : SelectableItemsPageViewModelBase
 
     public ICommand? TogglePlainViewCommand { get; set; }
 
+    public ICommand? OpenRenameDialogCommand { get; set; }
+
+    public ICommand? OpenObjectPropertiesCommand { get; set; }
+
     // --- Tree building ---
 
     public void RebuildTree(IReadOnlyList<CertificateListItem> items)

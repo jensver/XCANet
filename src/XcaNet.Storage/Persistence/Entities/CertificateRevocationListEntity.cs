@@ -11,5 +11,6 @@ public sealed class CertificateRevocationListEntity
     public DateTime? NextUpdateUtc { get; set; }
     public byte[] DerData { get; set; } = [];
     public string? PemData { get; set; }
+    public string? Comment { get; set; }
     public ICollection<CertificateRevocationListEntryEntity> RevokedEntries { get; set; } = [];
 }

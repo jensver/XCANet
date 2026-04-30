@@ -24,6 +24,9 @@
             <TextBlock Text="{Binding EmptyStateMessage}" TextWrapping="Wrap" />
           </Border>
           <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}">
+            <ListBox.KeyBindings>
+              <KeyBinding Gesture="F2" Command="{Binding OpenRenameDialogCommand}" />
+            </ListBox.KeyBindings>
             <ListBox.ItemTemplate>
               <DataTemplate>
                 <Border Padding="8,6" BorderBrush="{DynamicResource BorderSubtleBrush}" BorderThickness="0,0,0,1">
@@ -52,6 +55,7 @@
         <Button Classes="side-action" Content="Enable/Disable" Command="{Binding ToggleEnabledCommand}" />
         <Button Classes="side-action" Content="Favorite" Command="{Binding ToggleFavoriteCommand}" />
         <Button Classes="side-action" Content="Export/Import" IsEnabled="False" />
+        <Button Classes="side-action" Content="Properties" Command="{Binding OpenObjectPropertiesCommand}" />
       </StackPanel>
     </Border>
 

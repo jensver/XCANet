@@ -34,4 +34,20 @@ public sealed class CertificateRequestRepository : ICertificateRequestRepository
             .OrderByDescending(x => x.CreatedUtc)
             .ToListAsync(cancellationToken);
     }
+
+    public async Task UpdateDisplayNameAsync(string databasePath, Guid certificateRequestId, string newName, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var request = await dbContext.CertificateRequests.SingleAsync(x => x.Id == certificateRequestId, cancellationToken);
+        request.DisplayName = newName;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateCommentAsync(string databasePath, Guid certificateRequestId, string? comment, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var request = await dbContext.CertificateRequests.SingleAsync(x => x.Id == certificateRequestId, cancellationToken);
+        request.Comment = comment;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

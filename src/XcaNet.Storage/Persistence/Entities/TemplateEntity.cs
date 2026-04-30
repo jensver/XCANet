@@ -19,4 +19,5 @@ public sealed class TemplateEntity
     public int? PathLengthConstraint { get; set; }
     public string KeyUsages { get; set; } = string.Empty;
     public string EnhancedKeyUsages { get; set; } = string.Empty;
+    public string? Comment { get; set; }
 }
