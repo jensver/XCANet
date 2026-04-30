@@ -149,4 +149,12 @@ public sealed class TemplateRepository : ITemplateRepository
         template.Name = newName;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task UpdateCommentAsync(string databasePath, Guid templateId, string? comment, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var template = await dbContext.Templates.SingleAsync(x => x.Id == templateId, cancellationToken);
+        template.Comment = comment;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

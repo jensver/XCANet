@@ -13,4 +13,6 @@ public interface ITemplateRepository
     Task<bool> DeleteAsync(string databasePath, Guid templateId, CancellationToken cancellationToken);
 
     Task UpdateDisplayNameAsync(string databasePath, Guid templateId, string newName, CancellationToken cancellationToken);
+
+    Task UpdateCommentAsync(string databasePath, Guid templateId, string? comment, CancellationToken cancellationToken);
 }

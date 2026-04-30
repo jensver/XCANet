@@ -42,4 +42,12 @@ public sealed class CertificateRequestRepository : ICertificateRequestRepository
         request.DisplayName = newName;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task UpdateCommentAsync(string databasePath, Guid certificateRequestId, string? comment, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var request = await dbContext.CertificateRequests.SingleAsync(x => x.Id == certificateRequestId, cancellationToken);
+        request.Comment = comment;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

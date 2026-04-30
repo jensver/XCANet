@@ -64,6 +64,7 @@
         <Button Classes="side-action" Content="Create CSR" Command="{Binding OpenCertificateSigningRequestAuthoringCommand}" />
         <Button Classes="side-action" Content="Create Certificate" Command="{Binding OpenSelfSignedCaAuthoringCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
+        <Button Classes="side-action" Content="Properties" Command="{Binding OpenObjectPropertiesCommand}" />
       </StackPanel>
     </Border>
 

@@ -11,4 +11,6 @@ public interface ICertificateRequestRepository
     Task<IReadOnlyList<CertificateRequestEntity>> ListAsync(string databasePath, CancellationToken cancellationToken);
 
     Task UpdateDisplayNameAsync(string databasePath, Guid certificateRequestId, string newName, CancellationToken cancellationToken);
+
+    Task UpdateCommentAsync(string databasePath, Guid certificateRequestId, string? comment, CancellationToken cancellationToken);
 }

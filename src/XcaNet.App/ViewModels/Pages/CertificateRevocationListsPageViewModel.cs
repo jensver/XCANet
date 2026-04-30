@@ -29,5 +29,7 @@ public sealed class CertificateRevocationListsPageViewModel : SelectableItemsPag
 
     public ICommand? OpenRenameDialogCommand { get; set; }
 
+    public ICommand? OpenObjectPropertiesCommand { get; set; }
+
     protected override Guid GetItemId(CertificateRevocationListItem item) => item.CertificateRevocationListId;
 }

@@ -179,6 +179,8 @@ public sealed class TemplatesPageViewModel : SelectableItemsPageViewModelBase<Te
 
     public ICommand? OpenRenameDialogCommand { get; set; }
 
+    public ICommand? OpenObjectPropertiesCommand { get; set; }
+
     protected override Guid GetItemId(TemplateListItem item) => item.TemplateId;
 
     public void SetTemplates(IEnumerable<TemplateListItem> items)

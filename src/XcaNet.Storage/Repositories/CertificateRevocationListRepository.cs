@@ -46,4 +46,12 @@ public sealed class CertificateRevocationListRepository : ICertificateRevocation
         crl.DisplayName = newName;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task UpdateCommentAsync(string databasePath, Guid certificateRevocationListId, string? comment, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var crl = await dbContext.CertificateRevocationLists.SingleAsync(x => x.Id == certificateRevocationListId, cancellationToken);
+        crl.Comment = comment;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

@@ -89,6 +89,8 @@ public sealed class CertificateRequestsPageViewModel : SelectableItemsPageViewMo
 
     public ICommand? OpenRenameDialogCommand { get; set; }
 
+    public ICommand? OpenObjectPropertiesCommand { get; set; }
+
     public void SetIssuers(IEnumerable<CertificateListItem> certificates, IEnumerable<PrivateKeyListItem> privateKeys)
     {
         IssuanceAuthoring.SetIssuers(certificates, privateKeys);

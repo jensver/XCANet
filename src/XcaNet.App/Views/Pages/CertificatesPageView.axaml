@@ -135,6 +135,7 @@
         <Button Classes="side-action" Content="To Template" Command="{Binding CreateTemplateFromCertificateCommand}" />
         <Button Classes="side-action" Content="Open Issuer" Command="{Binding OpenIssuerCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
+        <Button Classes="side-action" Content="Properties" Command="{Binding OpenObjectPropertiesCommand}" />
       </StackPanel>
     </Border>
 

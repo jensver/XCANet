@@ -68,6 +68,7 @@
         <Button Classes="side-action" Content="To Template" Command="{Binding CreateTemplateFromRequestCommand}" />
         <Button Classes="side-action" Content="Open Key" Command="{Binding OpenSelectedPrivateKeyCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
+        <Button Classes="side-action" Content="Properties" Command="{Binding OpenObjectPropertiesCommand}" />
       </StackPanel>
     </Border>
 

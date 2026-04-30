@@ -55,6 +55,7 @@
         <Button Classes="side-action" Content="Enable/Disable" Command="{Binding ToggleEnabledCommand}" />
         <Button Classes="side-action" Content="Favorite" Command="{Binding ToggleFavoriteCommand}" />
         <Button Classes="side-action" Content="Export/Import" IsEnabled="False" />
+        <Button Classes="side-action" Content="Properties" Command="{Binding OpenObjectPropertiesCommand}" />
       </StackPanel>
     </Border>
 

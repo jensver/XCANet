@@ -168,6 +168,8 @@ public sealed class PrivateKeysPageViewModel : SelectableItemsPageViewModelBase<
 
     public ICommand? OpenRenameDialogCommand { get; set; }
 
+    public ICommand? OpenObjectPropertiesCommand { get; set; }
+
     public void SetTemplates(IEnumerable<TemplateListItem> templates)
     {
         ResetTemplateCollection(SelfSignedCaAuthoring.Templates, templates.Where(x => x.IntendedUsage == TemplateIntendedUsage.SelfSignedCa && x.IsEnabled));

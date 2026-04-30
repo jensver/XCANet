@@ -42,4 +42,12 @@ public sealed class PrivateKeyRepository : IPrivateKeyRepository
         key.DisplayName = newName;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task UpdateCommentAsync(string databasePath, Guid privateKeyId, string? comment, CancellationToken cancellationToken)
+    {
+        await using var dbContext = _dbContextFactory.CreateDbContext(databasePath);
+        var key = await dbContext.PrivateKeys.SingleAsync(x => x.Id == privateKeyId, cancellationToken);
+        key.Comment = comment;
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
 }

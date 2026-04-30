@@ -265,5 +265,58 @@
       </Border>
     </Grid>
 
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Object Properties dialog overlay                                    -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <Grid Grid.RowSpan="4"
+          Background="{DynamicResource DialogOverlayBrush}"
+          IsVisible="{Binding IsObjectPropertiesDialogOpen}">
+      <Border Classes="authoring-dialog-shell"
+              Width="420"
+              HorizontalAlignment="Center"
+              VerticalAlignment="Center"
+              Padding="16">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="10">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="Object Properties" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Close" Command="{Binding CloseObjectPropertiesCommand}" />
+          </Grid>
+
+          <Grid Grid.Row="1" ColumnDefinitions="100,*" ColumnSpacing="8" RowSpacing="6">
+            <TextBlock Text="Name" VerticalAlignment="Center" />
+            <TextBox Grid.Column="1" Text="{Binding ObjectPropertiesName}" Watermark="Display name" />
+          </Grid>
+
+          <Grid Grid.Row="2" ColumnDefinitions="100,*" ColumnSpacing="8">
+            <TextBlock Text="Comment" VerticalAlignment="Top" Margin="0,6,0,0" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding ObjectPropertiesComment}"
+                     Watermark="Optional comment"
+                     AcceptsReturn="True"
+                     TextWrapping="Wrap"
+                     Height="72" />
+          </Grid>
+
+          <Grid Grid.Row="3" ColumnDefinitions="100,*" ColumnSpacing="8">
+            <TextBlock Text="Source" VerticalAlignment="Center" Classes="secondary-text" />
+            <TextBlock Grid.Column="1" Text="{Binding ObjectPropertiesSource}" VerticalAlignment="Center" TextWrapping="Wrap" />
+          </Grid>
+
+          <Grid Grid.Row="4" ColumnDefinitions="100,*" ColumnSpacing="8">
+            <TextBlock Text="Created" VerticalAlignment="Center" Classes="secondary-text" />
+            <TextBlock Grid.Column="1" Text="{Binding ObjectPropertiesCreatedAt}" VerticalAlignment="Center" />
+          </Grid>
+
+          <Grid Grid.Row="5" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <TextBlock Classes="secondary-text" Text="Edit name and comment, then save." VerticalAlignment="Center" />
+            <Button Grid.Column="1" Content="Save" Command="{Binding ConfirmObjectPropertiesCommand}" />
+            <Button Grid.Column="2" Content="Cancel" Command="{Binding CloseObjectPropertiesCommand}" />
+          </Grid>
+
+        </Grid>
+      </Border>
+    </Grid>
+
   </Grid>
 </Window>

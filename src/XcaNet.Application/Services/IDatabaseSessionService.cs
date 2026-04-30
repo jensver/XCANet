@@ -78,5 +78,9 @@ public interface IDatabaseSessionService
 
     Task<OperationResult> RenameStoredItemAsync(RenameStoredItemRequest request, CancellationToken cancellationToken);
 
+    Task<OperationResult<ObjectPropertiesData>> GetObjectPropertiesAsync(BrowserEntityType kind, Guid id, CancellationToken cancellationToken);
+
+    Task<OperationResult> SaveObjectPropertiesAsync(SaveObjectPropertiesRequest request, CancellationToken cancellationToken);
+
     DatabaseSessionSnapshot GetSnapshot();
 }

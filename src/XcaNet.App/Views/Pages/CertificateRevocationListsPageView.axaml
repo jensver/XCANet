@@ -50,6 +50,7 @@
         <Button Classes="side-action" Content="Delete" IsEnabled="False" />
         <Button Classes="side-action" Content="Open Issuer" Command="{Binding OpenIssuerCommand}" />
         <Button Classes="side-action" Content="Refresh" Command="{Binding RefreshCommand}" />
+        <Button Classes="side-action" Content="Properties" Command="{Binding OpenObjectPropertiesCommand}" />
       </StackPanel>
     </Border>
 

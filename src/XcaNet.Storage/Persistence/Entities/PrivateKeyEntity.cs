@@ -12,4 +12,5 @@ public sealed class PrivateKeyEntity
     public string EncryptionAlgorithm { get; set; } = string.Empty;
     public int KeyVersion { get; set; }
     public DateTime CreatedUtc { get; set; }
+    public string? Comment { get; set; }
 }
