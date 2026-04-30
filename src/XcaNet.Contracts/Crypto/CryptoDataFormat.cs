@@ -6,5 +6,6 @@ public enum CryptoDataFormat
     Der = 1,
     Pkcs8 = 2,
     Pkcs12 = 3,
-    Pkcs10 = 4
+    Pkcs10 = 4,
+    Pkcs7 = 5
 }

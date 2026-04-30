@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input.Platform;
 using Avalonia.Platform.Storage;
 
 namespace XcaNet.App.Services;
@@ -28,7 +29,7 @@ public sealed class DesktopFileDialogService : IDesktopFileDialogService
                 [
                     new FilePickerFileType("Supported certificate material")
                     {
-                        Patterns = ["*.pem", "*.der", "*.cer", "*.crt", "*.csr", "*.key", "*.p8", "*.pfx", "*.p12", "*.crl"]
+                        Patterns = ["*.pem", "*.der", "*.cer", "*.crt", "*.csr", "*.key", "*.p8", "*.pfx", "*.p12", "*.crl", "*.p7b", "*.p7c"]
                     }
                 ]
             });
@@ -58,5 +59,17 @@ public sealed class DesktopFileDialogService : IDesktopFileDialogService
 
         cancellationToken.ThrowIfCancellationRequested();
         return file?.TryGetLocalPath();
+    }
+
+    public async Task<string?> GetClipboardTextAsync(CancellationToken cancellationToken)
+    {
+        var clipboard = _owner?.Clipboard;
+        if (clipboard is null)
+        {
+            return null;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        return await clipboard.TryGetTextAsync();
     }
 }

@@ -200,4 +200,7 @@ file sealed class TestDesktopFileDialogService : IDesktopFileDialogService
 
     public Task<string?> PickSavePathAsync(string suggestedFileName, CancellationToken cancellationToken)
         => Task.FromResult<string?>(null);
+
+    public Task<string?> GetClipboardTextAsync(CancellationToken cancellationToken)
+        => Task.FromResult<string?>(null);
 }

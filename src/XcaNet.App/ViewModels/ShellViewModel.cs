@@ -78,6 +78,7 @@ public sealed class ShellViewModel : ViewModelBase
     private readonly DelegateCommand _openRevokeDialogCommand;
     private readonly DelegateCommand _closeRevokeDialogCommand;
     private readonly DelegateCommand _togglePlainViewCommand;
+    private readonly AsyncCommand _pastePemCommand;
 
     private PageViewModelBase _currentPage;
     private string _subtitle = "Core UI workflows";
@@ -159,6 +160,7 @@ public sealed class ShellViewModel : ViewModelBase
         _openRevokeDialogCommand = new DelegateCommand(OpenRevokeDialog, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked && CertificatesPage.SelectedItem is { } cert && !string.Equals(cert.RevocationStatus, "Revoked", StringComparison.OrdinalIgnoreCase));
         _closeRevokeDialogCommand = new DelegateCommand(() => CertificatesPage.IsRevokeDialogOpen = false);
         _togglePlainViewCommand = new DelegateCommand(() => CertificatesPage.IsPlainView = !CertificatesPage.IsPlainView);
+        _pastePemCommand = new AsyncCommand(PastePemAsync, () => !IsBusy && Snapshot.State == DatabaseSessionState.Unlocked);
 
         SettingsSecurityPage.CreateDatabaseCommand = _createDatabaseCommand;
         SettingsSecurityPage.OpenDatabaseCommand = _openDatabaseCommand;
@@ -383,6 +385,8 @@ public sealed class ShellViewModel : ViewModelBase
     public ICommand RefreshWorkspaceCommand => _refreshWorkspaceCommand;
 
     public ICommand ImportFilesCommand => _importFilesCommand;
+
+    public ICommand PastePemCommand => _pastePemCommand;
 
     public ICommand ExitCommand => _exitCommand;
 
@@ -738,6 +742,53 @@ public sealed class ShellViewModel : ViewModelBase
         }
 
         NotifySuccess($"{result.Value.ImportedFiles.Count} file(s) imported.");
+    }
+
+    private async Task PastePemAsync()
+    {
+        var text = await _fileDialogService.GetClipboardTextAsync(CancellationToken.None);
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            NotifyFailure("Clipboard is empty or contains no text.");
+            return;
+        }
+
+        if (!text.Contains("-----BEGIN ", StringComparison.Ordinal))
+        {
+            NotifyFailure("Clipboard text does not contain any PEM blocks.");
+            return;
+        }
+
+        using var scope = BeginBusy("Importing PEM from clipboard");
+        var result = await _databaseSessionService.ImportPemTextAsync(text, CancellationToken.None);
+
+        if (!result.IsSuccess || result.Value is null)
+        {
+            NotifyFailure(result.Message);
+            return;
+        }
+
+        await RefreshAllAsync();
+
+        var value = result.Value;
+        if (value.CertificateIds.Count > 0)
+        {
+            NavigateTo(new NavigationTarget(BrowserEntityType.Certificate, value.CertificateIds[0], NavigationFocusSection.Inspector));
+        }
+        else if (value.PrivateKeyIds.Count > 0)
+        {
+            NavigateTo(new NavigationTarget(BrowserEntityType.PrivateKey, value.PrivateKeyIds[0], NavigationFocusSection.Overview));
+        }
+        else if (value.CertificateSigningRequestIds.Count > 0)
+        {
+            NavigateTo(new NavigationTarget(BrowserEntityType.CertificateSigningRequest, value.CertificateSigningRequestIds[0], NavigationFocusSection.Overview));
+        }
+        else if (value.CertificateRevocationListIds.Count > 0)
+        {
+            NavigateTo(new NavigationTarget(BrowserEntityType.CertificateRevocationList, value.CertificateRevocationListIds[0], NavigationFocusSection.Inspector));
+        }
+
+        NotifySuccess(result.Message);
     }
 
     private async Task ExportSelectedCertificateAsync()
@@ -1721,6 +1772,7 @@ public sealed class ShellViewModel : ViewModelBase
         _openRevokeDialogCommand.RaiseCanExecuteChanged();
         _closeRevokeDialogCommand.RaiseCanExecuteChanged();
         _togglePlainViewCommand.RaiseCanExecuteChanged();
+        _pastePemCommand.RaiseCanExecuteChanged();
     }
 
     private static IReadOnlyList<SanEntry> ParseSubjectAlternativeNames(string value)

@@ -36,6 +36,8 @@ public interface IDatabaseSessionService
 
     Task<OperationResult<ImportStoredFilesResult>> ImportStoredFilesAsync(ImportStoredFilesRequest request, CancellationToken cancellationToken);
 
+    Task<OperationResult<ImportStoredMaterialResult>> ImportPemTextAsync(string pemText, CancellationToken cancellationToken);
+
     Task<OperationResult<ExportedArtifact>> ExportStoredMaterialAsync(ExportStoredMaterialRequest request, CancellationToken cancellationToken);
 
     Task<OperationResult<ExportedArtifact>> ExportStoredMaterialToFileAsync(ExportStoredMaterialToFileRequest request, CancellationToken cancellationToken);
