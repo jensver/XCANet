@@ -35,6 +35,8 @@
           <MenuItem Header="Revocation list" Command="{Binding ImportFilesCommand}" />
           <Separator />
           <MenuItem Header="PEM file" Command="{Binding ImportFilesCommand}" />
+          <Separator />
+          <MenuItem Header="Paste PEM from clipboard" Command="{Binding PastePemCommand}" />
         </MenuItem>
         <MenuItem Header="_Token">
           <MenuItem Header="Manage Security token" IsEnabled="False" />

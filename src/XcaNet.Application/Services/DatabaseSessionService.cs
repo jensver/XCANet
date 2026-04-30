@@ -737,6 +737,11 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             return OperationResult<ImportStoredMaterialResult>.Success(new ImportStoredMaterialResult([], [], [], [crlId]), "CRL imported.");
         }
 
+        if (request.Format == CryptoDataFormat.Pkcs7)
+        {
+            return await ImportPkcs7BundleAsync(request, cancellationToken);
+        }
+
         var importResult = await _importExportService.ImportAsync(
             new ImportCertificateMaterialRequest(request.Kind, request.Format, request.Data, request.Password, request.DisplayName),
             cancellationToken);
@@ -1947,6 +1952,13 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
             return OperationResult<ImportStoredMaterialRequest>.Failure(OperationErrorCode.ValidationFailed, $"The selected import file is empty: {Path.GetFileName(filePath)}");
         }
 
+        if (LooksLikePem(data, "PKCS7") || extension.Equals(".p7b", StringComparison.OrdinalIgnoreCase) || extension.Equals(".p7c", StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult<ImportStoredMaterialRequest>.Success(
+                new ImportStoredMaterialRequest(displayName, CryptoImportKind.Bundle, CryptoDataFormat.Pkcs7, data, password),
+                "PKCS#7 bundle import classified.");
+        }
+
         if (LooksLikePem(data, "X509 CRL") || extension.Equals(".crl", StringComparison.OrdinalIgnoreCase))
         {
             var format = LooksLikePem(data, "X509 CRL") ? CryptoDataFormat.Pem : CryptoDataFormat.Der;
@@ -2050,6 +2062,138 @@ public sealed class DatabaseSessionService : IDatabaseSessionService, IDisposabl
         var text = System.Text.Encoding.UTF8.GetString(data);
         var pemField = System.Security.Cryptography.PemEncoding.Find(text);
         return Convert.FromBase64String(text[pemField.Base64Data].ToString());
+    }
+
+    public async Task<OperationResult<ImportStoredMaterialResult>> ImportPemTextAsync(string pemText, CancellationToken cancellationToken)
+    {
+        if (!IsUnlockedDatabase())
+        {
+            return OperationResult<ImportStoredMaterialResult>.Failure(OperationErrorCode.DatabaseLocked, "Unlock the database before importing material.");
+        }
+
+        var blocks = SplitPemBlocks(pemText);
+        if (blocks.Count == 0)
+        {
+            return OperationResult<ImportStoredMaterialResult>.Failure(OperationErrorCode.ValidationFailed, "No PEM blocks found in the provided text.");
+        }
+
+        var allPrivateKeyIds = new List<Guid>();
+        var allCertificateIds = new List<Guid>();
+        var allCsrIds = new List<Guid>();
+        var allCrlIds = new List<Guid>();
+
+        foreach (var (label, pem) in blocks)
+        {
+            var kind = label switch
+            {
+                "CERTIFICATE" => (CryptoImportKind?)CryptoImportKind.Certificate,
+                "PRIVATE KEY" or "RSA PRIVATE KEY" or "EC PRIVATE KEY" or "ENCRYPTED PRIVATE KEY" => CryptoImportKind.PrivateKey,
+                "CERTIFICATE REQUEST" or "NEW CERTIFICATE REQUEST" => CryptoImportKind.CertificateSigningRequest,
+                "X509 CRL" => CryptoImportKind.CertificateRevocationList,
+                "PKCS7" => CryptoImportKind.Bundle,
+                _ => null
+            };
+
+            if (kind is null)
+            {
+                continue;
+            }
+
+            var data = System.Text.Encoding.UTF8.GetBytes(pem);
+            var format = label == "PKCS7" ? CryptoDataFormat.Pkcs7 : CryptoDataFormat.Pem;
+            var request = new ImportStoredMaterialRequest("clipboard", kind.Value, format, data, null);
+            var importResult = await ImportStoredMaterialAsync(request, cancellationToken);
+
+            if (!importResult.IsSuccess || importResult.Value is null)
+            {
+                return OperationResult<ImportStoredMaterialResult>.Failure(importResult.ErrorCode, importResult.Message);
+            }
+
+            allPrivateKeyIds.AddRange(importResult.Value.PrivateKeyIds);
+            allCertificateIds.AddRange(importResult.Value.CertificateIds);
+            allCsrIds.AddRange(importResult.Value.CertificateSigningRequestIds);
+            allCrlIds.AddRange(importResult.Value.CertificateRevocationListIds);
+        }
+
+        var total = allPrivateKeyIds.Count + allCertificateIds.Count + allCsrIds.Count + allCrlIds.Count;
+        return OperationResult<ImportStoredMaterialResult>.Success(
+            new ImportStoredMaterialResult(allPrivateKeyIds, allCertificateIds, allCsrIds, allCrlIds),
+            $"Imported {total} object(s) from PEM text.");
+    }
+
+    private async Task<OperationResult<ImportStoredMaterialResult>> ImportPkcs7BundleAsync(ImportStoredMaterialRequest request, CancellationToken cancellationToken)
+    {
+        byte[] derData;
+        var text = System.Text.Encoding.UTF8.GetString(request.Data);
+        if (text.Contains("-----BEGIN PKCS7-----", StringComparison.Ordinal))
+        {
+            derData = GetPemBody(request.Data);
+        }
+        else
+        {
+            derData = request.Data;
+        }
+
+        System.Security.Cryptography.X509Certificates.X509Certificate2Collection collection;
+        try
+        {
+            collection = [];
+#pragma warning disable SYSLIB0057
+            collection.Import(derData);
+#pragma warning restore SYSLIB0057
+        }
+        catch (Exception ex)
+        {
+            return OperationResult<ImportStoredMaterialResult>.Failure(
+                OperationErrorCode.ValidationFailed,
+                $"Could not parse PKCS#7 bundle: {ex.Message}");
+        }
+
+        var certificateIds = new List<Guid>();
+        foreach (var certificate in collection)
+        {
+            var derBytes = certificate.RawData;
+            var parseResult = await _certificateService.ParseCertificateAsync(
+                new CertificateParseRequest(derBytes, CryptoDataFormat.Der), cancellationToken);
+
+            if (!parseResult.IsSuccess || parseResult.Value is null)
+            {
+                continue;
+            }
+
+            var certificateId = Guid.NewGuid();
+            await _certificateRepository.AddAsync(
+                _currentDatabasePath!,
+                CreateCertificateEntity(certificateId, request.DisplayName, derBytes, parseResult.Value, null, null),
+                cancellationToken);
+            await _auditEventRepository.AddAsync(
+                _currentDatabasePath!,
+                CreateAuditEvent(AuditEventKind.CertificateImported, "Certificate imported from PKCS#7 bundle."),
+                cancellationToken);
+            certificateIds.Add(certificateId);
+        }
+
+        return OperationResult<ImportStoredMaterialResult>.Success(
+            new ImportStoredMaterialResult([], certificateIds, [], []),
+            $"Imported {certificateIds.Count} certificate(s) from PKCS#7 bundle.");
+    }
+
+    private static IReadOnlyList<(string Label, string Pem)> SplitPemBlocks(string pemText)
+    {
+        var results = new List<(string, string)>();
+        var remaining = pemText.AsSpan();
+
+        while (System.Security.Cryptography.PemEncoding.TryFind(remaining, out var fields))
+        {
+            var label = remaining[fields.Label].ToString();
+            var pem = remaining[fields.Location].ToString();
+            results.Add((label, pem));
+
+            var end = fields.Location.End.GetOffset(remaining.Length);
+            remaining = remaining[end..];
+        }
+
+        return results;
     }
 
     private void ReplaceUnlockedKey(UnlockedDatabaseKey unlockedKey)
